@@ -114,6 +114,20 @@ export type EntryNeighbor = {
   score: number;
 };
 
+/**
+ * Phase 2C: the public-safe join of an `entry_neighbors` row against its
+ * `entries` row, used by the related-entries block on the entry page. Only
+ * the fields the roadmap actually asks for (title, modality, link status) —
+ * the raw `rank`/`score` ranking signal from `EntryNeighbor` is an internal
+ * detail, not surfaced to readers.
+ */
+export type RelatedEntry = {
+  id: string;
+  title: string;
+  therapy_modality: string;
+  link_status: LinkStatus;
+};
+
 export type SearchHit = {
   id: string;
   title: string;

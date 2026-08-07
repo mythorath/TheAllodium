@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import {
   getEntry,
   getManifest,
+  getRelatedEntries,
   listEntriesForSitemap,
   resolveCanonicalId,
   searchEntries,
@@ -90,7 +91,8 @@ app.get("/psychotherapy/entries/:id", async (c) => {
   if (!entry) {
     return c.html(<NotFoundPage id={id} />, 404);
   }
-  return c.html(<EntryPage entry={entry} />);
+  const related = await getRelatedEntries(c.env.DB, resolved.canonicalId);
+  return c.html(<EntryPage entry={entry} related={related} />);
 });
 
 app.get("/psychotherapy/search", async (c) => {

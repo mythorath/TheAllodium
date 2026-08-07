@@ -9,7 +9,7 @@ import fullSnapshotSql from "../fixtures/full_snapshot.sql?raw";
 import fullSnapshotManifest from "../fixtures/full_snapshot.manifest.json";
 import ftsSql from "../migrations/0002_fts.sql?raw";
 import { execStatements } from "./sql-test-utils";
-import { getManifest, searchEntries } from "../src/db/repository";
+import { getManifest, getRelatedEntries, searchEntries } from "../src/db/repository";
 import { EMPTY_FACET_FILTERS } from "../src/db/facets";
 
 /**
@@ -221,6 +221,30 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     // 4 static routes + one <url> per real entry.
     expect(urlCount).toBe(4 + fullSnapshotManifest.entry_count);
     expect(urlCount).toBeLessThan(50_000);
+  });
+
+  it("returns getRelatedEntries() results matching a raw entry_neighbors query, in rank order (Phase 2C)", async () => {
+    const sample = await env.DB.prepare(
+      `SELECT entry_id, COUNT(*) AS c FROM entry_neighbors
+       GROUP BY entry_id ORDER BY c DESC LIMIT 1`,
+    ).first<{ entry_id: string; c: number }>();
+    expect(sample).not.toBeNull();
+
+    const rawRows = (
+      await env.DB.prepare(
+        `SELECT e.id, e.title, e.therapy_modality, e.link_status
+         FROM entry_neighbors n
+         JOIN entries e ON e.id = n.neighbor_id
+         WHERE n.entry_id = ?
+         ORDER BY n.rank ASC`,
+      )
+        .bind(sample!.entry_id)
+        .all<{ id: string; title: string; therapy_modality: string; link_status: string }>()
+    ).results;
+
+    const related = await getRelatedEntries(env.DB, sample!.entry_id);
+    expect(related).toEqual(rawRows);
+    expect(related.length).toBe(sample!.c);
   });
 
   it("sums modality facet counts to the total entry count (Phase 2B)", async () => {

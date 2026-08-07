@@ -1,7 +1,8 @@
 import type { FC, Child } from "hono/jsx";
-import type { PublicEntry, SearchHit, SnapshotManifest } from "../contract";
+import type { PublicEntry, RelatedEntry, SearchHit, SnapshotManifest } from "../contract";
 import { SITE_URL } from "../site-config";
 import type { AccessValue, FacetCounts, FacetFilters, StorageValue } from "../db/facets";
+import { buildCitations, citationUrl } from "../citations";
 
 export const Layout: FC<{
   title: string;
@@ -11,6 +12,10 @@ export const Layout: FC<{
   /** Extra <head> content (e.g. a JSON-LD <script>) beyond the shared
    * boilerplate every page already gets. */
   headExtra?: Child;
+  /** Phase 2C: extra content just before </body> — used for a page-scoped
+   * <script src> (e.g. the entry page's copy-to-clipboard enhancement) so
+   * pages that don't need any JS never load it. */
+  bodyExtra?: Child;
   children?: Child;
 }> = (props) => {
   return (
@@ -52,6 +57,7 @@ export const Layout: FC<{
             <a href="/disclaimer">the disclaimer page</a>.
           </p>
         </footer>
+        {props.bodyExtra ?? null}
       </body>
     </html>
   );
@@ -352,81 +358,151 @@ function LinkBadge(props: { status: PublicEntry["link_status"] }) {
   return <span class="badge">link ok</span>;
 }
 
-export const EntryPage: FC<{ entry: PublicEntry }> = ({ entry }) => (
-  <Layout
-    title={entry.title}
-    canonicalPath={`/psychotherapy/entries/${entry.id}`}
-    headExtra={<EntryJsonLd entry={entry} />}
-  >
-    <h1>{entry.title}</h1>
-    <p class="meta">
-      <span class="badge">{entry.therapy_modality}</span>
-      <span class="badge">{entry.resource_type}</span>
-      <span class="badge">tier {entry.credibility_tier}</span>
-      <LinkBadge status={entry.link_status} />
-      {entry.is_link_only ? <span class="badge">link-only</span> : null}
-    </p>
-    <p>
-      <a href={entry.canonical_url} rel="noopener noreferrer" target="_blank">
-        Open source
+const CITATION_LABELS = {
+  bibtex: "BibTeX",
+  ris: "RIS",
+  apa: "APA",
+} as const;
+
+/** Phase 2C: renders a citation as a real link-terminated paragraph so the
+ * DOI/URL segment is an actual clickable `doi.org` link, while still being
+ * the exact plain text (via `textContent`) that the copy button copies and
+ * that a no-JS reader can select manually. `prefix + url` must equal
+ * `citations.apa` — enforced by slicing the known-length `url` off the end
+ * of the full formatted string rather than duplicating formatting logic. */
+function ApaCitation(props: { text: string; url: string }) {
+  const prefix = props.text.slice(0, props.text.length - props.url.length);
+  return (
+    <p id="citation-apa">
+      {prefix}
+      <a href={props.url} rel="noopener noreferrer" target="_blank">
+        {props.url}
       </a>
     </p>
-    <dl>
-      <dt>ID</dt>
-      <dd>
-        <code>{entry.id}</code>
-      </dd>
-      <dt>Source org</dt>
-      <dd>{entry.source_org ?? "—"}</dd>
-      <dt>Author</dt>
-      <dd>{entry.author ?? "—"}</dd>
-      <dt>Published</dt>
-      <dd>{entry.published_date ?? "—"}</dd>
-      <dt>OA status</dt>
-      <dd>{entry.oa_status ?? "—"}</dd>
-      <dt>DOI</dt>
-      <dd>{entry.doi ?? "—"}</dd>
-      <dt>PMID</dt>
-      <dd>{entry.pmid ?? "—"}</dd>
-      <dt>PMCID</dt>
-      <dd>{entry.pmcid ?? "—"}</dd>
-      <dt>Citations</dt>
-      <dd>{entry.citation_count ?? "—"}</dd>
-    </dl>
+  );
+}
 
-    <h2>Tags</h2>
-    {entry.tags.length === 0 ? (
-      <p class="meta">No tags</p>
-    ) : (
-      <ul>
-        {entry.tags.map((t) => (
-          <li key={`${t.category}:${t.name}`}>
-            {t.name} <span class="meta">({t.category})</span>
-          </li>
-        ))}
-      </ul>
-    )}
+function CitationBlock(props: { format: "bibtex" | "ris"; text: string }) {
+  return (
+    <div class="citation-block">
+      <h3>{CITATION_LABELS[props.format]}</h3>
+      <pre id={`citation-${props.format}`}>{props.text}</pre>
+      <button type="button" class="copy-button" data-copy-target={`citation-${props.format}`}>
+        Copy {CITATION_LABELS[props.format]}
+      </button>
+    </div>
+  );
+}
 
-    <h2>Verification</h2>
-    <p class="meta">
-      Automated checks only — not clinical endorsement or advice.
-    </p>
-    {entry.verifications.length === 0 ? (
-      <p class="meta">No verification records</p>
-    ) : (
-      <ul>
-        {entry.verifications.map((v, i) => (
-          <li key={`${v.check_kind}-${i}`}>
-            <strong>{v.check_kind}</strong>: {v.result} via {v.method}
-            {v.method_version ? ` (${v.method_version})` : ""}
-            {v.score !== null ? ` · score ${v.score}` : ""}
-            {v.checked_at ? ` · ${v.checked_at}` : " · checked_at unknown"}
-          </li>
-        ))}
-      </ul>
-    )}
-  </Layout>
-);
+export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
+  entry,
+  related,
+}) => {
+  const citations = buildCitations(entry);
+  const apaUrl = citationUrl(entry);
+  return (
+    <Layout
+      title={entry.title}
+      canonicalPath={`/psychotherapy/entries/${entry.id}`}
+      headExtra={<EntryJsonLd entry={entry} />}
+      bodyExtra={<script src="/app.js" defer />}
+    >
+      <h1>{entry.title}</h1>
+      <p class="meta">
+        <span class="badge">{entry.therapy_modality}</span>
+        <span class="badge">{entry.resource_type}</span>
+        <span class="badge">tier {entry.credibility_tier}</span>
+        <LinkBadge status={entry.link_status} />
+        {entry.is_link_only ? <span class="badge">link-only</span> : null}
+      </p>
+      <p>
+        <a href={entry.canonical_url} rel="noopener noreferrer" target="_blank">
+          Open source
+        </a>
+      </p>
+      <dl>
+        <dt>ID</dt>
+        <dd>
+          <code>{entry.id}</code>
+        </dd>
+        <dt>Source org</dt>
+        <dd>{entry.source_org ?? "—"}</dd>
+        <dt>Author</dt>
+        <dd>{entry.author ?? "—"}</dd>
+        <dt>Published</dt>
+        <dd>{entry.published_date ?? "—"}</dd>
+        <dt>OA status</dt>
+        <dd>{entry.oa_status ?? "—"}</dd>
+        <dt>DOI</dt>
+        <dd>{entry.doi ?? "—"}</dd>
+        <dt>PMID</dt>
+        <dd>{entry.pmid ?? "—"}</dd>
+        <dt>PMCID</dt>
+        <dd>{entry.pmcid ?? "—"}</dd>
+        <dt>Citations</dt>
+        <dd>{entry.citation_count ?? "—"}</dd>
+      </dl>
+
+      <h2>Tags</h2>
+      {entry.tags.length === 0 ? (
+        <p class="meta">No tags</p>
+      ) : (
+        <ul>
+          {entry.tags.map((t) => (
+            <li key={`${t.category}:${t.name}`}>
+              {t.name} <span class="meta">({t.category})</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2>Verification</h2>
+      <p class="meta">
+        Automated checks only — not clinical endorsement or advice.
+      </p>
+      {entry.verifications.length === 0 ? (
+        <p class="meta">No verification records</p>
+      ) : (
+        <ul>
+          {entry.verifications.map((v, i) => (
+            <li key={`${v.check_kind}-${i}`}>
+              <strong>{v.check_kind}</strong>: {v.result} via {v.method}
+              {v.method_version ? ` (${v.method_version})` : ""}
+              {v.score !== null ? ` · score ${v.score}` : ""}
+              {v.checked_at ? ` · ${v.checked_at}` : " · checked_at unknown"}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <h2>Cite this entry</h2>
+      <CitationBlock format="bibtex" text={citations.bibtex} />
+      <CitationBlock format="ris" text={citations.ris} />
+      <div class="citation-block">
+        <h3>{CITATION_LABELS.apa}</h3>
+        <ApaCitation text={citations.apa} url={apaUrl} />
+        <button type="button" class="copy-button" data-copy-target="citation-apa">
+          Copy APA
+        </button>
+      </div>
+
+      <h2>Related entries</h2>
+      {related.length === 0 ? (
+        <p class="meta">No related entries in this snapshot</p>
+      ) : (
+        <ul>
+          {related.map((r) => (
+            <li key={r.id}>
+              <a href={`/psychotherapy/entries/${r.id}`}>{r.title}</a>{" "}
+              <span class="badge">{r.therapy_modality}</span>
+              <LinkBadge status={r.link_status} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </Layout>
+  );
+};
 
 const FACET_PARAM_NAMES = {
   modality: "modality",

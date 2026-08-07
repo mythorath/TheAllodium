@@ -5,6 +5,7 @@ import type {
   CoverageStats,
   LinkStatus,
   PublicEntry,
+  RelatedEntry,
   SearchHit,
   SnapshotManifest,
 } from "../contract";
@@ -191,6 +192,30 @@ export async function getEntry(db: D1Database, id: string): Promise<PublicEntry 
   ).results;
 
   return mapEntry(row, tags, verifications);
+}
+
+/** Phase 2C: precomputed cosine-kNN neighbors for the related-entries block,
+ * joined against `entries` for the public-safe fields the view needs. A
+ * plain INNER JOIN is what makes the "honest empty state when coverage is
+ * missing" behavior automatic: an entry with no embedding at snapshot-build
+ * time simply has zero `entry_neighbors` rows, so this returns `[]` rather
+ * than needing a special case. */
+export async function getRelatedEntries(
+  db: D1Database,
+  entryId: string,
+): Promise<RelatedEntry[]> {
+  return (
+    await db
+      .prepare(
+        `SELECT e.id, e.title, e.therapy_modality, e.link_status
+         FROM entry_neighbors n
+         JOIN entries e ON e.id = n.neighbor_id
+         WHERE n.entry_id = ?
+         ORDER BY n.rank ASC`,
+      )
+      .bind(entryId)
+      .all<RelatedEntry>()
+  ).results;
 }
 
 /** Phase 1F: minimal row shape for /sitemap.xml — never selects public-safe

@@ -11,6 +11,7 @@ import {
   searchEntries,
   getEntry,
   getManifest,
+  getRelatedEntries,
   resolveCanonicalId,
 } from "../src/db/repository";
 import { EMPTY_FACET_FILTERS, buildFacetWhere, parseFacetFilters } from "../src/db/facets";
@@ -216,6 +217,24 @@ describe("local D1 repository + routes", () => {
     expect(entry?.authors).toBeNull();
   });
 
+  it("returns rank-ordered related entries from entry_neighbors (Phase 2C)", async () => {
+    const related = await getRelatedEntries(env.DB, "aaaaaaaa00000001");
+    expect(related).toEqual([
+      { id: "aaaaaaaa00000002", title: "Defusion Techniques for Anxiety", therapy_modality: "act", link_status: "ok" },
+      {
+        id: "bbbbbbbb00000003",
+        title: "Acceptance and Commitment Therapy for Depression: A Meta-Analysis",
+        therapy_modality: "act",
+        link_status: "ok",
+      },
+    ]);
+  });
+
+  it("gives an honest empty array for an entry with no computed neighbors (Phase 2C)", async () => {
+    const related = await getRelatedEntries(env.DB, "dddddddd00000007");
+    expect(related).toEqual([]);
+  });
+
   it("ranks FTS results for representative queries", async () => {
     const values = await searchEntries(env.DB, "values");
     expect(values.mode).toBe("fts");
@@ -387,6 +406,41 @@ describe("local D1 repository + routes", () => {
     expect(aliasRes.headers.get("Location")).toBe(
       "/psychotherapy/entries/aaaaaaaa00000001",
     );
+  });
+
+  it("renders related entries and all three citation formats on an entry page (Phase 2C)", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request(
+      "/psychotherapy/entries/bbbbbbbb00000003",
+      {},
+      env,
+      ctx,
+    );
+    await waitOnExecutionContext(ctx);
+    const html = await res.text();
+
+    expect(html).toContain("Related entries");
+    expect(html).toContain("Behavioral Activation for Depression");
+
+    expect(html).toContain("Cite this entry");
+    expect(html).toContain("@article{allodium:bbbbbbbb00000003,");
+    expect(html).toContain("TY  - JOUR");
+    expect(html).toContain("Researcher, C., &amp; Colleague, D.");
+    expect(html).toContain('href="https://doi.org/10.1000/act.depression.meta"');
+    expect(html).toContain('src="/app.js"');
+  });
+
+  it("shows an honest empty state for related entries when none are computed (Phase 2C)", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request(
+      "/psychotherapy/entries/dddddddd00000007",
+      {},
+      env,
+      ctx,
+    );
+    await waitOnExecutionContext(ctx);
+    const html = await res.text();
+    expect(html).toContain("No related entries in this snapshot");
   });
 
   it("serves search HTML and labels blocked links", async () => {

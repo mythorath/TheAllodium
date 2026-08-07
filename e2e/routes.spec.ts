@@ -168,6 +168,92 @@ test.describe("entries", () => {
   });
 });
 
+test.describe("citations and related entries (Phase 2C)", () => {
+  test("shows a related entries block, and an honest empty state when none are computed", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy/entries/bbbbbbbb00000003");
+    await expect(
+      page.getByRole("heading", { name: "Related entries" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Behavioral Activation for Depression" }),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+
+    await page.goto("/psychotherapy/entries/dddddddd00000007");
+    await expect(
+      page.getByText("No related entries in this snapshot"),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("renders BibTeX, RIS, and APA citations with a doi.org link", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy/entries/bbbbbbbb00000003");
+    await expect(
+      page.getByRole("heading", { name: "Cite this entry" }),
+    ).toBeVisible();
+    await expect(page.locator("#citation-bibtex")).toContainText(
+      "@article{allodium:bbbbbbbb00000003",
+    );
+    await expect(page.locator("#citation-ris")).toContainText("TY  - JOUR");
+    await expect(page.locator("#citation-apa")).toContainText(
+      "Researcher, C., & Colleague, D.",
+    );
+    const doiLink = page.getByRole("link", {
+      name: "https://doi.org/10.1000/act.depression.meta",
+    });
+    await expect(doiLink).toHaveAttribute(
+      "href",
+      "https://doi.org/10.1000/act.depression.meta",
+    );
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("copying a citation writes the exact rendered text to the clipboard and shows feedback", async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.goto("/psychotherapy/entries/bbbbbbbb00000003");
+
+    const bibtexText = await page
+      .locator("#citation-bibtex")
+      .evaluate((el) => el.textContent);
+    await page.getByRole("button", { name: "Copy BibTeX" }).click();
+    await expect(page.getByRole("button", { name: "Copied!" })).toBeVisible();
+    const clipboardText = await page.evaluate(() =>
+      navigator.clipboard.readText(),
+    );
+    expect(clipboardText).toBe(bibtexText);
+  });
+
+  test.describe("with JavaScript disabled", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("citation text stays fully visible and selectable, and the page never errors", async ({
+      page,
+    }) => {
+      await page.goto("/psychotherapy/entries/bbbbbbbb00000003");
+      await expect(page.locator("#citation-bibtex")).toContainText(
+        "@article{allodium:bbbbbbbb00000003",
+      );
+      await expect(page.locator("#citation-ris")).toContainText("TY  - JOUR");
+      await expect(page.locator("#citation-apa")).toContainText(
+        "Researcher, C., & Colleague, D.",
+      );
+      // Copy buttons stay visible (inert without JS) rather than being
+      // hidden — see the copy-script section of docs/phase-2c-decision-record.md
+      // for why a <noscript> hide would itself violate the current CSP.
+      await expect(
+        page.getByRole("button", { name: "Copy BibTeX" }),
+      ).toBeVisible();
+    });
+  });
+});
+
 test.describe("standard and disclaimer", () => {
   test("/standard explains the verification methodology with live coverage", async ({
     page,

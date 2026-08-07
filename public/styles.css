@@ -199,6 +199,36 @@ input:focus-visible {
   color: #4b4b4b;
 }
 
+.citation-block {
+  border: 1px solid #e5e5e5;
+  border-radius: 0.35rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.citation-block h3 {
+  margin-top: 0;
+  font-size: 0.95rem;
+}
+
+.citation-block pre,
+.citation-block p {
+  background: #f5f5f5;
+  border-radius: 0.25rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  margin: 0 0 0.6rem;
+}
+
+.copy-button {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  min-height: 2.25rem;
+}
+
 @media (max-width: 30rem) {
   main,
   header .site-nav,
