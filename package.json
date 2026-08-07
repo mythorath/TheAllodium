@@ -29,7 +29,9 @@
     "deploy:staging": "tsx scripts/deploy-worker.ts --env staging",
     "deploy:production": "tsx scripts/deploy-worker.ts --env production --yes",
     "configure:com-redirect": "tsx scripts/configure-com-redirect.ts --yes",
+    "promote:og-cards": "tsx scripts/upload-og-cards.ts",
     "smoke:live": "tsx scripts/smoke-live.ts",
+    "smoke:og-cards": "tsx scripts/smoke-og-cards.ts",
     "gate:1a": "tsx scripts/close-1a-gate.ts",
     "gate:1c": "tsx scripts/close-1c-gate.ts",
     "gate:1d": "tsx scripts/close-1d-gate.ts",
@@ -39,6 +41,7 @@
     "gate:2b": "tsx scripts/close-2b-gate.ts",
     "gate:2c": "tsx scripts/close-2c-gate.ts",
     "gate:2d": "tsx scripts/close-2d-gate.ts",
+    "gate:2e": "tsx scripts/close-2e-gate.ts",
     "secrets:scan": "tsx scripts/secrets-scan.ts"
   },
   "dependencies": {

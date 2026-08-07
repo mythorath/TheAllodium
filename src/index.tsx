@@ -26,6 +26,7 @@ export type AppBindings = {
   DB: D1Database;
   ASSETS?: Fetcher;
   ABSTRACT_SEARCH_ENABLED?: string;
+  OG_CARDS: R2Bucket;
 };
 
 /**
@@ -77,6 +78,46 @@ app.get("/disclaimer", (c) => c.html(<DisclaimerPage />));
 // Browsers request this path unconditionally regardless of <link rel="icon">;
 // redirect to the real static asset instead of serving 404 noise.
 app.get("/favicon.ico", (c) => c.redirect("/favicon.svg", 301));
+
+// Phase 2E: per-entry OpenGraph card, content-addressed by
+// {checksum}/{canonical id}.png in the OG_CARDS R2 bucket (rendered by
+// ACT's render_og_cards.py, uploaded by scripts/upload-og-cards.ts). Every
+// failure mode here — a malformed filename, an unknown/retired id, no
+// current manifest, a missing R2 object, or any thrown error — redirects to
+// the static default card rather than ever 500ing on a social-preview
+// fetch; a D1 Time-Travel rollback to a checksum whose cards were already
+// pruned degrades the same way. `resolveCanonicalId` also means an alias id
+// resolves to its canonical entry's card, matching the entry route's own
+// redirect behavior.
+app.get("/og/:filename", async (c) => {
+  try {
+    const filename = c.req.param("filename");
+    if (!filename.endsWith(".png")) return c.redirect("/og-default.png", 302);
+    const id = filename.slice(0, -".png".length);
+    if (!id) return c.redirect("/og-default.png", 302);
+
+    const resolved = await resolveCanonicalId(c.env.DB, id);
+    if (resolved.kind === "missing" || !resolved.canonicalId) {
+      return c.redirect("/og-default.png", 302);
+    }
+
+    const manifest = await getManifest(c.env.DB);
+    if (!manifest) return c.redirect("/og-default.png", 302);
+
+    const object = await c.env.OG_CARDS.get(`${manifest.checksum}/${resolved.canonicalId}.png`);
+    if (!object) return c.redirect("/og-default.png", 302);
+
+    return c.body(object.body, 200, {
+      "Content-Type": "image/png",
+      // Safe to be immutable: the key already encodes the exact checksum,
+      // so a new snapshot always resolves through a different key.
+      "Cache-Control": "public, max-age=31536000, immutable",
+    });
+  } catch (err) {
+    console.error(err);
+    return c.redirect("/og-default.png", 302);
+  }
+});
 
 app.get("/psychotherapy/entries/:id", async (c) => {
   const id = c.req.param("id");

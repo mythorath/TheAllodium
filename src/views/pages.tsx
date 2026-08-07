@@ -16,8 +16,23 @@ export const Layout: FC<{
    * every page already loads (see below). Unused as of Phase 2D but kept
    * for future page-scoped additions. */
   bodyExtra?: Child;
+  /** Phase 2E: absolute URL to a 1200x630 OG/Twitter card image. Defaults
+   * to the static default card (`public/og-default.png`) when omitted, so
+   * every page with a `canonicalPath` gets a valid social-preview image
+   * even before a page-specific one is threaded through. */
+  ogImage?: string;
+  /** Phase 2E: short og:description/twitter:description text — always
+   * either hand-written per page or synthesized only from public-contract
+   * fields (see `EntryPage` below); never sourced from
+   * notes/abstract/rationale. */
+  ogDescription?: string;
+  /** Phase 2E: og:type, e.g. "article" for an entry page. Defaults to
+   * "website". */
+  ogType?: string;
   children?: Child;
 }> = (props) => {
+  const ogImage = props.ogImage ?? `${SITE_URL}/og-default.png`;
+  const ogType = props.ogType ?? "website";
   return (
     <html lang="en">
       <head>
@@ -29,6 +44,26 @@ export const Layout: FC<{
         ) : null}
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="stylesheet" href="/styles.css" />
+        {/* Phase 2E: only pages with a single canonical URL get OG/Twitter
+         * tags -- og:url has nothing meaningful to point at otherwise
+         * (404/error pages), matching the existing canonical-link rule. */}
+        {props.canonicalPath ? (
+          <>
+            <meta property="og:title" content={props.title} />
+            <meta property="og:type" content={ogType} />
+            <meta property="og:url" content={`${SITE_URL}${props.canonicalPath}`} />
+            <meta property="og:image" content={ogImage} />
+            {props.ogDescription ? (
+              <meta property="og:description" content={props.ogDescription} />
+            ) : null}
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" content={props.title} />
+            <meta name="twitter:image" content={ogImage} />
+            {props.ogDescription ? (
+              <meta name="twitter:description" content={props.ogDescription} />
+            ) : null}
+          </>
+        ) : null}
         {props.headExtra ?? null}
       </head>
       <body>
@@ -82,7 +117,11 @@ export const HomePage: FC<{ manifest: SnapshotManifest | null }> = ({
     ? Object.keys(manifest.coverage_json.modalities ?? {}).length
     : 0;
   return (
-    <Layout title="Home" canonicalPath="/">
+    <Layout
+      title="Home"
+      canonicalPath="/"
+      ogDescription="A free, ad-free index of published psychotherapy research and client resources, verified for identity, legitimacy, and link health."
+    >
       <h1>The Allodium</h1>
       <p>
         A free, ad-free index of published psychotherapy research and client
@@ -138,7 +177,11 @@ export const StandardPage: FC<{ manifest: SnapshotManifest | null }> = ({
     ? JSON.parse(manifest.exclusion_counts_json)
     : {};
   return (
-    <Layout title="The Standard" canonicalPath="/standard">
+    <Layout
+      title="The Standard"
+      canonicalPath="/standard"
+      ogDescription="How every Allodium entry is verified: identity checks, legitimacy triage, and live link-health status."
+    >
       <h1>The Standard</h1>
       <p>
         No competitor in this space publishes its link-integrity and
@@ -261,7 +304,11 @@ export const StandardPage: FC<{ manifest: SnapshotManifest | null }> = ({
 };
 
 export const DisclaimerPage: FC = () => (
-  <Layout title="Disclaimer" canonicalPath="/disclaimer">
+  <Layout
+    title="Disclaimer"
+    canonicalPath="/disclaimer"
+    ogDescription="The Allodium is a verified index of psychotherapy resources, not therapy or a clinical service. Crisis resources included."
+  >
     <h1>Disclaimer</h1>
     <div class="prose">
       <p>
@@ -417,6 +464,15 @@ function ApaCitationList(props: { items: Array<{ id: string; text: string; url: 
   );
 }
 
+/** Phase 2E: og:description for an entry page, built only from
+ * public-contract fields already rendered elsewhere on the page (resource
+ * type, modality, source org) — never abstract/notes/rationale. */
+function buildEntryOgDescription(entry: PublicEntry): string {
+  const parts = [entry.resource_type, entry.therapy_modality];
+  if (entry.source_org) parts.push(entry.source_org);
+  return parts.filter(Boolean).join(" · ");
+}
+
 function CitationBlock(props: { format: "bibtex" | "ris"; text: string }) {
   return (
     <div class="citation-block">
@@ -440,6 +496,9 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
       title={entry.title}
       canonicalPath={`/psychotherapy/entries/${entry.id}`}
       headExtra={<EntryJsonLd entry={entry} />}
+      ogType="article"
+      ogImage={`${SITE_URL}/og/${entry.id}.png`}
+      ogDescription={buildEntryOgDescription(entry)}
     >
       <h1>{entry.title}</h1>
       <p class="meta">
@@ -644,7 +703,11 @@ export const SearchPage: FC<{
     props.facets.linkStatus.length > 0;
 
   return (
-    <Layout title="Search" canonicalPath="/psychotherapy/search">
+    <Layout
+      title="Search"
+      canonicalPath="/psychotherapy/search"
+      ogDescription="Keyword search and faceted browsing over The Allodium's verified psychotherapy research index."
+    >
       <h1>Psychotherapy search</h1>
       <form method="get" action="/psychotherapy/search">
         <div class="search-form">

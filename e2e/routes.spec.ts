@@ -419,6 +419,56 @@ test.describe("standard and disclaimer", () => {
   });
 });
 
+test.describe("OpenGraph cards (Phase 2E)", () => {
+  async function ogImageContent(page: import("@playwright/test").Page): Promise<string> {
+    const content = await page
+      .locator('meta[property="og:image"]')
+      .getAttribute("content");
+    expect(content).toBeTruthy();
+    return content as string;
+  }
+
+  test("home page's og:image/twitter:image point at the default card and resolve to a real PNG", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const content = await ogImageContent(page);
+    expect(content).toBe("https://theallodium.org/og-default.png");
+    const res = await page.request.get(new URL(content).pathname);
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toBe("image/png");
+  });
+
+  test("an entry page's og:image points at /og/:id.png and resolves (falls back to the default card in this local/test R2 bucket)", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy/entries/aaaaaaaa00000001");
+    const content = await ogImageContent(page);
+    expect(content).toBe("https://theallodium.org/og/aaaaaaaa00000001.png");
+
+    const twitterContent = await page
+      .locator('meta[name="twitter:image"]')
+      .getAttribute("content");
+    expect(twitterContent).toBe(content);
+
+    // No card has ever been uploaded to this dev/test environment's R2
+    // bucket, so the route's own miss-fallback kicks in -- still a real,
+    // reachable 200 PNG response (Playwright follows the redirect), never a
+    // broken image on a live social-preview fetch.
+    const res = await page.request.get(new URL(content).pathname);
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toBe("image/png");
+  });
+
+  test("search page's og:image resolves to a real PNG", async ({ page }) => {
+    await page.goto("/psychotherapy/search");
+    const content = await ogImageContent(page);
+    const res = await page.request.get(new URL(content).pathname);
+    expect(res.status()).toBe(200);
+    expect(res.headers()["content-type"]).toBe("image/png");
+  });
+});
+
 test.describe("generic 404", () => {
   test("unknown routes render the not-found page", async ({ page }) => {
     const response = await page.goto("/this-route-does-not-exist");

@@ -19,6 +19,17 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Phase 2E: OpenGraph card PNGs, content-addressed by
+  // {checksum}/{entry id}.png -- see scripts/upload-og-cards.ts and the
+  // GET /og/:filename route in src/index.tsx. vitest-pool-workers reads
+  // bindings straight from this file (see vitest.config.ts), so R2 is
+  // simulated locally in tests automatically once this binding exists.
+  "r2_buckets": [
+    {
+      "binding": "OG_CARDS",
+      "bucket_name": "theallodium-og-cards-local"
+    }
+  ],
   "env": {
     "staging": {
       "name": "theallodium-staging",
@@ -29,6 +40,12 @@
           // Replaced by create-staging-d1.ts after wrangler d1 create
           "database_id": "b3ded3ce-abf6-499f-acfd-ba35ea869313",
           "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "OG_CARDS",
+          "bucket_name": "theallodium-og-cards-staging"
         }
       ]
     },
@@ -41,6 +58,12 @@
           // Written by create-production-d1.ts after wrangler d1 create
           "database_id": "f476d24a-c84d-4234-b080-fb22215a283e",
           "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "OG_CARDS",
+          "bucket_name": "theallodium-og-cards-production"
         }
       ],
       // Phase 1F: Custom Domain, not a raw Route -- this Worker is the sole

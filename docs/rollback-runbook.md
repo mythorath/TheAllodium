@@ -88,6 +88,25 @@ check that exercises the actual deployed Worker + D1 pair together:
 npm run smoke:live -- --url https://theallodium.org
 ```
 
+## OpenGraph cards (R2) — not covered by rollback
+
+Phase 2E's per-entry OG card PNGs in the `OG_CARDS` R2 bucket are
+content-addressed by `{snapshot checksum}/{entry id}.png` and are
+best-effort, explicitly **not** covered by D1 Time Travel or any rollback
+step above — rolling back D1 to a prior checksum does not restore that
+checksum's R2 objects if `upload-og-cards.ts` has since pruned them (it
+keeps only the most recently promoted generation's cards). The accepted
+consequence is cosmetic only: `GET /og/:filename` redirects to
+`public/og-default.png` whenever the current checksum's card is missing —
+never a broken page or a 500. If a rolled-back checksum's cards still
+happen to exist in R2 (e.g. the rollback follows immediately after the
+promotion that superseded them, before the next `promote:og-cards` prune
+runs), they resolve automatically since the route reads whatever checksum
+is currently live in `snapshot_manifest`. Otherwise, re-run
+`.venv/bin/python3 scripts/render_og_cards.py` (ACT) and
+`npm run promote:og-cards -- --env <env> --checksum <checksum>` to restore
+per-entry cards for the rolled-back generation.
+
 ## `.com` redirect
 
 The `theallodium.com` → `theallodium.org` redirect (`scripts/configure-com-redirect.ts`)

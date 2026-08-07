@@ -7,7 +7,7 @@ import { run } from "./cli";
  * and rollback-snapshot.ts. Never rewrites an existing entry. */
 
 export interface DeploymentLogEntry {
-  type: "promote" | "rollback" | "deploy";
+  type: "promote" | "rollback" | "deploy" | "og-card-upload";
   at: string;
   env: "staging" | "production";
   databaseName: string;
