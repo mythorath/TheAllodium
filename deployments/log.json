@@ -1,0 +1,61 @@
+[
+  {
+    "type": "promote",
+    "at": "2026-08-07T01:54:59.730Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "snapshot": "full_snapshot",
+    "entryCount": 5643,
+    "tagLinkCount": 18654,
+    "aliasCount": 1,
+    "checksum": "8f23e192da000ff80e9bbc9b565160747f773cedfd51ba435b7ae5001581b7e5",
+    "sourceGeneratedAt": "2026-08-07T01:45:36.837252+00:00",
+    "preBookmark": "00000002-0000000a-000050c0-43ec9c3a14e4aadc4bbe834c8ade93c9",
+    "postBookmark": "00000002-00000068-000050c0-75a5e60af8486f6114f6201e402b1840",
+    "evidencePath": "evidence/promote-staging-1786067697688.json",
+    "gitCommit": "be100e3db94786e5ea0d6676c06499b1395a129d"
+  },
+  {
+    "type": "promote",
+    "at": "2026-08-07T01:55:44.385Z",
+    "env": "production",
+    "databaseName": "theallodium-psychotherapy-production",
+    "snapshot": "full_snapshot",
+    "entryCount": 5643,
+    "tagLinkCount": 18654,
+    "aliasCount": 1,
+    "checksum": "8f23e192da000ff80e9bbc9b565160747f773cedfd51ba435b7ae5001581b7e5",
+    "sourceGeneratedAt": "2026-08-07T01:45:36.837252+00:00",
+    "preBookmark": "00000001-0000000a-000050c0-fd4b17a8d0287c0d431174fb9413cb34",
+    "postBookmark": "00000001-00000069-000050c0-0ccdc5d10d765dce9f7edb504e72dbd1",
+    "evidencePath": "evidence/promote-production-1786067742259.json",
+    "gitCommit": "be100e3db94786e5ea0d6676c06499b1395a129d"
+  },
+  {
+    "type": "rollback",
+    "at": "2026-08-07T01:56:23.679Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "restoredToBookmark": "00000002-0000000a-000050c0-43ec9c3a14e4aadc4bbe834c8ade93c9",
+    "rolledBackPromotionAt": "2026-08-07T01:54:59.730Z",
+    "postBookmark": "00000003-00000008-000050c0-bf06ec81a9392ce9f683c836b7b54344",
+    "evidencePath": "evidence/rollback-staging-1786067781608.json",
+    "gitCommit": "be100e3db94786e5ea0d6676c06499b1395a129d"
+  },
+  {
+    "type": "promote",
+    "at": "2026-08-07T01:57:11.043Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "snapshot": "full_snapshot",
+    "entryCount": 5643,
+    "tagLinkCount": 18654,
+    "aliasCount": 1,
+    "checksum": "8f23e192da000ff80e9bbc9b565160747f773cedfd51ba435b7ae5001581b7e5",
+    "sourceGeneratedAt": "2026-08-07T01:45:36.837252+00:00",
+    "preBookmark": "00000003-00000008-000050c0-bf06ec81a9392ce9f683c836b7b54344",
+    "postBookmark": "00000003-00000066-000050c0-af0fea5d24b963bf224db334d367b482",
+    "evidencePath": "evidence/promote-staging-1786067829009.json",
+    "gitCommit": "be100e3db94786e5ea0d6676c06499b1395a129d"
+  }
+]

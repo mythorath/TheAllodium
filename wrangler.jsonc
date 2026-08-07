@@ -31,6 +31,18 @@
           "migrations_dir": "migrations"
         }
       ]
+    },
+    "production": {
+      "name": "theallodium-production",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "theallodium-psychotherapy-production",
+          // Written by create-production-d1.ts after wrangler d1 create
+          "database_id": "f476d24a-c84d-4234-b080-fb22215a283e",
+          "migrations_dir": "migrations"
+        }
+      ]
     }
   }
 }

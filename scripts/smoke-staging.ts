@@ -2,25 +2,15 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config } from "./load-env";
 import { requireEnv, run } from "./cli";
+import { runRemoteQueryRaw } from "./smoke-checks";
 
 config();
 
+// This spike (Phase 1A) tests fixed, known IDs/words from the tiny synthetic
+// spike_fixture.sql, unlike smoke-checks.ts's dynamic discovery over real
+// data -- only the low-level query runner is shared.
 function remoteQuery(sql: string): { stdout: string; elapsedMs: number } {
-  const started = Date.now();
-  const result = run("npx", [
-    "wrangler",
-    "d1",
-    "execute",
-    "DB",
-    "--env",
-    "staging",
-    "--remote",
-    "--json",
-    "--command",
-    sql,
-    "--yes",
-  ]);
-  return { stdout: result.stdout, elapsedMs: Date.now() - started };
+  return runRemoteQueryRaw("staging", sql);
 }
 
 function main() {

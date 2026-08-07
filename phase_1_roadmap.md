@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: plan-1d
     content: Plan the deterministic full-snapshot promotion and rollback pipeline
-    status: pending
+    status: completed
   - id: plan-1e
     content: Plan the public-beta search, entry, and methodology experience
     status: pending

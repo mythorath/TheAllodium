@@ -20,8 +20,14 @@
     "db:smoke:staging": "tsx scripts/smoke-staging.ts",
     "db:load:staging-sample": "tsx scripts/load-staging-sample.ts",
     "db:smoke:staging-sample": "tsx scripts/smoke-staging-sample.ts",
+    "db:create:production": "tsx scripts/create-production-d1.ts",
+    "db:promote:staging": "tsx scripts/promote-snapshot.ts --env staging",
+    "db:promote:production": "tsx scripts/promote-snapshot.ts --env production --yes",
+    "db:rollback:staging": "tsx scripts/rollback-snapshot.ts --env staging --yes",
+    "db:rollback:production": "tsx scripts/rollback-snapshot.ts --env production --yes",
     "gate:1a": "tsx scripts/close-1a-gate.ts",
     "gate:1c": "tsx scripts/close-1c-gate.ts",
+    "gate:1d": "tsx scripts/close-1d-gate.ts",
     "secrets:scan": "tsx scripts/secrets-scan.ts"
   },
   "dependencies": {

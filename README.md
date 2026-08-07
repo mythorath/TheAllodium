@@ -36,6 +36,43 @@ npm run db:smoke:staging-sample
 npm run gate:1c
 ```
 
+## Phase 1D
+
+Deterministic full-snapshot generation, pure-Python preflight validation, and
+a D1 Time-Travel-backed promote/rollback pipeline that pushes the complete
+catalog through staging into a real production D1 without hand-edited SQL.
+See [docs/phase-1d-decision-record.md](docs/phase-1d-decision-record.md).
+
+`fixtures/full_snapshot.sql` is a **generated artifact copied from ACT**, not
+hand-authored. To regenerate it:
+
+```bash
+# In /tank/ACT:
+.venv/bin/python3 scripts/export_allodium_snapshot.py
+
+# Copy the newest exports/allodium/psychotherapy/<TIMESTAMP>/ output into TheAllodium:
+cp /tank/ACT/exports/allodium/psychotherapy/<TIMESTAMP>/import.sql fixtures/full_snapshot.sql
+cp /tank/ACT/exports/allodium/psychotherapy/<TIMESTAMP>/manifest.json fixtures/full_snapshot.manifest.json
+cp /tank/ACT/exports/allodium/psychotherapy/<TIMESTAMP>/checksum.txt fixtures/full_snapshot.checksum.txt
+
+# Then re-run the local test suite and promote:
+npm test
+npm run db:promote:staging
+npm run db:promote:production   # requires --yes, baked into the script
+npm run gate:1d
+```
+
+To roll a database back to the state immediately before its most recent
+promotion (proven against real staging infrastructure — see the decision
+record):
+
+```bash
+npm run db:rollback:staging      # or db:rollback:production
+```
+
+Every promotion and rollback appends an immutable record to the git-tracked
+`deployments/log.json`.
+
 ## Setup
 
 ```bash
@@ -59,6 +96,17 @@ npm run gate:1a
 Requires `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` in `.env`.
 Token needs Account → D1 → Edit. Domain/zone permissions are not required for 1A.
 
+### Remote production (dedicated D1 only, no public domain yet)
+
+```bash
+npm run db:create:production
+npm run db:promote:production
+```
+
+Same token scope as staging. Creates `theallodium-psychotherapy-production`
+and loads the full snapshot into it — the Worker is not deployed against it
+until Phase 1F.
+
 ## Scripts
 
 | Script | Purpose |
@@ -70,3 +118,7 @@ Token needs Account → D1 → Edit. Domain/zone permissions are not required fo
 | `npm run db:load:staging-sample` | Reset + load the real Phase 1C representative sample into remote staging D1 |
 | `npm run db:smoke:staging-sample` | Remote smoke checks against the loaded sample (dynamically discovers alias/blocked-link rows) |
 | `npm run gate:1c` | Close Phase 1C: secrets scan, typecheck, test, write `docs/phase-1c-decision-record.md` |
+| `npm run db:create:production` | Create the real `theallodium-psychotherapy-production` D1 and wire it into `wrangler.jsonc` |
+| `npm run db:promote:staging` / `db:promote:production` | Verify checksum, apply migrations, capture a Time Travel bookmark, atomically replace content, smoke-check, log the deployment |
+| `npm run db:rollback:staging` / `db:rollback:production` | Restore to the bookmark captured before that env's last promotion, re-verify, log the rollback |
+| `npm run gate:1d` | Close Phase 1D: secrets scan, typecheck, test, verify deployment log, write `docs/phase-1d-decision-record.md` |

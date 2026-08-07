@@ -39,3 +39,31 @@ export function mask(value: string | undefined): string {
   if (value.length <= 8) return "***";
   return `${value.slice(0, 4)}…${value.slice(-4)} (len=${value.length})`;
 }
+
+/** Minimal `--flag value` / `--flag=value` / `--boolean-flag` argv parser —
+ * no dependency on a CLI-args package, matching load-env.ts's philosophy. */
+export function parseFlags(argv: string[]): {
+  flags: Record<string, string>;
+  booleans: Set<string>;
+} {
+  const flags: Record<string, string> = {};
+  const booleans = new Set<string>();
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (!arg.startsWith("--")) continue;
+    const eq = arg.indexOf("=");
+    if (eq !== -1) {
+      flags[arg.slice(2, eq)] = arg.slice(eq + 1);
+      continue;
+    }
+    const name = arg.slice(2);
+    const next = argv[i + 1];
+    if (next !== undefined && !next.startsWith("--")) {
+      flags[name] = next;
+      i += 1;
+    } else {
+      booleans.add(name);
+    }
+  }
+  return { flags, booleans };
+}
