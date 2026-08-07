@@ -218,6 +218,161 @@ export async function getRelatedEntries(
   ).results;
 }
 
+const SHORTLIST_MAX_IDS = 50;
+
+/** Phase 2D: pure parsing/validation for the `?ids=` query param on
+ * `/psychotherapy/list` — a single comma-separated list is the entire
+ * shareable state, so this never touches the database. Dedupes (keeping
+ * first occurrence, since list order is meaningful to the reader) and caps
+ * at `SHORTLIST_MAX_IDS` so an oversized URL can't turn into an oversized
+ * query. */
+export function parseShortlistIds(raw: string | null, cap = SHORTLIST_MAX_IDS): string[] {
+  if (!raw) return [];
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const part of raw.split(",")) {
+    const id = part.trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+    if (ids.length >= cap) break;
+  }
+  return ids;
+}
+
+export type ShortlistResult = {
+  entries: PublicEntry[];
+  missingIds: string[];
+};
+
+/** Phase 2D: batched multi-id fetch for the shortlist page — a handful of
+ * `IN (...)` queries regardless of list size, rather than looping
+ * `getEntry()` per id. Aliases resolve transparently against the same
+ * `entry_aliases` table `resolveCanonicalId` uses, and any requested id that
+ * resolves to nothing at all lands in `missingIds` so the view can render an
+ * honest "N of M items could not be shown" note instead of a 500 or a
+ * silently-shrunk list. */
+export async function getEntriesByIds(
+  db: D1Database,
+  ids: string[],
+): Promise<ShortlistResult> {
+  if (ids.length === 0) return { entries: [], missingIds: [] };
+
+  const placeholders = ids.map(() => "?").join(", ");
+  const directHits = (
+    await db
+      .prepare(`SELECT id FROM entries WHERE id IN (${placeholders})`)
+      .bind(...ids)
+      .all<{ id: string }>()
+  ).results;
+  const directIds = new Set(directHits.map((r) => r.id));
+
+  const aliasCandidates = ids.filter((id) => !directIds.has(id));
+  const resolvedFromAlias = new Map<string, string>();
+  if (aliasCandidates.length > 0) {
+    const aliasPlaceholders = aliasCandidates.map(() => "?").join(", ");
+    const aliasRows = (
+      await db
+        .prepare(
+          `SELECT alias_id, canonical_id FROM entry_aliases WHERE alias_id IN (${aliasPlaceholders})`,
+        )
+        .bind(...aliasCandidates)
+        .all<{ alias_id: string; canonical_id: string }>()
+    ).results;
+    for (const row of aliasRows) {
+      resolvedFromAlias.set(row.alias_id, row.canonical_id);
+    }
+  }
+
+  const canonicalFor = new Map<string, string>();
+  for (const id of ids) {
+    if (directIds.has(id)) canonicalFor.set(id, id);
+    else if (resolvedFromAlias.has(id)) canonicalFor.set(id, resolvedFromAlias.get(id) as string);
+  }
+  const missingIds = ids.filter((id) => !canonicalFor.has(id));
+
+  // Two requested ids (e.g. a canonical id and its retired alias) can
+  // resolve to the same entry — dedupe by canonical id, keeping the order
+  // the reader's list first requested them in.
+  const canonicalIds: string[] = [];
+  const canonicalSeen = new Set<string>();
+  for (const id of ids) {
+    const canonicalId = canonicalFor.get(id);
+    if (!canonicalId || canonicalSeen.has(canonicalId)) continue;
+    canonicalSeen.add(canonicalId);
+    canonicalIds.push(canonicalId);
+  }
+  if (canonicalIds.length === 0) return { entries: [], missingIds };
+
+  const entryPlaceholders = canonicalIds.map(() => "?").join(", ");
+  const rows = (
+    await db
+      .prepare(
+        `SELECT id, title, resource_type, therapy_modality, source_org, canonical_url,
+                author, published_date, credibility_tier, is_link_only, citation_count,
+                oa_status, doi, pmid, pmcid, link_status, link_checked_at, updated_at,
+                audience, authors_json
+         FROM entries WHERE id IN (${entryPlaceholders})`,
+      )
+      .bind(...canonicalIds)
+      .all<EntryRow>()
+  ).results;
+  const rowById = new Map(rows.map((r) => [r.id, r]));
+
+  const tagRows = (
+    await db
+      .prepare(
+        `SELECT et.entry_id AS entry_id, t.name, t.category
+         FROM entry_tags et
+         JOIN tags t ON t.id = et.tag_id
+         WHERE et.entry_id IN (${entryPlaceholders})
+         ORDER BY et.entry_id, t.category, t.name`,
+      )
+      .bind(...canonicalIds)
+      .all<TagRow & { entry_id: string }>()
+  ).results;
+  const tagsByEntry = new Map<string, TagRow[]>();
+  for (const row of tagRows) {
+    const list = tagsByEntry.get(row.entry_id) ?? [];
+    list.push({ name: row.name, category: row.category });
+    tagsByEntry.set(row.entry_id, list);
+  }
+
+  const verificationRows = (
+    await db
+      .prepare(
+        `SELECT entry_id, check_kind, result, method, method_version, score, checked_at
+         FROM entry_verifications
+         WHERE entry_id IN (${entryPlaceholders})
+         ORDER BY entry_id, check_kind, checked_at`,
+      )
+      .bind(...canonicalIds)
+      .all<VerificationRow & { entry_id: string }>()
+  ).results;
+  const verificationsByEntry = new Map<string, VerificationRow[]>();
+  for (const row of verificationRows) {
+    const list = verificationsByEntry.get(row.entry_id) ?? [];
+    list.push({
+      check_kind: row.check_kind,
+      result: row.result,
+      method: row.method,
+      method_version: row.method_version,
+      score: row.score,
+      checked_at: row.checked_at,
+    });
+    verificationsByEntry.set(row.entry_id, list);
+  }
+
+  const entries = canonicalIds
+    .map((id) => rowById.get(id))
+    .filter((row): row is EntryRow => row !== undefined)
+    .map((row) =>
+      mapEntry(row, tagsByEntry.get(row.id) ?? [], verificationsByEntry.get(row.id) ?? []),
+    );
+
+  return { entries, missingIds };
+}
+
 /** Phase 1F: minimal row shape for /sitemap.xml — never selects public-safe
  * fields beyond what's already on the contract, since this is still a
  * public surface. */

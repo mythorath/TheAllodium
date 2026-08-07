@@ -1,9 +1,11 @@
 import { Hono } from "hono";
 import {
+  getEntriesByIds,
   getEntry,
   getManifest,
   getRelatedEntries,
   listEntriesForSitemap,
+  parseShortlistIds,
   resolveCanonicalId,
   searchEntries,
 } from "./db/repository";
@@ -14,6 +16,7 @@ import {
   EntryPage,
   ErrorPage,
   HomePage,
+  ListPage,
   NotFoundPage,
   SearchPage,
   StandardPage,
@@ -111,6 +114,21 @@ app.get("/psychotherapy/search", async (c) => {
       mode={result.mode}
       filters={result.filters}
       facets={result.facets}
+    />,
+  );
+});
+
+// Phase 2D: the entire shortlist lives in this one query param — no
+// accounts, no cookies. An empty/absent `ids` renders a "build a list"
+// prompt (mirroring search's empty-query prompt), never an error.
+app.get("/psychotherapy/list", async (c) => {
+  const requestedIds = parseShortlistIds(c.req.query("ids") ?? null);
+  const { entries, missingIds } = await getEntriesByIds(c.env.DB, requestedIds);
+  return c.html(
+    <ListPage
+      requestedCount={requestedIds.length}
+      entries={entries}
+      missingCount={missingIds.length}
     />,
   );
 });

@@ -182,3 +182,23 @@ export function buildCitations(entry: PublicEntry): EntryCitations {
     apa: buildApa(entry),
   };
 }
+
+/**
+ * Phase 2D: whole-shortlist citation export. A `.bib` file is just its
+ * entries concatenated (each already self-delimiting via `@type{key, ...}`),
+ * so a blank line between them is purely for human readability — reference
+ * parsers handle multi-entry files natively, which is exactly why these are
+ * tested against them the same way single-entry `buildBibtex` is.
+ */
+export function buildBibtexList(entries: PublicEntry[]): string {
+  return entries.map(buildBibtex).join("\n\n");
+}
+
+/**
+ * Phase 2D: a `.ris` file's records are self-delimiting too (each ends in
+ * its own `ER  - ` line per the RIS spec), so records simply concatenate
+ * one after another with no extra separator needed.
+ */
+export function buildRisList(entries: PublicEntry[]): string {
+  return entries.map(buildRis).join("\n");
+}

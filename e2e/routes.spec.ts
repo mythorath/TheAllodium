@@ -254,6 +254,139 @@ test.describe("citations and related entries (Phase 2C)", () => {
   });
 });
 
+test.describe("shortlists and print (Phase 2D)", () => {
+  test("adding an entry to the shortlist toggles the button and updates the nav link", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy/entries/aaaaaaaa00000001");
+    await expect(page.getByRole("link", { name: "Shortlist", exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Add to shortlist" }).click();
+    await expect(page.getByRole("button", { name: "Remove from shortlist" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Shortlist (1)" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Remove from shortlist" }).click();
+    await expect(page.getByRole("button", { name: "Add to shortlist" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Shortlist", exact: true })).toBeVisible();
+  });
+
+  test("shortlist items added from search results and an entry page accumulate into one shareable link", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy/search?q=trauma");
+    await page.getByRole("button", { name: "Add to shortlist" }).first().click();
+    await expect(page.getByRole("link", { name: "Shortlist (1)" })).toBeVisible();
+
+    await page.goto("/psychotherapy/entries/aaaaaaaa00000001");
+    await page.getByRole("button", { name: "Add to shortlist" }).click();
+    const shortlistLink = page.getByRole("link", { name: "Shortlist (2)" });
+    await expect(shortlistLink).toBeVisible();
+    await expect(shortlistLink).toHaveAttribute("href", /\/psychotherapy\/list\?ids=.+,.+/);
+
+    await shortlistLink.click();
+    await expect(page).toHaveURL(/\/psychotherapy\/list\?ids=/);
+    await expect(
+      page.getByRole("link", { name: "Trauma-Focused CBT Overview" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Values Clarification Worksheet" }),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("a shared shortlist link renders its entries, and a Remove link needs no JS to work", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy/list?ids=aaaaaaaa00000001,bbbbbbbb00000003");
+    await expect(page.getByText("2 entries in this shortlist")).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Values Clarification Worksheet" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", {
+        name: "Acceptance and Commitment Therapy for Depression: A Meta-Analysis",
+      }),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+
+    await page.getByRole("link", { name: "Remove from this list" }).first().click();
+    await expect(page).toHaveURL(/\?ids=bbbbbbbb00000003$/);
+    await expect(page.getByText("1 entry in this shortlist")).toBeVisible();
+  });
+
+  test("an empty shortlist prompts to build one, and unresolvable ids get an honest note", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy/list");
+    await expect(page.getByText("No items yet")).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+
+    await page.goto("/psychotherapy/list?ids=bbbbbbbb00000003,doesnotexist0000");
+    await expect(page.getByText("1 entry in this shortlist", { exact: false })).toBeVisible();
+    await expect(page.getByText(/could not be shown/)).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("whole-shortlist citation copy buttons copy the exact combined, multi-entry text", async ({
+    page,
+    context,
+  }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.goto("/psychotherapy/list?ids=aaaaaaaa00000001,bbbbbbbb00000003");
+
+    const bibtexText = await page
+      .locator("#citation-bibtex")
+      .evaluate((el) => el.textContent);
+    expect(bibtexText).toContain("@misc{allodium:aaaaaaaa00000001,");
+    expect(bibtexText).toContain("@article{allodium:bbbbbbbb00000003,");
+
+    await page.getByRole("button", { name: "Copy BibTeX" }).click();
+    await expect(page.getByRole("button", { name: "Copied!" })).toBeVisible();
+    const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clipboardText).toBe(bibtexText);
+  });
+
+  test("print styles hide navigation, footer, and interactive buttons but keep citation content", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy/entries/bbbbbbbb00000003");
+    await page.emulateMedia({ media: "print" });
+    await expect(page.locator(".site-nav")).toBeHidden();
+    await expect(page.locator(".site-footer")).toBeHidden();
+    await expect(page.getByRole("button", { name: "Copy BibTeX" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Add to shortlist" })).toBeHidden();
+    await expect(page.getByRole("heading", { name: "Cite this entry" })).toBeVisible();
+    await expect(page.locator("#citation-bibtex")).toBeVisible();
+  });
+
+  test.describe("with JavaScript disabled", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("a shared shortlist link fully round-trips, and Remove links (not Add-to-shortlist) work", async ({
+      page,
+    }) => {
+      await page.goto("/psychotherapy/list?ids=aaaaaaaa00000001,bbbbbbbb00000003");
+      await expect(page.getByText("2 entries in this shortlist")).toBeVisible();
+      await expect(page.locator("#citation-bibtex")).toContainText(
+        "@misc{allodium:aaaaaaaa00000001,",
+      );
+      await expect(page.locator("#citation-bibtex")).toContainText(
+        "@article{allodium:bbbbbbbb00000003,",
+      );
+      // Add-to-shortlist buttons stay visible (inert without JS, same
+      // pattern as the copy buttons) — building a list needs JS, but
+      // reading/removing from an existing shared link never does.
+      await expect(
+        page.getByRole("button", { name: "Add to shortlist" }).first(),
+      ).toBeVisible();
+
+      await page.getByRole("link", { name: "Remove from this list" }).first().click();
+      await expect(page).toHaveURL(/\?ids=bbbbbbbb00000003$/);
+      await expect(page.getByText("1 entry in this shortlist")).toBeVisible();
+    });
+  });
+});
+
 test.describe("standard and disclaimer", () => {
   test("/standard explains the verification methodology with live coverage", async ({
     page,

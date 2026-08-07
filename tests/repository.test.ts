@@ -9,9 +9,11 @@ import {
   sanitizeFtsQuery,
   sanitizeLikeNeedle,
   searchEntries,
+  getEntriesByIds,
   getEntry,
   getManifest,
   getRelatedEntries,
+  parseShortlistIds,
   resolveCanonicalId,
 } from "../src/db/repository";
 import { EMPTY_FACET_FILTERS, buildFacetWhere, parseFacetFilters } from "../src/db/facets";
@@ -36,6 +38,31 @@ describe("query sanitizers", () => {
 
   it("strips LIKE wildcards from user input", () => {
     expect(sanitizeLikeNeedle("100%_defusion")).toBe("%100 defusion%");
+  });
+});
+
+describe("shortlist id parsing (Phase 2D)", () => {
+  it("splits on commas, trims whitespace, dedupes, and drops empties", () => {
+    expect(parseShortlistIds("aaa, bbb ,, aaa ,ccc")).toEqual(["aaa", "bbb", "ccc"]);
+  });
+
+  it("returns an empty array for null or blank input", () => {
+    expect(parseShortlistIds(null)).toEqual([]);
+    expect(parseShortlistIds("")).toEqual([]);
+    expect(parseShortlistIds("   ")).toEqual([]);
+  });
+
+  it("caps at the given limit, keeping the earliest-listed ids", () => {
+    const many = Array.from({ length: 60 }, (_, i) => `id${i}`).join(",");
+    const ids = parseShortlistIds(many, 50);
+    expect(ids.length).toBe(50);
+    expect(ids[0]).toBe("id0");
+    expect(ids[49]).toBe("id49");
+  });
+
+  it("defaults the cap to 50", () => {
+    const many = Array.from({ length: 60 }, (_, i) => `id${i}`).join(",");
+    expect(parseShortlistIds(many).length).toBe(50);
   });
 });
 
@@ -233,6 +260,33 @@ describe("local D1 repository + routes", () => {
   it("gives an honest empty array for an entry with no computed neighbors (Phase 2C)", async () => {
     const related = await getRelatedEntries(env.DB, "dddddddd00000007");
     expect(related).toEqual([]);
+  });
+
+  it("fetches multiple entries in request order, resolving aliases and reporting unresolvable ids (Phase 2D)", async () => {
+    const { entries, missingIds } = await getEntriesByIds(env.DB, [
+      "bbbbbbbb00000003",
+      "retired000000001", // alias -> aaaaaaaa00000001
+      "doesnotexist0000",
+    ]);
+    expect(entries.map((e) => e.id)).toEqual(["bbbbbbbb00000003", "aaaaaaaa00000001"]);
+    expect(missingIds).toEqual(["doesnotexist0000"]);
+    // Full PublicEntry shape (tags/verifications included), not a slim projection.
+    expect(entries[0].doi).toBe("10.1000/act.depression.meta");
+    expect(entries[0].tags.length).toBeGreaterThan(0);
+    expect(entries[1].title).toBe("Values Clarification Worksheet");
+  });
+
+  it("dedupes when a canonical id and its own alias are both requested (Phase 2D)", async () => {
+    const { entries, missingIds } = await getEntriesByIds(env.DB, [
+      "aaaaaaaa00000001",
+      "retired000000001",
+    ]);
+    expect(entries.map((e) => e.id)).toEqual(["aaaaaaaa00000001"]);
+    expect(missingIds).toEqual([]);
+  });
+
+  it("returns empty results for an empty id list without querying (Phase 2D)", async () => {
+    expect(await getEntriesByIds(env.DB, [])).toEqual({ entries: [], missingIds: [] });
   });
 
   it("ranks FTS results for representative queries", async () => {
@@ -441,6 +495,101 @@ describe("local D1 repository + routes", () => {
     await waitOnExecutionContext(ctx);
     const html = await res.text();
     expect(html).toContain("No related entries in this snapshot");
+  });
+
+  it('renders an "Add to shortlist" button on entry and search pages (Phase 2D)', async () => {
+    const entryCtx = createExecutionContext();
+    const entryRes = await app.request(
+      "/psychotherapy/entries/aaaaaaaa00000001",
+      {},
+      env,
+      entryCtx,
+    );
+    await waitOnExecutionContext(entryCtx);
+    const entryHtml = await entryRes.text();
+    expect(entryHtml).toContain('data-shortlist-id="aaaaaaaa00000001"');
+
+    const searchCtx = createExecutionContext();
+    const searchRes = await app.request(
+      "/psychotherapy/search?q=trauma",
+      {},
+      env,
+      searchCtx,
+    );
+    await waitOnExecutionContext(searchCtx);
+    const searchHtml = await searchRes.text();
+    expect(searchHtml).toContain('data-shortlist-id="cccccccc00000005"');
+  });
+
+  it("renders a persistent Shortlist nav link on every page (Phase 2D)", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request("/", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    const html = await res.text();
+    expect(html).toContain('href="/psychotherapy/list" id="shortlist-nav-link"');
+  });
+
+  it("renders a build-a-shortlist prompt when ids is absent (Phase 2D)", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request("/psychotherapy/list", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("No items yet");
+  });
+
+  it("renders shortlist entries, per-row remove links, and combined citation exports (Phase 2D)", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request(
+      "/psychotherapy/list?ids=aaaaaaaa00000001,bbbbbbbb00000003",
+      {},
+      env,
+      ctx,
+    );
+    await waitOnExecutionContext(ctx);
+    const html = await res.text();
+
+    expect(html).toContain("2 entries in this shortlist");
+    expect(html).toContain("Values Clarification Worksheet");
+    expect(html).toContain("Acceptance and Commitment Therapy for Depression");
+
+    // Each row's "Remove from this list" link points at the URL with just
+    // the *other* id left.
+    expect(html).toContain('href="/psychotherapy/list?ids=bbbbbbbb00000003"');
+    expect(html).toContain('href="/psychotherapy/list?ids=aaaaaaaa00000001"');
+
+    expect(html).toContain("Cite these entries");
+    expect(html).toContain("@misc{allodium:aaaaaaaa00000001,");
+    expect(html).toContain("@article{allodium:bbbbbbbb00000003,");
+    expect(html).toContain("TY  - GEN");
+    expect(html).toContain("TY  - JOUR");
+  });
+
+  it("shows an honest note for unresolvable ids without failing the whole page (Phase 2D)", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request(
+      "/psychotherapy/list?ids=bbbbbbbb00000003,doesnotexist0000",
+      {},
+      env,
+      ctx,
+    );
+    await waitOnExecutionContext(ctx);
+    const html = await res.text();
+    expect(html).toContain("1 entry in this shortlist");
+    expect(html).toContain("1 item in this link could not be shown");
+  });
+
+  it("shows a fully-missing state when every id in the link is unresolvable (Phase 2D)", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request(
+      "/psychotherapy/list?ids=doesnotexist0000",
+      {},
+      env,
+      ctx,
+    );
+    await waitOnExecutionContext(ctx);
+    const html = await res.text();
+    expect(html).toContain("None of the items in this link could be found.");
   });
 
   it("serves search HTML and labels blocked links", async () => {

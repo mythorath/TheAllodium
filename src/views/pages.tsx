@@ -2,7 +2,7 @@ import type { FC, Child } from "hono/jsx";
 import type { PublicEntry, RelatedEntry, SearchHit, SnapshotManifest } from "../contract";
 import { SITE_URL } from "../site-config";
 import type { AccessValue, FacetCounts, FacetFilters, StorageValue } from "../db/facets";
-import { buildCitations, citationUrl } from "../citations";
+import { buildApa, buildBibtexList, buildCitations, buildRisList, citationUrl } from "../citations";
 
 export const Layout: FC<{
   title: string;
@@ -12,9 +12,9 @@ export const Layout: FC<{
   /** Extra <head> content (e.g. a JSON-LD <script>) beyond the shared
    * boilerplate every page already gets. */
   headExtra?: Child;
-  /** Phase 2C: extra content just before </body> — used for a page-scoped
-   * <script src> (e.g. the entry page's copy-to-clipboard enhancement) so
-   * pages that don't need any JS never load it. */
+  /** Extra content just before </body>, beyond the site-wide `/app.js`
+   * every page already loads (see below). Unused as of Phase 2D but kept
+   * for future page-scoped additions. */
   bodyExtra?: Child;
   children?: Child;
 }> = (props) => {
@@ -42,6 +42,13 @@ export const Layout: FC<{
             </a>
             <a href="/psychotherapy/search">Search</a>
             <a href="/standard">The Standard</a>
+            {/* Phase 2D: a real link so it works with JS off (the empty
+             * shortlist state is a harmless, honest destination); `app.js`
+             * rewrites the href to include the reader's saved ids and
+             * appends a count once localStorage is available. */}
+            <a href="/psychotherapy/list" id="shortlist-nav-link">
+              Shortlist
+            </a>
           </nav>
         </header>
         <main id="main">{props.children}</main>
@@ -57,6 +64,11 @@ export const Layout: FC<{
             <a href="/disclaimer">the disclaimer page</a>.
           </p>
         </footer>
+        {/* Phase 2D: loaded site-wide now that both copy-to-clipboard
+         * (entry pages) and shortlist add/remove (entry + search/browse +
+         * list pages) live here — still the roadmap's single small
+         * self-hosted progressive-enhancement file, same unchanged CSP. */}
+        <script src="/app.js" defer />
         {props.bodyExtra ?? null}
       </body>
     </html>
@@ -364,21 +376,44 @@ const CITATION_LABELS = {
   apa: "APA",
 } as const;
 
-/** Phase 2C: renders a citation as a real link-terminated paragraph so the
- * DOI/URL segment is an actual clickable `doi.org` link, while still being
- * the exact plain text (via `textContent`) that the copy button copies and
- * that a no-JS reader can select manually. `prefix + url` must equal
- * `citations.apa` — enforced by slicing the known-length `url` off the end
- * of the full formatted string rather than duplicating formatting logic. */
-function ApaCitation(props: { text: string; url: string }) {
+/** Phase 2C: renders a citation's text with its trailing DOI/URL segment as
+ * a real clickable `doi.org` link, while the combined text content stays
+ * exactly `citations.apa` — enforced by slicing the known-length `url` off
+ * the end of the full formatted string rather than duplicating formatting
+ * logic. Shared by the single-entry (`ApaCitation`) and whole-shortlist
+ * (`ApaCitationList`, Phase 2D) renderings below. */
+function ApaCitationBody(props: { text: string; url: string }) {
   const prefix = props.text.slice(0, props.text.length - props.url.length);
   return (
-    <p id="citation-apa">
+    <>
       {prefix}
       <a href={props.url} rel="noopener noreferrer" target="_blank">
         {props.url}
       </a>
+    </>
+  );
+}
+
+function ApaCitation(props: { text: string; url: string }) {
+  return (
+    <p id="citation-apa">
+      <ApaCitationBody text={props.text} url={props.url} />
     </p>
+  );
+}
+
+/** Phase 2D: the shortlist page's combined APA block — one `<p>` per entry
+ * inside a single wrapping `#citation-apa`, so the existing copy-button
+ * `textContent` logic in `app.js` needs no changes to cover every entry. */
+function ApaCitationList(props: { items: Array<{ id: string; text: string; url: string }> }) {
+  return (
+    <div id="citation-apa">
+      {props.items.map((item) => (
+        <p key={item.id}>
+          <ApaCitationBody text={item.text} url={item.url} />
+        </p>
+      ))}
+    </div>
   );
 }
 
@@ -405,7 +440,6 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
       title={entry.title}
       canonicalPath={`/psychotherapy/entries/${entry.id}`}
       headExtra={<EntryJsonLd entry={entry} />}
-      bodyExtra={<script src="/app.js" defer />}
     >
       <h1>{entry.title}</h1>
       <p class="meta">
@@ -419,6 +453,16 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
         <a href={entry.canonical_url} rel="noopener noreferrer" target="_blank">
           Open source
         </a>
+      </p>
+      <p>
+        <button
+          type="button"
+          class="shortlist-button"
+          data-shortlist-id={entry.id}
+          aria-pressed="false"
+        >
+          Add to shortlist
+        </button>
       </p>
       <dl>
         <dt>ID</dt>
@@ -534,6 +578,14 @@ function filterEntries(filters: FacetFilters): Array<[string, string]> {
     ...filters.storage.map((v): [string, string] => [FACET_PARAM_NAMES.storage, v]),
     ...filters.linkStatus.map((v): [string, string] => [FACET_PARAM_NAMES.linkStatus, v]),
   ];
+}
+
+/** Phase 2D: the shortlist's entire state is this one query param, so
+ * "remove one item" is just linking to the same route with a shorter list —
+ * no JS required to edit a shortlist you're currently viewing. */
+function buildListHref(ids: string[]): string {
+  if (ids.length === 0) return "/psychotherapy/list";
+  return `/psychotherapy/list?ids=${ids.map(encodeURIComponent).join(",")}`;
 }
 
 function buildSearchHref(query: string, filters: FacetFilters, page?: number): string {
@@ -674,6 +726,14 @@ export const SearchPage: FC<{
                 {hit.source_org ? ` · ${hit.source_org}` : ""}
                 {hit.link_status === "blocked" ? " · link inconclusive" : ""}
               </div>
+              <button
+                type="button"
+                class="shortlist-button"
+                data-shortlist-id={hit.id}
+                aria-pressed="false"
+              >
+                Add to shortlist
+              </button>
             </li>
           ))}
         </ul>
@@ -690,6 +750,88 @@ export const SearchPage: FC<{
           ) : null}
         </nav>
       ) : null}
+    </Layout>
+  );
+};
+
+/**
+ * Phase 2D: `/psychotherapy/list?ids=…` — the URL is the entire shared
+ * state, no accounts, no cookies. `entries` is already in request order
+ * with aliases resolved and duplicates collapsed (see
+ * `getEntriesByIds()`); `missingCount` covers ids that didn't resolve to
+ * anything at all, rendered as an honest note rather than silently dropped.
+ */
+export const ListPage: FC<{
+  requestedCount: number;
+  entries: PublicEntry[];
+  missingCount: number;
+}> = ({ requestedCount, entries, missingCount }) => {
+  const ids = entries.map((e) => e.id);
+  const apaItems = entries.map((e) => ({ id: e.id, text: buildApa(e), url: citationUrl(e) }));
+
+  return (
+    <Layout title="Shortlist" canonicalPath="/psychotherapy/list">
+      <h1>Shortlist</h1>
+      {requestedCount === 0 ? (
+        <p class="meta">
+          No items yet. Use "Add to shortlist" on an entry or search result to
+          start one, or open a shortlist link someone shared with you.
+        </p>
+      ) : (
+        <>
+          <p class="meta" aria-live="polite">
+            {entries.length} {entries.length === 1 ? "entry" : "entries"} in this shortlist
+            {missingCount > 0
+              ? ` · ${missingCount} item${missingCount === 1 ? "" : "s"} in this link could not be shown (retired or unknown id${missingCount === 1 ? "" : "s"})`
+              : ""}
+          </p>
+          {entries.length === 0 ? (
+            <p class="meta" role="status">
+              None of the items in this link could be found.
+            </p>
+          ) : (
+            <>
+              <ul class="result-list">
+                {entries.map((entry) => (
+                  <li key={entry.id}>
+                    <a href={`/psychotherapy/entries/${entry.id}`}>{entry.title}</a>
+                    <div class="meta">
+                      {entry.therapy_modality} · {entry.resource_type}
+                      {entry.source_org ? ` · ${entry.source_org}` : ""}
+                      <LinkBadge status={entry.link_status} />
+                    </div>
+                    <a
+                      class="remove-link"
+                      href={buildListHref(ids.filter((id) => id !== entry.id))}
+                    >
+                      Remove from this list
+                    </a>
+                    <button
+                      type="button"
+                      class="shortlist-button"
+                      data-shortlist-id={entry.id}
+                      aria-pressed="false"
+                    >
+                      Add to shortlist
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <h2>Cite these entries</h2>
+              <CitationBlock format="bibtex" text={buildBibtexList(entries)} />
+              <CitationBlock format="ris" text={buildRisList(entries)} />
+              <div class="citation-block">
+                <h3>{CITATION_LABELS.apa}</h3>
+                <ApaCitationList items={apaItems} />
+                <button type="button" class="copy-button" data-copy-target="citation-apa">
+                  Copy APA
+                </button>
+              </div>
+            </>
+          )}
+        </>
+      )}
     </Layout>
   );
 };

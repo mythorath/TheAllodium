@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { parse as parseBibtex } from "@retorquere/bibtex-parser";
 import { read as readRis } from "@customcommander/ris";
-import { buildApa, buildBibtex, buildCitations, buildRis } from "../src/citations";
+import {
+  buildApa,
+  buildBibtex,
+  buildBibtexList,
+  buildCitations,
+  buildRis,
+  buildRisList,
+} from "../src/citations";
 import type { PublicEntry } from "../src/contract";
 
 /**
@@ -213,5 +220,53 @@ describe("buildCitations", () => {
     expect(citations.bibtex).toContain("@article");
     expect(citations.ris).toContain("TY  - JOUR");
     expect(citations.apa).toContain("Researcher, C.");
+  });
+});
+
+/**
+ * Phase 2D. Whole-shortlist export is just per-entry citations concatenated
+ * — validated the same way as the single-entry case, against real
+ * multi-record parsing rather than our own string-joining logic.
+ */
+describe("buildBibtexList", () => {
+  it("concatenates multiple entries into one parser-valid multi-entry .bib file", () => {
+    const bibtex = buildBibtexList([paperWithStructuredAuthors, clientResourceWithPlainAuthor]);
+    const parsed = parseBibtex(bibtex);
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.entries).toHaveLength(2);
+    expect(parsed.entries[0].key).toBe("allodium:bbbbbbbb00000003");
+    expect(parsed.entries[1].key).toBe("allodium:aaaaaaaa00000001");
+  });
+
+  it("returns an empty string for an empty list", () => {
+    expect(buildBibtexList([])).toBe("");
+  });
+
+  it("matches buildBibtex() output for a single-entry list", () => {
+    expect(buildBibtexList([paperWithStructuredAuthors])).toBe(
+      buildBibtex(paperWithStructuredAuthors),
+    );
+  });
+});
+
+describe("buildRisList", () => {
+  it("concatenates multiple entries into one parser-valid multi-record .ris file", () => {
+    const ris = buildRisList([paperWithStructuredAuthors, noAuthorNoDateEntry]);
+    const records = readRis(ris);
+    expect(records).toHaveLength(2);
+    expect(records[0].TY).toEqual(["JOUR"]);
+    expect(records[0].TI).toEqual([paperWithStructuredAuthors.title]);
+    expect(records[1].TY).toEqual(["GEN"]);
+    expect(records[1].TI).toEqual([noAuthorNoDateEntry.title]);
+  });
+
+  it("returns an empty string for an empty list", () => {
+    expect(buildRisList([])).toBe("");
+  });
+
+  it("matches buildRis() output for a single-entry list", () => {
+    expect(buildRisList([clientResourceWithPlainAuthor])).toBe(
+      buildRis(clientResourceWithPlainAuthor),
+    );
   });
 });

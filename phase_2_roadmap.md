@@ -10,10 +10,10 @@ todos:
     status: completed
   - id: plan-2c
     content: Plan related-entries block and client-side BibTeX/RIS/APA citation export
-    status: pending
+    status: completed
   - id: plan-2d
     content: Plan URL-encoded shareable shortlists, no accounts, plus the print stylesheet
-    status: pending
+    status: completed
   - id: plan-2e
     content: Plan the Selis-rendered OG card pipeline through R2 and Worker meta tags
     status: pending

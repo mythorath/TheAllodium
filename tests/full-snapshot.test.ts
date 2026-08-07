@@ -9,7 +9,7 @@ import fullSnapshotSql from "../fixtures/full_snapshot.sql?raw";
 import fullSnapshotManifest from "../fixtures/full_snapshot.manifest.json";
 import ftsSql from "../migrations/0002_fts.sql?raw";
 import { execStatements } from "./sql-test-utils";
-import { getManifest, getRelatedEntries, searchEntries } from "../src/db/repository";
+import { getEntriesByIds, getManifest, getRelatedEntries, searchEntries } from "../src/db/repository";
 import { EMPTY_FACET_FILTERS } from "../src/db/facets";
 
 /**
@@ -245,6 +245,28 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     const related = await getRelatedEntries(env.DB, sample!.entry_id);
     expect(related).toEqual(rawRows);
     expect(related.length).toBe(sample!.c);
+  });
+
+  it("batch-fetches a real 50-id shortlist in request order, matching individual lookups (Phase 2D)", async () => {
+    const sample = (
+      await env.DB.prepare(`SELECT id FROM entries ORDER BY id LIMIT 50`).all<{ id: string }>()
+    ).results.map((r) => r.id);
+    expect(sample.length).toBe(50);
+
+    // Deliberately reversed so a naive `ORDER BY id` in the batched query
+    // would fail this — order must come from the request, not from SQL.
+    const requested = [...sample].reverse();
+    const { entries, missingIds } = await getEntriesByIds(env.DB, requested);
+    expect(missingIds).toEqual([]);
+    expect(entries.map((e) => e.id)).toEqual(requested);
+
+    for (const id of [requested[0], requested[25], requested[49]]) {
+      const row = await env.DB.prepare(`SELECT title FROM entries WHERE id = ?`)
+        .bind(id)
+        .first<{ title: string }>();
+      const entry = entries.find((e) => e.id === id);
+      expect(entry?.title).toBe(row?.title);
+    }
   });
 
   it("sums modality facet counts to the total entry count (Phase 2B)", async () => {

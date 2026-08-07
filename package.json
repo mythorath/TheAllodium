@@ -38,6 +38,7 @@
     "gate:2a": "tsx scripts/close-2a-gate.ts",
     "gate:2b": "tsx scripts/close-2b-gate.ts",
     "gate:2c": "tsx scripts/close-2c-gate.ts",
+    "gate:2d": "tsx scripts/close-2d-gate.ts",
     "secrets:scan": "tsx scripts/secrets-scan.ts"
   },
   "dependencies": {
