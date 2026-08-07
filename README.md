@@ -90,6 +90,40 @@ The e2e suite runs against `npm run dev` (Miniflare-backed) using the same
 local D1 spike fixture as the Vitest suite — see `playwright.config.ts` and
 `e2e/routes.spec.ts`.
 
+## Phase 1F
+
+Launch readiness: JSON-LD, a live `/sitemap.xml`, `robots.txt`/`llms.txt`,
+security/caching headers, a production deploy bound to the
+`theallodium.org` Custom Domain, a `theallodium.com` → `theallodium.org`
+redirect, real HTTP-level smoke tests against the live edge, and a rollback
+runbook. See [docs/phase-1f-decision-record.md](docs/phase-1f-decision-record.md)
+and [docs/rollback-runbook.md](docs/rollback-runbook.md).
+
+```bash
+npm run deploy:staging
+npm run smoke:live -- --url https://theallodium-staging.theallodium.workers.dev
+
+npm run deploy:production          # requires --yes, baked into the script
+npm run configure:com-redirect     # requires --yes, baked into the script
+npm run smoke:live -- --url https://theallodium.org
+
+npm run gate:1f
+```
+
+`deploy:production` and `configure:com-redirect` need a `CLOUDFLARE_API_TOKEN`
+with Zone-level permissions in addition to the Account-level ones used by
+earlier phases — Cloudflare API tokens scope Account and Zone permissions
+independently, so full Account access does **not** imply any Zone access.
+Add, scoped to `theallodium.org` and `theallodium.com` specifically:
+
+- Zone → Workers Routes → Edit, on `theallodium.org` (for the Custom Domain attach on deploy)
+- Zone → Zone → Read, on both
+- Zone → Single Redirect → Edit, on `theallodium.com` (for the redirect rule)
+- Zone → DNS → Edit, on `theallodium.com` (a zone with zero DNS records has
+  no hostname for Cloudflare's edge to route requests to at all —
+  `configure-com-redirect.ts` also provisions a placeholder proxied A
+  record there, idempotently, before applying the redirect rule)
+
 ## Setup
 
 ```bash
@@ -141,3 +175,7 @@ until Phase 1F.
 | `npm run gate:1d` | Close Phase 1D: secrets scan, typecheck, test, verify deployment log, write `docs/phase-1d-decision-record.md` |
 | `npm run test:e2e` | Reset local D1, then run the Playwright + axe-core accessibility/route/search suite |
 | `npm run gate:1e` | Close Phase 1E: secrets scan, typecheck, test, e2e suite, write `docs/phase-1e-decision-record.md` |
+| `npm run deploy:staging` / `deploy:production` | Pre-flight checks, refuse to deploy against an empty D1, `wrangler deploy`, log the Version ID to `deployments/log.json` |
+| `npm run configure:com-redirect` | Idempotently PUT the `theallodium.com` → `theallodium.org` zone-level redirect rule |
+| `npm run smoke:live -- --url <base>` | Real HTTP-level checks against a deployed Worker (headers, sitemap/manifest parity, 404s, no cookies, and the `.com` redirect when `--url` is the production domain) |
+| `npm run gate:1f` | Close Phase 1F: secrets scan, typecheck, test, e2e suite, verify a production deploy + passing live smoke evidence exist, write `docs/phase-1f-decision-record.md` |

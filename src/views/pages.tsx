@@ -1,14 +1,29 @@
 import type { FC, Child } from "hono/jsx";
 import type { PublicEntry, SearchHit, SnapshotManifest } from "../contract";
+import { SITE_URL } from "../site-config";
 
-export const Layout: FC<{ title: string; children?: Child }> = (props) => {
+export const Layout: FC<{
+  title: string;
+  /** Path (no origin, e.g. "/standard") this page is canonically reachable
+   * at. Omit for pages with no single canonical URL (404, error). */
+  canonicalPath?: string;
+  /** Extra <head> content (e.g. a JSON-LD <script>) beyond the shared
+   * boilerplate every page already gets. */
+  headExtra?: Child;
+  children?: Child;
+}> = (props) => {
   return (
     <html lang="en">
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{props.title} · The Allodium</title>
+        {props.canonicalPath ? (
+          <link rel="canonical" href={`${SITE_URL}${props.canonicalPath}`} />
+        ) : null}
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="stylesheet" href="/styles.css" />
+        {props.headExtra ?? null}
       </head>
       <body>
         <a class="skip-link" href="#main">
@@ -48,7 +63,7 @@ export const HomePage: FC<{ manifest: SnapshotManifest | null }> = ({
     ? Object.keys(manifest.coverage_json.modalities ?? {}).length
     : 0;
   return (
-    <Layout title="Home">
+    <Layout title="Home" canonicalPath="/">
       <h1>The Allodium</h1>
       <p>
         A free, ad-free index of published psychotherapy research and client
@@ -104,7 +119,7 @@ export const StandardPage: FC<{ manifest: SnapshotManifest | null }> = ({
     ? JSON.parse(manifest.exclusion_counts_json)
     : {};
   return (
-    <Layout title="The Standard">
+    <Layout title="The Standard" canonicalPath="/standard">
       <h1>The Standard</h1>
       <p>
         No competitor in this space publishes its link-integrity and
@@ -227,7 +242,7 @@ export const StandardPage: FC<{ manifest: SnapshotManifest | null }> = ({
 };
 
 export const DisclaimerPage: FC = () => (
-  <Layout title="Disclaimer">
+  <Layout title="Disclaimer" canonicalPath="/disclaimer">
     <h1>Disclaimer</h1>
     <div class="prose">
       <p>
@@ -287,6 +302,45 @@ export const ErrorPage: FC = () => (
   </Layout>
 );
 
+/**
+ * Phase 1F: structured data for search engines. Describes the page itself
+ * (`WebPage`) rather than claiming to host the resource — the `mainEntity`
+ * points back at `canonical_url`, the actual source. Built only from
+ * `PublicEntry` fields already on the publication contract; never touches
+ * abstract/notes/rationale.
+ */
+function buildEntryJsonLd(entry: PublicEntry): Record<string, unknown> {
+  const mainEntity: Record<string, unknown> = {
+    "@type": entry.resource_type === "paper" ? "ScholarlyArticle" : "CreativeWork",
+    name: entry.title,
+    url: entry.canonical_url,
+    keywords: entry.tags.map((t) => t.name).join(", ") || undefined,
+  };
+  if (entry.author) mainEntity.author = { "@type": "Person", name: entry.author };
+  if (entry.published_date) mainEntity.datePublished = entry.published_date;
+  if (entry.source_org) mainEntity.publisher = { "@type": "Organization", name: entry.source_org };
+  if (entry.doi) mainEntity.identifier = `https://doi.org/${entry.doi}`;
+  if (entry.oa_status && entry.oa_status !== "closed") mainEntity.isAccessibleForFree = true;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    url: `${SITE_URL}/psychotherapy/entries/${entry.id}`,
+    name: entry.title,
+    mainEntity,
+  };
+}
+
+function EntryJsonLd(props: { entry: PublicEntry }) {
+  const json = JSON.stringify(buildEntryJsonLd(props.entry)).replace(/</g, "\\u003c");
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: json }}
+    />
+  );
+}
+
 function LinkBadge(props: { status: PublicEntry["link_status"] }) {
   if (props.status === "blocked") {
     return <span class="badge badge-blocked">link inconclusive</span>;
@@ -298,7 +352,11 @@ function LinkBadge(props: { status: PublicEntry["link_status"] }) {
 }
 
 export const EntryPage: FC<{ entry: PublicEntry }> = ({ entry }) => (
-  <Layout title={entry.title}>
+  <Layout
+    title={entry.title}
+    canonicalPath={`/psychotherapy/entries/${entry.id}`}
+    headExtra={<EntryJsonLd entry={entry} />}
+  >
     <h1>{entry.title}</h1>
     <p class="meta">
       <span class="badge">{entry.therapy_modality}</span>
@@ -380,7 +438,7 @@ export const SearchPage: FC<{
   const totalPages = Math.max(1, Math.ceil(props.total / props.pageSize));
   const q = encodeURIComponent(props.query);
   return (
-    <Layout title="Search">
+    <Layout title="Search" canonicalPath="/psychotherapy/search">
       <h1>Psychotherapy search</h1>
       <form class="search-form" method="get" action="/psychotherapy/search">
         <label class="visually-hidden" for="search-query">

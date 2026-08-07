@@ -57,5 +57,21 @@
     "postBookmark": "00000003-00000066-000050c0-af0fea5d24b963bf224db334d367b482",
     "evidencePath": "evidence/promote-staging-1786067829009.json",
     "gitCommit": "be100e3db94786e5ea0d6676c06499b1395a129d"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-08-07T02:57:13.241Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "versionId": "601963c3-273a-448f-af45-a1ecda089938",
+    "gitCommit": "dcf7ef1ad02dc4bc200909f7aa5fbc0eeabdac28"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-08-07T03:08:38.874Z",
+    "env": "production",
+    "databaseName": "theallodium-psychotherapy-production",
+    "versionId": "20278462-99fb-405b-86bc-184c6f8895d5",
+    "gitCommit": "dcf7ef1ad02dc4bc200909f7aa5fbc0eeabdac28"
   }
 ]

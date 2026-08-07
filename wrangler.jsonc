@@ -42,7 +42,10 @@
           "database_id": "f476d24a-c84d-4234-b080-fb22215a283e",
           "migrations_dir": "migrations"
         }
-      ]
+      ],
+      // Phase 1F: Custom Domain, not a raw Route -- this Worker is the sole
+      // origin for the whole zone. Cloudflare provisions DNS + TLS on deploy.
+      "routes": [{ "pattern": "theallodium.org", "custom_domain": true }]
     }
   }
 }

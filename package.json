@@ -26,10 +26,15 @@
     "db:promote:production": "tsx scripts/promote-snapshot.ts --env production --yes",
     "db:rollback:staging": "tsx scripts/rollback-snapshot.ts --env staging --yes",
     "db:rollback:production": "tsx scripts/rollback-snapshot.ts --env production --yes",
+    "deploy:staging": "tsx scripts/deploy-worker.ts --env staging",
+    "deploy:production": "tsx scripts/deploy-worker.ts --env production --yes",
+    "configure:com-redirect": "tsx scripts/configure-com-redirect.ts --yes",
+    "smoke:live": "tsx scripts/smoke-live.ts",
     "gate:1a": "tsx scripts/close-1a-gate.ts",
     "gate:1c": "tsx scripts/close-1c-gate.ts",
     "gate:1d": "tsx scripts/close-1d-gate.ts",
     "gate:1e": "tsx scripts/close-1e-gate.ts",
+    "gate:1f": "tsx scripts/close-1f-gate.ts",
     "secrets:scan": "tsx scripts/secrets-scan.ts"
   },
   "dependencies": {

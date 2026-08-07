@@ -7,7 +7,7 @@ import { run } from "./cli";
  * and rollback-snapshot.ts. Never rewrites an existing entry. */
 
 export interface DeploymentLogEntry {
-  type: "promote" | "rollback";
+  type: "promote" | "rollback" | "deploy";
   at: string;
   env: "staging" | "production";
   databaseName: string;
@@ -33,6 +33,12 @@ export function databaseNameFor(env: "staging" | "production"): string {
   return env === "production"
     ? "theallodium-psychotherapy-production"
     : "theallodium-psychotherapy-staging";
+}
+
+/** Matches the `name` field under `env.staging` / `env.production` in
+ * wrangler.jsonc — used to build the *.workers.dev URL for smoke tests. */
+export function workerNameFor(env: "staging" | "production"): string {
+  return env === "production" ? "theallodium-production" : "theallodium-staging";
 }
 
 export function timeTravelBookmark(env: string): string {

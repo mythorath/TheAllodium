@@ -1,0 +1,22 @@
+# The Allodium
+
+> A free, ad-free public index of published psychotherapy research and
+> client resources. Every entry carries published verification provenance —
+> DOI identity checks against Crossref/OpenAlex, legitimacy triage, and live
+> link-health status — so a source can be judged before it's followed. No
+> accounts, no cookies, no tracking.
+
+The Allodium indexes metadata and outbound links only. It does not host or
+republish full text, abstracts, or copyrighted files.
+
+## Key pages
+
+- [Search](https://theallodium.org/psychotherapy/search): keyword search
+  over the full psychotherapy collection.
+- [The Standard](https://theallodium.org/standard): the verification
+  methodology — identity checks, legitimacy triage, link-health gates — and
+  live coverage numbers for the current published snapshot.
+- [Disclaimer](https://theallodium.org/disclaimer): scope, limitations, and
+  crisis resources.
+- [Sitemap](https://theallodium.org/sitemap.xml): machine-readable list of
+  every entry and static route.

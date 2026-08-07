@@ -16,6 +16,7 @@ import {
 import fixtureSql from "../fixtures/spike_fixture.sql?raw";
 import ftsSql from "../migrations/0002_fts.sql?raw";
 import { execStatements } from "./sql-test-utils";
+import { SITE_URL } from "../src/site-config";
 
 async function loadFixture() {
   await execStatements(env.DB, fixtureSql);
@@ -286,5 +287,146 @@ describe("local D1 repository + routes", () => {
       `UPDATE snapshot_manifest SET abstract_search_enabled = 0 WHERE id = 1`,
     ).run();
     await execStatements(env.DB, ftsSql);
+  });
+
+  it("renders a canonical link matching SITE_URL on every page", async () => {
+    const cases: Array<[string, string]> = [
+      ["/", "/"],
+      ["/standard", "/standard"],
+      ["/disclaimer", "/disclaimer"],
+      ["/psychotherapy/search", "/psychotherapy/search"],
+      [
+        "/psychotherapy/entries/aaaaaaaa00000001",
+        "/psychotherapy/entries/aaaaaaaa00000001",
+      ],
+    ];
+    for (const [path, canonicalPath] of cases) {
+      const ctx = createExecutionContext();
+      const res = await app.request(path, {}, env, ctx);
+      await waitOnExecutionContext(ctx);
+      const html = await res.text();
+      expect(html).toContain(
+        `<link rel="canonical" href="${SITE_URL}${canonicalPath}"/>`,
+      );
+    }
+  });
+
+  it("omits a canonical link on the 404 page", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request("/does-not-exist", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    const html = await res.text();
+    expect(html).not.toContain('rel="canonical"');
+  });
+
+  it("embeds valid ScholarlyArticle JSON-LD on a paper entry page", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request(
+      "/psychotherapy/entries/bbbbbbbb00000003",
+      {},
+      env,
+      ctx,
+    );
+    await waitOnExecutionContext(ctx);
+    const html = await res.text();
+    const match = html.match(
+      /<script type="application\/ld\+json">([^<]*)<\/script>/,
+    );
+    expect(match).not.toBeNull();
+    const jsonLd = JSON.parse(match![1]);
+    expect(jsonLd["@context"]).toBe("https://schema.org");
+    expect(jsonLd["@type"]).toBe("WebPage");
+    expect(jsonLd.url).toBe(
+      `${SITE_URL}/psychotherapy/entries/bbbbbbbb00000003`,
+    );
+    expect(jsonLd.mainEntity["@type"]).toBe("ScholarlyArticle");
+    expect(jsonLd.mainEntity.identifier).toBe(
+      "https://doi.org/10.1000/act.depression.meta",
+    );
+  });
+
+  it("omits JSON-LD on non-entry pages", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request("/", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    const html = await res.text();
+    expect(html).not.toContain("application/ld+json");
+  });
+
+  it("serves /sitemap.xml with static routes and every entry, cached for an hour", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request("/sitemap.xml", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/xml");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
+    const xml = await res.text();
+    expect(xml).toContain(`<loc>${SITE_URL}/</loc>`);
+    expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy/search</loc>`);
+    expect(xml).toContain(
+      `<loc>${SITE_URL}/psychotherapy/entries/aaaaaaaa00000001</loc>`,
+    );
+    const urlCount = (xml.match(/<url>/g) ?? []).length;
+    expect(urlCount).toBe(12 + 4);
+  });
+
+  it("sets the shared security header set on HTML and JSON responses alike", async () => {
+    const routes = ["/", "/standard", "/psychotherapy/search", "/health"];
+    for (const path of routes) {
+      const ctx = createExecutionContext();
+      const res = await app.request(path, {}, env, ctx);
+      await waitOnExecutionContext(ctx);
+      expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+      expect(res.headers.get("X-Frame-Options")).toBe("DENY");
+      expect(res.headers.get("Referrer-Policy")).toBe(
+        "strict-origin-when-cross-origin",
+      );
+      expect(res.headers.get("Content-Security-Policy")).toContain(
+        "default-src 'self'",
+      );
+      expect(res.headers.get("Permissions-Policy")).toContain(
+        "geolocation=()",
+      );
+    }
+  });
+
+  it("caches successful HTML GETs for 5 minutes but leaves sitemap's own cache header alone", async () => {
+    const htmlCtx = createExecutionContext();
+    const htmlRes = await app.request("/", {}, env, htmlCtx);
+    await waitOnExecutionContext(htmlCtx);
+    expect(htmlRes.headers.get("Cache-Control")).toBe("public, max-age=300");
+
+    const sitemapCtx = createExecutionContext();
+    const sitemapRes = await app.request("/sitemap.xml", {}, env, sitemapCtx);
+    await waitOnExecutionContext(sitemapCtx);
+    expect(sitemapRes.headers.get("Cache-Control")).toBe(
+      "public, max-age=3600",
+    );
+  });
+
+  it("applies the security header set to the 500 error page too", async () => {
+    const original = console.error;
+    console.error = () => {};
+    try {
+      // Rename (not drop) so the table -- schema and rows both -- comes
+      // back untouched afterwards; getManifest() throws on the missing
+      // table, which is what actually exercises app.onError here.
+      await env.DB.prepare(
+        `ALTER TABLE snapshot_manifest RENAME TO snapshot_manifest_tmp`,
+      ).run();
+      const ctx = createExecutionContext();
+      const res = await app.request("/", {}, env, ctx);
+      await waitOnExecutionContext(ctx);
+      expect(res.status).toBe(500);
+      expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+      expect(res.headers.get("Content-Security-Policy")).toContain(
+        "default-src 'self'",
+      );
+    } finally {
+      await env.DB.prepare(
+        `ALTER TABLE snapshot_manifest_tmp RENAME TO snapshot_manifest`,
+      ).run();
+      console.error = original;
+    }
   });
 });

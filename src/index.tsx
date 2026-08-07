@@ -2,9 +2,11 @@ import { Hono } from "hono";
 import {
   getEntry,
   getManifest,
+  listEntriesForSitemap,
   resolveCanonicalId,
   searchEntries,
 } from "./db/repository";
+import { buildSitemapXml, STATIC_SITEMAP_PATHS } from "./sitemap";
 import {
   DisclaimerPage,
   EntryPage,
@@ -21,7 +23,39 @@ export type AppBindings = {
   ABSTRACT_SEARCH_ENABLED?: string;
 };
 
+/**
+ * Phase 1F: same header set as `public/_headers` (which only covers literal
+ * static-asset responses, per Cloudflare's docs), applied here to every
+ * Worker-rendered response — including error responses, set explicitly in
+ * `app.onError` below since a thrown error bypasses the rest of this
+ * middleware's post-`next()` code.
+ */
+const SECURITY_HEADERS: Record<string, string> = {
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "X-Frame-Options": "DENY",
+  "Permissions-Policy": "geolocation=(), camera=(), microphone=(), interest-cohort=()",
+  "Content-Security-Policy":
+    "default-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'",
+};
+
 const app = new Hono<{ Bindings: AppBindings }>();
+
+app.use("*", async (c, next) => {
+  await next();
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    c.res.headers.set(key, value);
+  }
+  const contentType = c.res.headers.get("Content-Type") ?? "";
+  if (
+    c.req.method === "GET" &&
+    c.res.ok &&
+    !c.res.headers.has("Cache-Control") &&
+    contentType.includes("text/html")
+  ) {
+    c.res.headers.set("Cache-Control", "public, max-age=300");
+  }
+});
 
 app.get("/", async (c) => {
   const manifest = await getManifest(c.env.DB);
@@ -34,6 +68,10 @@ app.get("/standard", async (c) => {
 });
 
 app.get("/disclaimer", (c) => c.html(<DisclaimerPage />));
+
+// Browsers request this path unconditionally regardless of <link rel="icon">;
+// redirect to the real static asset instead of serving 404 noise.
+app.get("/favicon.ico", (c) => c.redirect("/favicon.svg", 301));
 
 app.get("/psychotherapy/entries/:id", async (c) => {
   const id = c.req.param("id");
@@ -71,6 +109,21 @@ app.get("/psychotherapy/search", async (c) => {
   );
 });
 
+app.get("/sitemap.xml", async (c) => {
+  const rows = await listEntriesForSitemap(c.env.DB);
+  const urls = [
+    ...STATIC_SITEMAP_PATHS.map((path) => ({ path })),
+    ...rows.map((row) => ({
+      path: `/psychotherapy/entries/${row.id}`,
+      lastmod: row.updated_at,
+    })),
+  ];
+  return c.text(buildSitemapXml(urls), 200, {
+    "Content-Type": "application/xml; charset=UTF-8",
+    "Cache-Control": "public, max-age=3600",
+  });
+});
+
 app.get("/health", async (c) => {
   const manifest = await getManifest(c.env.DB);
   return c.json({
@@ -85,9 +138,13 @@ app.get("/health", async (c) => {
 
 app.notFound((c) => c.html(<NotFoundPage />, 404));
 
-app.onError((err, c) => {
+app.onError(async (err, c) => {
   console.error(err);
-  return c.html(<ErrorPage />, 500);
+  const res = await c.html(<ErrorPage />, 500);
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    res.headers.set(key, value);
+  }
+  return res;
 });
 
 export default app;

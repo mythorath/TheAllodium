@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: plan-1f
     content: Plan discoverability, domain, operations, and launch-readiness work
-    status: pending
+    status: completed
 isProject: false
 ---
 

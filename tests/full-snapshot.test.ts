@@ -136,6 +136,18 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     expect(page2Html).not.toBe(page1Html);
   });
 
+  it("serves a full sitemap.xml under the 50,000-URL single-sitemap limit (Phase 1F)", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request("/sitemap.xml", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(200);
+    const xml = await res.text();
+    const urlCount = (xml.match(/<url>/g) ?? []).length;
+    // 4 static routes + one <url> per real entry.
+    expect(urlCount).toBe(4 + fullSnapshotManifest.entry_count);
+    expect(urlCount).toBeLessThan(50_000);
+  });
+
   it("matches the manifest's row-set checksum and row counts", async () => {
     const manifestRow = await env.DB.prepare(
       "SELECT checksum, entry_count, tag_link_count, alias_count FROM snapshot_manifest WHERE id = 1",

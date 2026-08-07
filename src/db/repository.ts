@@ -165,6 +165,20 @@ export async function getEntry(db: D1Database, id: string): Promise<PublicEntry 
   return mapEntry(row, tags, verifications);
 }
 
+/** Phase 1F: minimal row shape for /sitemap.xml — never selects public-safe
+ * fields beyond what's already on the contract, since this is still a
+ * public surface. */
+export async function listEntriesForSitemap(
+  db: D1Database,
+): Promise<Array<{ id: string; updated_at: string | null }>> {
+  return (
+    await db.prepare(`SELECT id, updated_at FROM entries ORDER BY id`).all<{
+      id: string;
+      updated_at: string | null;
+    }>()
+  ).results;
+}
+
 /** Escape user query for FTS5 MATCH. Returns null if nothing searchable remains. */
 export function sanitizeFtsQuery(raw: string): string | null {
   const tokens = raw
