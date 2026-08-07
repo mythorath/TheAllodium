@@ -132,5 +132,61 @@
     "postBookmark": "00000009-000000f2-000050c0-943290ee9ab5464d6c7ba5d86aa130a6",
     "evidencePath": "evidence/promote-staging-1786077409467.json",
     "gitCommit": "a93ff6ec9905a9079fa6adad40f1ad81047affea"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-08-07T06:51:36.908Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "versionId": "ac5d18f4-ec55-46c0-ba00-4fd7b18a6b1d",
+    "gitCommit": "05ab1d95fabbb8c4410df0cff0e740df7662773d"
+  },
+  {
+    "type": "promote",
+    "at": "2026-08-07T07:19:29.849Z",
+    "env": "production",
+    "databaseName": "theallodium-psychotherapy-production",
+    "snapshot": "full_snapshot",
+    "entryCount": 5643,
+    "tagLinkCount": 18654,
+    "aliasCount": 1,
+    "checksum": "bf1222c04f7a31e9c4a0d296752f65838e56a25d98e67d7498ac963f1e2c7479",
+    "sourceGeneratedAt": "2026-08-07T03:52:12.194699+00:00",
+    "preBookmark": "00000020-00000004-000050c0-754078e60ce2f52504f8ae6cf8489bd9",
+    "postBookmark": "00000020-000000df-000050c0-68fbee86de75501bf2dfe1830f8f7cb4",
+    "evidencePath": "evidence/promote-production-1786087167707.json",
+    "gitCommit": "05ab1d95fabbb8c4410df0cff0e740df7662773d"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-08-07T07:20:20.397Z",
+    "env": "production",
+    "databaseName": "theallodium-psychotherapy-production",
+    "versionId": "6c5e5de4-553d-48e3-9cbc-39a05f69eac0",
+    "gitCommit": "05ab1d95fabbb8c4410df0cff0e740df7662773d"
+  },
+  {
+    "type": "og-card-upload",
+    "at": "2026-08-07T07:44:09.878Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "bucketName": "theallodium-og-cards-staging",
+    "checksum": "bf1222c04f7a31e9c4a0d296752f65838e56a25d98e67d7498ac963f1e2c7479",
+    "cardCount": 5643,
+    "prunedChecksum": null,
+    "prunedCount": 0,
+    "gitCommit": "05ab1d95fabbb8c4410df0cff0e740df7662773d"
+  },
+  {
+    "type": "og-card-upload",
+    "at": "2026-08-07T08:24:04.854Z",
+    "env": "production",
+    "databaseName": "theallodium-psychotherapy-production",
+    "bucketName": "theallodium-og-cards-production",
+    "checksum": "bf1222c04f7a31e9c4a0d296752f65838e56a25d98e67d7498ac963f1e2c7479",
+    "cardCount": 5643,
+    "prunedChecksum": null,
+    "prunedCount": 0,
+    "gitCommit": "05ab1d95fabbb8c4410df0cff0e740df7662773d"
   }
 ]

@@ -25,19 +25,19 @@ todos:
     status: pending
   - id: precompute-neighbors
     content: Build-time kNN over backend/data/embeddings.npy, written into D1 as a neighbor table, so related-resources works with Selis offline
-    status: pending
+    status: completed
   - id: faceted-search
     content: Facet queries against D1 (modality, client-facing vs clinician-facing, oa_status, stored vs link-only) with FTS5 keyword search, no result cap
-    status: pending
+    status: completed
   - id: citation-export
     content: Client-side BibTeX, RIS, and APA citation export with copy button, per entry and per collection
-    status: pending
+    status: completed
   - id: collections-print
     content: URL-encoded shareable shortlists with no accounts, plus a print stylesheet
-    status: pending
+    status: completed
   - id: og-images
     content: Render OpenGraph cards for every entry locally on Selis, push to R2, reference by entry id from the Worker's meta tags
-    status: pending
+    status: completed
   - id: gpu-tunnel-layer
     content: Expose an optional GPU service at gpu.theallodium.org over Cloudflare Tunnel from Selis; Worker calls it with a short timeout and falls back to D1 FTS5
     status: pending

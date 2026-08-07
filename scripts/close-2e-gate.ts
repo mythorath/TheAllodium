@@ -151,11 +151,17 @@ abstract/notes/rationale. \`HomePage\`, \`SearchPage\`, \`StandardPage\`, and
   style. Cross-checks \`--checksum\` against the target environment's live
   \`snapshot_manifest.checksum\` before uploading anything, so a stale or
   mistyped checksum can never silently upload cards for the wrong snapshot
-  generation. Skips objects that already exist (a HEAD check per key) for
-  idempotent reruns; after a fully successful upload, deletes any *other*
-  checksum prefix already in the bucket (list + bulk delete) so storage
-  doesn't grow unbounded across promotions — the new generation is always
-  uploaded and confirmed before the old one is removed. New
+  generation. Determines what to skip via one upfront paginated listing of
+  the checksum prefix rather than a HEAD request per file — a first, naive
+  per-file-HEAD version doubled the request count against the real R2 REST
+  API and reproducibly tripped its rate limit (429s, then a longer-lived
+  general abuse-prevention throttle) partway through the real ~5,643-file
+  production upload; fixed with the bulk listing plus low concurrency, a
+  fixed inter-request pacing delay, and exponential-backoff retries on any
+  remaining transient failure. After a fully successful upload, deletes any
+  *other* checksum prefix already in the bucket (list + bulk delete) so
+  storage doesn't grow unbounded across promotions — the new generation is
+  always uploaded and confirmed before the old one is removed. New
   \`"og-card-upload"\` entry type in \`deployments-log.ts\`, logging
   \`{ checksum, cardCount, prunedChecksum }\`.
 - \`docs/rollback-runbook.md\` gets an explicit new section: R2 cards are
