@@ -1,0 +1,19 @@
+{
+  "contract_version": "1",
+  "schema_version": "1",
+  "collection": "psychotherapy",
+  "source_generated_at": "2026-08-07T01:18:24.259654+00:00",
+  "entry_count": 260,
+  "tag_link_count": 817,
+  "alias_count": 1,
+  "checksum": "d3250f53d08935f81787d8db86424db90084ab149c0aa7b57688bf10fa33b054",
+  "abstract_search_enabled": false,
+  "exclusion_counts_json": {
+    "gated_excluded": 29,
+    "retracted_excluded": 0,
+    "junk_titles_rejected": 1,
+    "dead_links_excluded": 0,
+    "already_aliased_excluded": 1,
+    "duplicate_rows_merged": 0
+  }
+}

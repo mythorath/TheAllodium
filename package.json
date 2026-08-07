@@ -18,7 +18,10 @@
     "db:create:staging": "tsx scripts/create-staging-d1.ts",
     "db:migrate:staging": "tsx scripts/migrate-staging.ts",
     "db:smoke:staging": "tsx scripts/smoke-staging.ts",
+    "db:load:staging-sample": "tsx scripts/load-staging-sample.ts",
+    "db:smoke:staging-sample": "tsx scripts/smoke-staging-sample.ts",
     "gate:1a": "tsx scripts/close-1a-gate.ts",
+    "gate:1c": "tsx scripts/close-1c-gate.ts",
     "secrets:scan": "tsx scripts/secrets-scan.ts"
   },
   "dependencies": {

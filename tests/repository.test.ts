@@ -14,33 +14,11 @@ import {
 } from "../src/db/repository";
 import fixtureSql from "../fixtures/spike_fixture.sql?raw";
 import ftsSql from "../migrations/0002_fts.sql?raw";
-
-/** Split SQL into statements; ignores line comments. */
-function splitSql(sql: string): string[] {
-  const withoutBlockComments = sql.replace(/\/\*[\s\S]*?\*\//g, "");
-  const lines = withoutBlockComments
-    .split("\n")
-    .map((line) => {
-      const idx = line.indexOf("--");
-      return idx >= 0 ? line.slice(0, idx) : line;
-    })
-    .join("\n");
-
-  return lines
-    .split(";")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-}
-
-async function execStatements(sql: string) {
-  for (const statement of splitSql(sql)) {
-    await env.DB.prepare(statement).run();
-  }
-}
+import { execStatements } from "./sql-test-utils";
 
 async function loadFixture() {
-  await execStatements(fixtureSql);
-  await execStatements(ftsSql);
+  await execStatements(env.DB, fixtureSql);
+  await execStatements(env.DB, ftsSql);
 }
 
 describe("query sanitizers", () => {
@@ -214,7 +192,7 @@ describe("local D1 repository + routes", () => {
     await env.DB.prepare(
       `UPDATE snapshot_manifest SET abstract_search_enabled = 1 WHERE id = 1`,
     ).run();
-    await execStatements(ftsSql);
+    await execStatements(env.DB, ftsSql);
 
     const abstractHit = await env.DB.prepare(
       `SELECT entry_id FROM entry_fts WHERE entry_fts MATCH '"evaluates"'`,
@@ -236,6 +214,6 @@ describe("local D1 repository + routes", () => {
     await env.DB.prepare(
       `UPDATE snapshot_manifest SET abstract_search_enabled = 0 WHERE id = 1`,
     ).run();
-    await execStatements(ftsSql);
+    await execStatements(env.DB, ftsSql);
   });
 });

@@ -7,10 +7,10 @@ todos:
     status: completed
   - id: plan-1b
     content: Plan structured ACT provenance, rights states, aliases, and versioned snapshot export
-    status: pending
+    status: completed
   - id: plan-1c
     content: Plan the thin staging vertical slice using representative records
-    status: pending
+    status: completed
   - id: plan-1d
     content: Plan the deterministic full-snapshot promotion and rollback pipeline
     status: pending
