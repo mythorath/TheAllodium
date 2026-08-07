@@ -1,6 +1,7 @@
 import type { FC, Child } from "hono/jsx";
 import type { PublicEntry, SearchHit, SnapshotManifest } from "../contract";
 import { SITE_URL } from "../site-config";
+import type { AccessValue, FacetCounts, FacetFilters, StorageValue } from "../db/facets";
 
 export const Layout: FC<{
   title: string;
@@ -427,6 +428,74 @@ export const EntryPage: FC<{ entry: PublicEntry }> = ({ entry }) => (
   </Layout>
 );
 
+const FACET_PARAM_NAMES = {
+  modality: "modality",
+  audience: "audience",
+  access: "access",
+  storage: "storage",
+  linkStatus: "link_status",
+} as const;
+
+const ACCESS_LABELS: Record<AccessValue, string> = {
+  free: "Free to read",
+  paywalled: "Paywalled",
+};
+
+const STORAGE_LABELS: Record<StorageValue, string> = {
+  stored: "Available here",
+  link_only: "External link only",
+};
+
+/** Every active filter, as `[paramName, value][]` — the single source both
+ * the checkbox `checked` state and the URL-building helpers below draw from,
+ * so pager/clear-filter links can never drift out of sync with what's
+ * actually selected. */
+function filterEntries(filters: FacetFilters): Array<[string, string]> {
+  return [
+    ...filters.modality.map((v): [string, string] => [FACET_PARAM_NAMES.modality, v]),
+    ...filters.audience.map((v): [string, string] => [FACET_PARAM_NAMES.audience, v]),
+    ...filters.access.map((v): [string, string] => [FACET_PARAM_NAMES.access, v]),
+    ...filters.storage.map((v): [string, string] => [FACET_PARAM_NAMES.storage, v]),
+    ...filters.linkStatus.map((v): [string, string] => [FACET_PARAM_NAMES.linkStatus, v]),
+  ];
+}
+
+function buildSearchHref(query: string, filters: FacetFilters, page?: number): string {
+  const parts: string[] = [];
+  if (query) parts.push(`q=${encodeURIComponent(query)}`);
+  for (const [name, value] of filterEntries(filters)) {
+    parts.push(`${name}=${encodeURIComponent(value)}`);
+  }
+  if (page && page > 1) parts.push(`page=${page}`);
+  return `/psychotherapy/search${parts.length > 0 ? `?${parts.join("&")}` : ""}`;
+}
+
+function FacetGroup(props: {
+  legend: string;
+  paramName: string;
+  options: Array<{ value: string; count: number; selected: boolean }>;
+  labelFor?: (value: string) => string;
+}) {
+  if (props.options.length === 0) return null;
+  return (
+    <fieldset class="facet-group">
+      <legend>{props.legend}</legend>
+      {props.options.map((opt) => (
+        <label class="facet-option" key={opt.value}>
+          <input
+            type="checkbox"
+            name={props.paramName}
+            value={opt.value}
+            checked={opt.selected}
+          />
+          {(props.labelFor ? props.labelFor(opt.value) : opt.value)} (
+          {opt.count.toLocaleString()})
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
 export const SearchPage: FC<{
   query: string;
   hits: SearchHit[];
@@ -434,39 +503,92 @@ export const SearchPage: FC<{
   page: number;
   pageSize: number;
   mode: string;
+  filters: FacetFilters;
+  facets: FacetCounts;
 }> = (props) => {
   const totalPages = Math.max(1, Math.ceil(props.total / props.pageSize));
-  const q = encodeURIComponent(props.query);
+  const hasFilters = filterEntries(props.filters).length > 0;
+  const hasFacetOptions =
+    props.facets.modality.length > 0 ||
+    props.facets.audience.length > 0 ||
+    props.facets.access.length > 0 ||
+    props.facets.storage.length > 0 ||
+    props.facets.linkStatus.length > 0;
+
   return (
     <Layout title="Search" canonicalPath="/psychotherapy/search">
       <h1>Psychotherapy search</h1>
-      <form class="search-form" method="get" action="/psychotherapy/search">
-        <label class="visually-hidden" for="search-query">
-          Search query
-        </label>
-        <input
-          id="search-query"
-          type="search"
-          name="q"
-          value={props.query}
-          placeholder="Keyword search"
-        />
-        <button type="submit">Search</button>
+      <form method="get" action="/psychotherapy/search">
+        <div class="search-form">
+          <label class="visually-hidden" for="search-query">
+            Search query
+          </label>
+          <input
+            id="search-query"
+            type="search"
+            name="q"
+            value={props.query}
+            placeholder="Keyword search"
+          />
+          <button type="submit">Search</button>
+        </div>
+        {hasFacetOptions ? (
+          <div class="facet-groups">
+            <FacetGroup
+              legend="Modality"
+              paramName={FACET_PARAM_NAMES.modality}
+              options={props.facets.modality}
+            />
+            <FacetGroup
+              legend="Audience"
+              paramName={FACET_PARAM_NAMES.audience}
+              options={props.facets.audience}
+            />
+            <FacetGroup
+              legend="Access"
+              paramName={FACET_PARAM_NAMES.access}
+              options={props.facets.access}
+              labelFor={(v) => ACCESS_LABELS[v as AccessValue] ?? v}
+            />
+            <FacetGroup
+              legend="Storage"
+              paramName={FACET_PARAM_NAMES.storage}
+              options={props.facets.storage}
+              labelFor={(v) => STORAGE_LABELS[v as StorageValue] ?? v}
+            />
+            <FacetGroup
+              legend="Link status"
+              paramName={FACET_PARAM_NAMES.linkStatus}
+              options={props.facets.linkStatus}
+            />
+            {hasFilters ? (
+              <p class="meta">
+                <a href={buildSearchHref(props.query, { modality: [], audience: [], access: [], storage: [], linkStatus: [] })}>
+                  Clear filters
+                </a>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </form>
-      {props.query ? (
-        <p class="meta" aria-live="polite">
-          {props.total} result{props.total === 1 ? "" : "s"} · mode {props.mode} ·
-          page {props.page}/{totalPages}
-        </p>
-      ) : (
+      {props.mode === "empty" ? (
         <p class="meta">Enter a keyword to search the public index.</p>
-      )}
-      {props.query && props.total === 0 ? (
-        <p class="meta" role="status">
-          No results for "{props.query}". Try a broader or differently
-          spelled term.
-        </p>
       ) : (
+        <p class="meta" aria-live="polite">
+          {props.total} result{props.total === 1 ? "" : "s"}
+          {props.query ? ` for "${props.query}"` : hasFilters ? " matching your filters" : ""}
+          {" · "}page {props.page}/{totalPages}
+        </p>
+      )}
+      {props.mode !== "empty" && props.total === 0 ? (
+        <p class="meta" role="status">
+          {props.query ? (
+            <>No results for "{props.query}". Try a broader or differently spelled term.</>
+          ) : (
+            <>No entries match the selected filters. Try removing one.</>
+          )}
+        </p>
+      ) : props.mode !== "empty" ? (
         <ul class="result-list">
           {props.hits.map((hit) => (
             <li key={hit.id}>
@@ -479,16 +601,16 @@ export const SearchPage: FC<{
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
       {props.total > props.pageSize ? (
         <nav class="pager" aria-label="Pagination">
           {props.page > 1 ? (
-            <a href={`/psychotherapy/search?q=${q}&page=${props.page - 1}`}>
+            <a href={buildSearchHref(props.query, props.filters, props.page - 1)}>
               Previous
             </a>
           ) : null}
           {props.page < totalPages ? (
-            <a href={`/psychotherapy/search?q=${q}&page=${props.page + 1}`}>Next</a>
+            <a href={buildSearchHref(props.query, props.filters, props.page + 1)}>Next</a>
           ) : null}
         </nav>
       ) : null}

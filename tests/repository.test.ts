@@ -13,6 +13,8 @@ import {
   getManifest,
   resolveCanonicalId,
 } from "../src/db/repository";
+import { EMPTY_FACET_FILTERS, buildFacetWhere, parseFacetFilters } from "../src/db/facets";
+import type { FacetFilters } from "../src/db/facets";
 import fixtureSql from "../fixtures/spike_fixture.sql?raw";
 import ftsSql from "../migrations/0002_fts.sql?raw";
 import { execStatements } from "./sql-test-utils";
@@ -33,6 +35,91 @@ describe("query sanitizers", () => {
 
   it("strips LIKE wildcards from user input", () => {
     expect(sanitizeLikeNeedle("100%_defusion")).toBe("%100 defusion%");
+  });
+});
+
+describe("facet filter parsing and WHERE building", () => {
+  function getAllFrom(params: Record<string, string[]>) {
+    return (name: string) => params[name];
+  }
+
+  it("reads repeated params per dimension", () => {
+    const filters = parseFacetFilters(
+      getAllFrom({
+        modality: ["cbt", "act"],
+        audience: ["client"],
+        access: ["free"],
+        storage: ["stored"],
+        link_status: ["ok", "blocked"],
+      }),
+    );
+    expect(filters).toEqual({
+      modality: ["cbt", "act"],
+      audience: ["client"],
+      access: ["free"],
+      storage: ["stored"],
+      linkStatus: ["ok", "blocked"],
+    });
+  });
+
+  it("defaults every dimension to empty when params are absent", () => {
+    expect(parseFacetFilters(getAllFrom({}))).toEqual(EMPTY_FACET_FILTERS);
+  });
+
+  it("drops values outside the allowlist for enum dimensions, but not modality (free text)", () => {
+    const filters = parseFacetFilters(
+      getAllFrom({
+        audience: ["client", "not-a-real-audience"],
+        access: ["free", "bogus"],
+        link_status: ["ok", "bogus"],
+        modality: ["anything-goes"],
+      }),
+    );
+    expect(filters.audience).toEqual(["client"]);
+    expect(filters.access).toEqual(["free"]);
+    expect(filters.linkStatus).toEqual(["ok"]);
+    expect(filters.modality).toEqual(["anything-goes"]);
+  });
+
+  it("dedupes and caps the number of values per dimension", () => {
+    const many = Array.from({ length: 40 }, (_, i) => `modality-${i}`);
+    const filters = parseFacetFilters(getAllFrom({ modality: [...many, ...many] }));
+    expect(filters.modality.length).toBe(25);
+    expect(new Set(filters.modality).size).toBe(25);
+  });
+
+  it("builds no WHERE clause when nothing is active", () => {
+    expect(buildFacetWhere(EMPTY_FACET_FILTERS)).toEqual({ sql: "", binds: [] });
+  });
+
+  it("builds an IN clause for simple dimensions and ANDs across dimensions", () => {
+    const { sql, binds } = buildFacetWhere({
+      ...EMPTY_FACET_FILTERS,
+      modality: ["cbt", "act"],
+      linkStatus: ["ok"],
+    });
+    expect(sql).toBe("e.therapy_modality IN (?, ?) AND e.link_status IN (?)");
+    expect(binds).toEqual(["cbt", "act", "ok"]);
+  });
+
+  it("excludes only the named dimension's own filter", () => {
+    const filters: FacetFilters = {
+      ...EMPTY_FACET_FILTERS,
+      modality: ["cbt"],
+      audience: ["client"],
+    };
+    const { sql, binds } = buildFacetWhere(filters, "modality");
+    expect(sql).toBe("e.audience IN (?)");
+    expect(binds).toEqual(["client"]);
+  });
+
+  it("maps access/storage to their derived oa_status/is_link_only conditions", () => {
+    const access = buildFacetWhere({ ...EMPTY_FACET_FILTERS, access: ["free", "paywalled"] });
+    expect(access.sql).toBe(
+      "((e.oa_status IS NOT NULL AND e.oa_status != 'closed') OR e.oa_status = 'closed')",
+    );
+    const storage = buildFacetWhere({ ...EMPTY_FACET_FILTERS, storage: ["link_only"] });
+    expect(storage.sql).toBe("(e.is_link_only = 1)");
   });
 });
 
@@ -140,16 +227,136 @@ describe("local D1 repository + routes", () => {
   });
 
   it("falls back to LIKE over title+meta only", async () => {
-    const result = await searchEntries(env.DB, "defusion", 1, {
+    const result = await searchEntries(env.DB, "defusion", 1, EMPTY_FACET_FILTERS, {
       forceLike: true,
     });
     expect(result.mode).toBe("like");
     expect(result.hits.some((h) => h.id === "aaaaaaaa00000002")).toBe(true);
 
-    const abstractLeak = await searchEntries(env.DB, "SYNTHETIC ABSTRACT", 1, {
+    const abstractLeak = await searchEntries(env.DB, "SYNTHETIC ABSTRACT", 1, EMPTY_FACET_FILTERS, {
       forceLike: true,
     });
     expect(abstractLeak.total).toBe(0);
+  });
+
+  describe("Phase 2B facets", () => {
+    function filters(overrides: Partial<FacetFilters>): FacetFilters {
+      return { ...EMPTY_FACET_FILTERS, ...overrides };
+    }
+
+    it("browses with a single-dimension filter and no text query (first-class, not an error)", async () => {
+      const result = await searchEntries(env.DB, "", 1, filters({ modality: ["cbt"] }));
+      expect(result.mode).toBe("browse");
+      expect(result.total).toBe(2);
+      expect(result.hits.map((h) => h.id).sort()).toEqual([
+        "bbbbbbbb00000004",
+        "eeeeeeee00000009",
+      ]);
+    });
+
+    it("ORs multiple values within the same dimension", async () => {
+      const result = await searchEntries(
+        env.DB,
+        "",
+        1,
+        filters({ modality: ["cbt", "act"] }),
+      );
+      expect(result.mode).toBe("browse");
+      expect(result.total).toBe(5); // 3 act + 2 cbt
+    });
+
+    it("ANDs filters across dimensions", async () => {
+      const result = await searchEntries(
+        env.DB,
+        "",
+        1,
+        filters({ modality: ["act"], audience: ["clinician"] }),
+      );
+      expect(result.mode).toBe("browse");
+      expect(result.hits.map((h) => h.id)).toEqual(["bbbbbbbb00000003"]);
+    });
+
+    it("combines a text query with a facet filter", async () => {
+      const both = await searchEntries(
+        env.DB,
+        "depression",
+        1,
+        filters({ modality: ["ba"] }),
+      );
+      expect(both.total).toBe(1);
+      expect(both.hits[0]?.id).toBe("cccccccc00000006");
+
+      const excluded = await searchEntries(
+        env.DB,
+        "depression",
+        1,
+        filters({ audience: ["client"] }),
+      );
+      expect(excluded.total).toBe(0);
+    });
+
+    it("shows no result-set entries with oa_status null under an access filter", async () => {
+      const free = await searchEntries(env.DB, "", 1, filters({ access: ["free"] }));
+      expect(free.total).toBe(2); // gold (bbbbbbbb3) + green (cccccccc6)
+
+      const paywalled = await searchEntries(env.DB, "", 1, filters({ access: ["paywalled"] }));
+      expect(paywalled.total).toBe(1); // closed (eeeeeeee9)
+    });
+
+    it("computes cross-filtered facet counts that exclude a dimension's own filter", async () => {
+      const result = await searchEntries(env.DB, "", 1, filters({ audience: ["clinician"] }));
+
+      // The audience dimension itself must show BOTH values (client and
+      // clinician), not just the one currently selected — that's what makes
+      // switching between them possible without starting over.
+      const audienceOptions = Object.fromEntries(
+        result.facets.audience.map((o) => [o.value, o]),
+      );
+      expect(audienceOptions.client?.count).toBe(7);
+      expect(audienceOptions.clinician?.count).toBe(5);
+      expect(audienceOptions.clinician?.selected).toBe(true);
+      expect(audienceOptions.client?.selected).toBe(false);
+
+      // Every OTHER dimension's counts should reflect the audience=clinician
+      // filter already applied: clinician modalities are act(1) cbt(2) ba(1)
+      // mbct(1) = 5 total.
+      const modalityCounts = Object.fromEntries(
+        result.facets.modality.map((o) => [o.value, o.count]),
+      );
+      expect(modalityCounts).toEqual({ act: 1, cbt: 2, ba: 1, mbct: 1 });
+    });
+
+    it("computes unfiltered facet counts for the empty landing page, so browsing is discoverable", async () => {
+      const result = await searchEntries(env.DB, "", 1, EMPTY_FACET_FILTERS);
+      expect(result.mode).toBe("empty");
+      expect(result.total).toBe(0);
+
+      const access = Object.fromEntries(result.facets.access.map((o) => [o.value, o.count]));
+      expect(access).toEqual({ free: 2, paywalled: 1 }); // 9 null-oa_status entries excluded
+
+      const storage = Object.fromEntries(result.facets.storage.map((o) => [o.value, o.count]));
+      expect(storage).toEqual({ stored: 7, link_only: 5 });
+
+      const linkStatus = Object.fromEntries(
+        result.facets.linkStatus.map((o) => [o.value, o.count]),
+      );
+      expect(linkStatus).toEqual({ ok: 9, blocked: 2, unchecked: 1 });
+    });
+
+    it("ignores unknown/invalid facet values rather than erroring", async () => {
+      const result = await searchEntries(
+        env.DB,
+        "",
+        1,
+        filters({ audience: ["not-a-real-audience" as FacetFilters["audience"][number]] }),
+      );
+      // An unrecognized value never reaches SQL from parseFacetFilters, but
+      // searchEntries itself must also stay safe if a filter object is
+      // constructed directly with a bogus value — worst case it's bound as a
+      // literal that matches nothing, never throws.
+      expect(result.mode).toBe("browse");
+      expect(result.total).toBe(0);
+    });
   });
 
   it("serves entry HTML and alias redirect", async () => {

@@ -89,6 +89,53 @@ test.describe("search", () => {
   });
 });
 
+test.describe("faceted browse (Phase 2B)", () => {
+  test("shows discoverable, labeled filter checkboxes on the empty landing page", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy/search");
+    await expect(page.getByRole("group", { name: "Modality" })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Access" })).toBeVisible();
+    await expect(page.getByLabel("cbt (2)")).toBeVisible();
+    await expect(page.getByLabel("Free to read (2)")).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("browsing with a filter and no query is a first-class path, not the empty-query prompt", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy/search");
+    await page.getByLabel("cbt (2)").check();
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(/modality=cbt/);
+    await expect(
+      page.getByText("Enter a keyword to search the public index."),
+    ).not.toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Cognitive Restructuring Protocol" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Closed Access Psychotherapy Trial" }),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("combining a text query with a facet filter can legitimately return zero results", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy/search?q=depression&audience=client");
+    await expect(page.getByText(/No results for/)).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("Clear filters preserves the query but drops every facet param", async ({ page }) => {
+    await page.goto("/psychotherapy/search?q=depression&audience=clinician");
+    await page.getByRole("link", { name: "Clear filters" }).click();
+    await expect(page).toHaveURL(/q=depression/);
+    await expect(page).not.toHaveURL(/audience=/);
+  });
+});
+
 test.describe("entries", () => {
   test("serves a canonical entry with verification records", async ({
     page,

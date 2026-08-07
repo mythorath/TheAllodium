@@ -6,6 +6,7 @@ import {
   resolveCanonicalId,
   searchEntries,
 } from "./db/repository";
+import { parseFacetFilters } from "./db/facets";
 import { buildSitemapXml, STATIC_SITEMAP_PATHS } from "./sitemap";
 import {
   DisclaimerPage,
@@ -96,7 +97,8 @@ app.get("/psychotherapy/search", async (c) => {
   const q = c.req.query("q") ?? "";
   const pageRaw = Number(c.req.query("page") ?? "1");
   const forceLike = c.req.query("fallback") === "1";
-  const result = await searchEntries(c.env.DB, q, pageRaw, { forceLike });
+  const filters = parseFacetFilters((name) => c.req.queries(name));
+  const result = await searchEntries(c.env.DB, q, pageRaw, filters, { forceLike });
   return c.html(
     <SearchPage
       query={result.query}
@@ -105,6 +107,8 @@ app.get("/psychotherapy/search", async (c) => {
       page={result.page}
       pageSize={result.pageSize}
       mode={result.mode}
+      filters={result.filters}
+      facets={result.facets}
     />,
   );
 });

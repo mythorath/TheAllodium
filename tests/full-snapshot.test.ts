@@ -9,7 +9,8 @@ import fullSnapshotSql from "../fixtures/full_snapshot.sql?raw";
 import fullSnapshotManifest from "../fixtures/full_snapshot.manifest.json";
 import ftsSql from "../migrations/0002_fts.sql?raw";
 import { execStatements } from "./sql-test-utils";
-import { getManifest } from "../src/db/repository";
+import { getManifest, searchEntries } from "../src/db/repository";
+import { EMPTY_FACET_FILTERS } from "../src/db/facets";
 
 /**
  * Phase 1D: validates the complete 5,643-row deterministic snapshot -- the
@@ -220,6 +221,57 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     // 4 static routes + one <url> per real entry.
     expect(urlCount).toBe(4 + fullSnapshotManifest.entry_count);
     expect(urlCount).toBeLessThan(50_000);
+  });
+
+  it("sums modality facet counts to the total entry count (Phase 2B)", async () => {
+    const result = await searchEntries(env.DB, "", 1, EMPTY_FACET_FILTERS);
+    expect(result.mode).toBe("empty");
+    const sum = result.facets.modality.reduce((acc, o) => acc + o.count, 0);
+    expect(sum).toBe(fullSnapshotManifest.entry_count);
+    expect(result.facets.modality.length).toBe(21);
+  });
+
+  it("filters browse results to exactly the paywalled oa_status set (Phase 2B)", async () => {
+    const result = await searchEntries(env.DB, "", 1, {
+      ...EMPTY_FACET_FILTERS,
+      access: ["paywalled"],
+    });
+    expect(result.mode).toBe("browse");
+    expect(result.total).toBeGreaterThan(0);
+
+    const closedCount = await env.DB.prepare(
+      "SELECT COUNT(*) AS c FROM entries WHERE oa_status = 'closed'",
+    ).first<{ c: number }>();
+    expect(result.total).toBe(closedCount?.c);
+
+    for (const hit of result.hits) {
+      const row = await env.DB.prepare("SELECT oa_status FROM entries WHERE id = ?")
+        .bind(hit.id)
+        .first<{ oa_status: string | null }>();
+      expect(row?.oa_status).toBe("closed");
+    }
+  });
+
+  it("still paginates correctly when a broad text query is combined with a facet filter (Phase 2B)", async () => {
+    const unfiltered = await searchEntries(env.DB, "act", 1, EMPTY_FACET_FILTERS);
+    const filtered = await searchEntries(env.DB, "act", 1, {
+      ...EMPTY_FACET_FILTERS,
+      audience: ["clinician"],
+    });
+    expect(filtered.mode).toBe("fts");
+    expect(filtered.total).toBeGreaterThan(0);
+    expect(filtered.total).toBeLessThan(unfiltered.total);
+
+    const ctx = createExecutionContext();
+    const res = await app.request(
+      "/psychotherapy/search?q=act&audience=clinician",
+      {},
+      env,
+      ctx,
+    );
+    await waitOnExecutionContext(ctx);
+    const html = await res.text();
+    expect(html).toContain("page 1/");
   });
 
   it("matches the manifest's row-set checksum and row counts", async () => {

@@ -105,6 +105,28 @@ export function runSmokeChecks(env: string): SmokeEvidence {
     console.warn(`[${env}] No blocked-link entry found — skipping discoverability check`);
   }
 
+  console.log(`[${env}] smoke: dynamically-discovered faceted browse combo (Phase 2B)`);
+  const modalityRows = remoteQuery(
+    env,
+    "SELECT therapy_modality, COUNT(*) AS c FROM entries GROUP BY therapy_modality ORDER BY c DESC LIMIT 1;",
+  );
+  const topModality = (modalityRows.rows[0] as { therapy_modality?: string } | undefined)
+    ?.therapy_modality;
+  if (topModality) {
+    results.facetModalityAudience = remoteQuery(
+      env,
+      `SELECT audience, COUNT(*) AS c FROM entries WHERE therapy_modality = ${sqlString(topModality)} GROUP BY audience;`,
+    );
+    results.facetAccessBucket = remoteQuery(
+      env,
+      `SELECT CASE WHEN oa_status = 'closed' THEN 'paywalled' ELSE 'free' END AS bucket, COUNT(*) AS c
+       FROM entries WHERE therapy_modality = ${sqlString(topModality)} AND oa_status IS NOT NULL
+       GROUP BY bucket;`,
+    );
+  } else {
+    console.warn(`[${env}] No modality found — skipping faceted browse smoke check`);
+  }
+
   console.log(`[${env}] smoke: rebuild FTS again (idempotent rebuild)`);
   const rebuildStarted = Date.now();
   run("npx", [

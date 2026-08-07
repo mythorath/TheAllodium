@@ -9,8 +9,14 @@ import type {
   SnapshotManifest,
 } from "../contract";
 import { assertNoForbiddenKeys } from "../contract";
+import type { FacetCounts, FacetFilters } from "./facets";
+import { EMPTY_FACET_FILTERS, buildFacetWhere, computeFacetCounts, hasActiveFilters } from "./facets";
 
-const PAGE_SIZE = 10;
+export type { FacetFilters, AccessValue, StorageValue } from "./facets";
+
+// Phase 2B: raised from 10 now that facets make it easy to narrow a result
+// set to well under one page; still small enough to keep pages fast.
+const PAGE_SIZE = 25;
 
 export type DbEnv = {
   DB: D1Database;
@@ -232,19 +238,35 @@ async function ftsAvailable(db: D1Database): Promise<boolean> {
   }
 }
 
+type SqlFragment = { sql: string; binds: unknown[] };
+
+/** Splices an optional facet WHERE fragment onto a base condition. Both
+ * sides are assumed non-empty SQL predicates (no leading AND/WHERE). */
+function andFragments(...parts: Array<SqlFragment | null>): SqlFragment {
+  const active = parts.filter((p): p is SqlFragment => p !== null && p.sql.length > 0);
+  return {
+    sql: active.map((p) => p.sql).join(" AND "),
+    binds: active.flatMap((p) => p.binds),
+  };
+}
+
 async function searchViaFts(
   db: D1Database,
   matchQuery: string,
+  facetWhere: SqlFragment,
   limit: number,
   offset: number,
 ): Promise<{ hits: SearchHit[]; total: number }> {
+  const where = andFragments({ sql: "entry_fts MATCH ?", binds: [matchQuery] }, facetWhere);
+
   const totalRow = await db
     .prepare(
       `SELECT COUNT(*) AS c
        FROM entry_fts
-       WHERE entry_fts MATCH ?`,
+       JOIN entries e ON e.id = entry_fts.entry_id
+       WHERE ${where.sql}`,
     )
-    .bind(matchQuery)
+    .bind(...where.binds)
     .first<{ c: number }>();
 
   const rows = (
@@ -254,11 +276,11 @@ async function searchViaFts(
                 e.link_status, bm25(entry_fts) AS score
          FROM entry_fts
          JOIN entries e ON e.id = entry_fts.entry_id
-         WHERE entry_fts MATCH ?
+         WHERE ${where.sql}
          ORDER BY score ASC, e.title ASC
          LIMIT ? OFFSET ?`,
       )
-      .bind(matchQuery, limit, offset)
+      .bind(...where.binds, limit, offset)
       .all<{
         id: string;
         title: string;
@@ -287,18 +309,24 @@ async function searchViaFts(
 async function searchViaLike(
   db: D1Database,
   needle: string,
+  facetWhere: SqlFragment,
   limit: number,
   offset: number,
 ): Promise<{ hits: SearchHit[]; total: number }> {
   // LIKE fallback searches title + meta only — never abstract_text.
+  const where = andFragments(
+    { sql: "(lower(d.title) LIKE ? OR lower(d.meta) LIKE ?)", binds: [needle, needle] },
+    facetWhere,
+  );
+
   const totalRow = await db
     .prepare(
       `SELECT COUNT(*) AS c
        FROM entry_search_documents d
        JOIN entries e ON e.id = d.entry_id
-       WHERE lower(d.title) LIKE ? OR lower(d.meta) LIKE ?`,
+       WHERE ${where.sql}`,
     )
-    .bind(needle, needle)
+    .bind(...where.binds)
     .first<{ c: number }>();
 
   const rows = (
@@ -308,11 +336,62 @@ async function searchViaLike(
                 e.link_status
          FROM entry_search_documents d
          JOIN entries e ON e.id = d.entry_id
-         WHERE lower(d.title) LIKE ? OR lower(d.meta) LIKE ?
+         WHERE ${where.sql}
          ORDER BY e.title ASC
          LIMIT ? OFFSET ?`,
       )
-      .bind(needle, needle, limit, offset)
+      .bind(...where.binds, limit, offset)
+      .all<{
+        id: string;
+        title: string;
+        resource_type: string;
+        therapy_modality: string;
+        source_org: string | null;
+        link_status: LinkStatus;
+      }>()
+  ).results;
+
+  return {
+    total: totalRow?.c ?? 0,
+    hits: rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      resource_type: r.resource_type,
+      therapy_modality: r.therapy_modality,
+      source_org: r.source_org,
+      link_status: r.link_status,
+      score: null,
+    })),
+  };
+}
+
+/** Phase 2B: browsing with filters but no text query — first-class, not a
+ * fallback. Orders by title like the LIKE path since there's no bm25 score
+ * to rank by. */
+async function browseViaFacets(
+  db: D1Database,
+  facetWhere: SqlFragment,
+  limit: number,
+  offset: number,
+): Promise<{ hits: SearchHit[]; total: number }> {
+  const whereSql = facetWhere.sql ? `WHERE ${facetWhere.sql}` : "";
+
+  const totalRow = await db
+    .prepare(`SELECT COUNT(*) AS c FROM entries e ${whereSql}`)
+    .bind(...facetWhere.binds)
+    .first<{ c: number }>();
+
+  const rows = (
+    await db
+      .prepare(
+        `SELECT e.id, e.title, e.resource_type, e.therapy_modality, e.source_org,
+                e.link_status
+         FROM entries e
+         ${whereSql}
+         ORDER BY e.title ASC
+         LIMIT ? OFFSET ?`,
+      )
+      .bind(...facetWhere.binds, limit, offset)
       .all<{
         id: string;
         title: string;
@@ -342,65 +421,89 @@ export type SearchResult = {
   total: number;
   page: number;
   pageSize: number;
-  mode: "fts" | "like" | "empty";
+  mode: "fts" | "like" | "browse" | "empty";
   query: string;
+  filters: FacetFilters;
+  facets: FacetCounts;
 };
 
 export async function searchEntries(
   db: D1Database,
   rawQuery: string,
   page = 1,
+  filters: FacetFilters = EMPTY_FACET_FILTERS,
   options?: { forceLike?: boolean },
 ): Promise<SearchResult> {
   const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
   const offset = (safePage - 1) * PAGE_SIZE;
   const trimmed = rawQuery.trim();
+  const filtered = hasActiveFilters(filters);
+
+  // Facet counts are computed against the current filters (ignoring any
+  // rejected/too-short search term) even on the "empty" path, so the
+  // checkbox menu is populated on first landing — browsing must be
+  // discoverable, not something only reachable by already knowing the URL
+  // params.
+  const empty = async (): Promise<SearchResult> => ({
+    hits: [],
+    total: 0,
+    page: safePage,
+    pageSize: PAGE_SIZE,
+    mode: "empty",
+    query: trimmed,
+    filters,
+    facets: await computeFacetCounts(db, filters, null),
+  });
+
+  if (!trimmed && !filtered) {
+    return empty();
+  }
 
   if (!trimmed) {
+    // Phase 2B: browse-with-no-query is a first-class path once a filter is
+    // active, not an error state.
+    const facetWhere = buildFacetWhere(filters);
+    const result = await browseViaFacets(db, facetWhere, PAGE_SIZE, offset);
+    const facets = await computeFacetCounts(db, filters, null);
     return {
-      hits: [],
-      total: 0,
+      ...result,
       page: safePage,
       pageSize: PAGE_SIZE,
-      mode: "empty",
+      mode: "browse",
       query: trimmed,
+      filters,
+      facets,
     };
   }
 
   const useLike = options?.forceLike || !(await ftsAvailable(db));
   if (!useLike) {
     const matchQuery = sanitizeFtsQuery(trimmed);
-    if (!matchQuery) {
-      return {
-        hits: [],
-        total: 0,
-        page: safePage,
-        pageSize: PAGE_SIZE,
-        mode: "empty",
-        query: trimmed,
-      };
-    }
+    if (!matchQuery) return empty();
     try {
-      const result = await searchViaFts(db, matchQuery, PAGE_SIZE, offset);
-      return { ...result, page: safePage, pageSize: PAGE_SIZE, mode: "fts", query: trimmed };
+      const facetWhere = buildFacetWhere(filters);
+      const result = await searchViaFts(db, matchQuery, facetWhere, PAGE_SIZE, offset);
+      const searchClause: SqlFragment = {
+        sql: "e.id IN (SELECT entry_id FROM entry_fts WHERE entry_fts MATCH ?)",
+        binds: [matchQuery],
+      };
+      const facets = await computeFacetCounts(db, filters, searchClause);
+      return { ...result, page: safePage, pageSize: PAGE_SIZE, mode: "fts", query: trimmed, filters, facets };
     } catch {
       // Fall through to LIKE on FTS errors (corrupt vtab, syntax, etc.)
     }
   }
 
   const needle = sanitizeLikeNeedle(trimmed);
-  if (!needle) {
-    return {
-      hits: [],
-      total: 0,
-      page: safePage,
-      pageSize: PAGE_SIZE,
-      mode: "empty",
-      query: trimmed,
-    };
-  }
-  const result = await searchViaLike(db, needle, PAGE_SIZE, offset);
-  return { ...result, page: safePage, pageSize: PAGE_SIZE, mode: "like", query: trimmed };
+  if (!needle) return empty();
+  const facetWhere = buildFacetWhere(filters);
+  const result = await searchViaLike(db, needle, facetWhere, PAGE_SIZE, offset);
+  const searchClause: SqlFragment = {
+    sql: "e.id IN (SELECT entry_id FROM entry_search_documents WHERE lower(title) LIKE ? OR lower(meta) LIKE ?)",
+    binds: [needle, needle],
+  };
+  const facets = await computeFacetCounts(db, filters, searchClause);
+  return { ...result, page: safePage, pageSize: PAGE_SIZE, mode: "like", query: trimmed, filters, facets };
 }
 
 export { PAGE_SIZE };

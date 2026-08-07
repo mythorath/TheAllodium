@@ -4,10 +4,10 @@ overview: Break the Make-it-genuinely-useful phase into five separately plannabl
 todos:
   - id: plan-2a
     content: "Plan and execute contract v1.1: audience derivation, authors_json, entry_neighbors, embedding-freshness preflight"
-    status: pending
+    status: completed
   - id: plan-2b
     content: Plan faceted browse and search with uncapped, URL-stated filters over FTS5 and LIKE
-    status: pending
+    status: completed
   - id: plan-2c
     content: Plan related-entries block and client-side BibTeX/RIS/APA citation export
     status: pending

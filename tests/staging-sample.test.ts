@@ -6,6 +6,7 @@ import {
 import { describe, expect, it, beforeAll } from "vitest";
 import app from "../src/index";
 import { searchEntries } from "../src/db/repository";
+import { EMPTY_FACET_FILTERS } from "../src/db/facets";
 import stagingSampleSql from "../fixtures/staging_sample.sql?raw";
 import ftsSql from "../migrations/0002_fts.sql?raw";
 import { execStatements } from "./sql-test-utils";
@@ -162,7 +163,7 @@ describe("staging sample (real ACT data) - repository + routes", () => {
        ORDER BY COUNT(*) DESC LIMIT 1`,
     ).first<{ therapy_modality: string }>();
 
-    const result = await searchEntries(env.DB, modalityRow!.therapy_modality, 1, {
+    const result = await searchEntries(env.DB, modalityRow!.therapy_modality, 1, EMPTY_FACET_FILTERS, {
       forceLike: true,
     });
     expect(result.mode).toBe("like");

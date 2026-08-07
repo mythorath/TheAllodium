@@ -135,6 +135,36 @@ input:focus-visible {
   padding: 0.85rem 0;
 }
 
+.facet-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.facet-group {
+  border: 1px solid #e5e5e5;
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.75rem 0.65rem;
+  min-width: 12rem;
+}
+
+.facet-group legend {
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0 0.25rem;
+}
+
+.facet-option {
+  display: block;
+  font-size: 0.9rem;
+  padding: 0.15rem 0;
+}
+
+.facet-option input {
+  margin-right: 0.4rem;
+}
+
 .pager {
   display: flex;
   gap: 1rem;
