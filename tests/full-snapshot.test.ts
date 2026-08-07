@@ -88,6 +88,80 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     }
   });
 
+  it("gives every entry a non-null, contract-valid audience value (Phase 2A)", async () => {
+    const rows = await env.DB.prepare(
+      "SELECT audience, COUNT(*) AS c FROM entries GROUP BY audience",
+    ).all<{ audience: string | null; c: number }>();
+    expect(rows.results.length).toBeGreaterThan(0);
+    for (const { audience } of rows.results) {
+      expect(audience).not.toBeNull();
+      expect(["client", "clinician", "unknown"]).toContain(audience);
+    }
+  });
+
+  it("populates entry_neighbors with valid, self-excluding references for every entry (Phase 2A)", async () => {
+    const entryCount = await env.DB.prepare(
+      "SELECT COUNT(*) AS c FROM entries",
+    ).first<{ c: number }>();
+    const neighborCount = await env.DB.prepare(
+      "SELECT COUNT(*) AS c FROM entry_neighbors",
+    ).first<{ c: number }>();
+    expect(neighborCount?.c).toBeGreaterThan(0);
+    // Every embedded entry gets up to 10 neighbors; total rows must not
+    // exceed 10x the entry count.
+    expect(neighborCount?.c).toBeLessThanOrEqual((entryCount?.c ?? 0) * 10);
+
+    const selfReferencing = await env.DB.prepare(
+      "SELECT COUNT(*) AS c FROM entry_neighbors WHERE entry_id = neighbor_id",
+    ).first<{ c: number }>();
+    expect(selfReferencing?.c).toBe(0);
+
+    const danglingEntryRefs = await env.DB.prepare(
+      `SELECT COUNT(*) AS c FROM entry_neighbors n
+       LEFT JOIN entries e ON e.id = n.entry_id
+       WHERE e.id IS NULL`,
+    ).first<{ c: number }>();
+    expect(danglingEntryRefs?.c).toBe(0);
+
+    const danglingNeighborRefs = await env.DB.prepare(
+      `SELECT COUNT(*) AS c FROM entry_neighbors n
+       LEFT JOIN entries e ON e.id = n.neighbor_id
+       WHERE e.id IS NULL`,
+    ).first<{ c: number }>();
+    expect(danglingNeighborRefs?.c).toBe(0);
+  });
+
+  it("stores coverage_json audience/neighbors breakdowns matching recomputed totals (Phase 2A)", async () => {
+    const row = await env.DB.prepare(
+      "SELECT coverage_json FROM snapshot_manifest WHERE id = 1",
+    ).first<{ coverage_json: string }>();
+    const coverage = JSON.parse(row!.coverage_json) as {
+      audience: Record<string, number>;
+      neighbors: { entries_with_neighbors: number; entries_missing_embeddings: number };
+      authors_structured_count: number;
+    };
+
+    const audienceRows = await env.DB.prepare(
+      "SELECT audience, COUNT(*) AS c FROM entries GROUP BY audience",
+    ).all<{ audience: string; c: number }>();
+    for (const { audience, c } of audienceRows.results) {
+      expect(coverage.audience[audience]).toBe(c);
+    }
+
+    const entriesWithNeighbors = await env.DB.prepare(
+      "SELECT COUNT(DISTINCT entry_id) AS c FROM entry_neighbors",
+    ).first<{ c: number }>();
+    expect(coverage.neighbors.entries_with_neighbors).toBe(
+      entriesWithNeighbors?.c,
+    );
+    expect(coverage.neighbors.entries_missing_embeddings).toBe(0);
+
+    const authorsCount = await env.DB.prepare(
+      "SELECT COUNT(*) AS c FROM entries WHERE authors_json IS NOT NULL",
+    ).first<{ c: number }>();
+    expect(coverage.authors_structured_count).toBe(authorsCount?.c);
+  });
+
   it("surfaces coverage_json as a typed object via getManifest (Phase 1E)", async () => {
     const manifest = await getManifest(env.DB);
     expect(manifest).not.toBeNull();

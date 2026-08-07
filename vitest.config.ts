@@ -23,6 +23,15 @@ export default defineWorkersConfig(async () => {
       poolOptions: {
         workers: {
           wrangler: { configPath: "./wrangler.jsonc" },
+          // @cloudflare/vitest-pool-workers' isolated-storage stack
+          // bookkeeping (WorkersTestRunner.updateStackedStorage) becomes
+          // unreliable when multiple test files run concurrently, each
+          // spinning up its own Miniflare worker -- surfaced as an
+          // intermittent "Stack underflow" assertion that fails unrelated
+          // tests non-deterministically (discovered in Phase 2A once the
+          // suite grew to 4 files). Running every file serially in one
+          // worker costs a few seconds but makes the suite deterministic.
+          singleWorker: true,
           miniflare: {
             bindings: {
               ABSTRACT_SEARCH_ENABLED: "0",

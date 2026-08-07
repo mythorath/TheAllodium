@@ -73,5 +73,48 @@
     "databaseName": "theallodium-psychotherapy-production",
     "versionId": "20278462-99fb-405b-86bc-184c6f8895d5",
     "gitCommit": "dcf7ef1ad02dc4bc200909f7aa5fbc0eeabdac28"
+  },
+  {
+    "type": "promote",
+    "at": "2026-08-07T03:54:49.068Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "snapshot": "full_snapshot",
+    "entryCount": 5643,
+    "tagLinkCount": 18654,
+    "aliasCount": 1,
+    "checksum": "bf1222c04f7a31e9c4a0d296752f65838e56a25d98e67d7498ac963f1e2c7479",
+    "sourceGeneratedAt": "2026-08-07T03:52:12.194699+00:00",
+    "preBookmark": "00000007-00000002-000050c0-af897cbe04b8976753668b5380a6755a",
+    "postBookmark": "00000007-000000ed-000050c0-6feeedd1971b142ffe5813ad3055971f",
+    "evidencePath": "evidence/promote-staging-1786074886931.json",
+    "gitCommit": "4b4dc91a6d6cce4ff24cb2b1d7bc55ecb5f6e450"
+  },
+  {
+    "type": "rollback",
+    "at": "2026-08-07T03:55:27.888Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "restoredToBookmark": "00000007-00000002-000050c0-af897cbe04b8976753668b5380a6755a",
+    "rolledBackPromotionAt": "2026-08-07T03:54:49.068Z",
+    "postBookmark": "00000008-0000000a-000050c0-19609b3b8cc08660fea37052daae4f66",
+    "evidencePath": "evidence/rollback-staging-1786074925787.json",
+    "gitCommit": "4b4dc91a6d6cce4ff24cb2b1d7bc55ecb5f6e450"
+  },
+  {
+    "type": "promote",
+    "at": "2026-08-07T03:56:39.064Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "snapshot": "full_snapshot",
+    "entryCount": 5643,
+    "tagLinkCount": 18654,
+    "aliasCount": 1,
+    "checksum": "bf1222c04f7a31e9c4a0d296752f65838e56a25d98e67d7498ac963f1e2c7479",
+    "sourceGeneratedAt": "2026-08-07T03:52:12.194699+00:00",
+    "preBookmark": "00000008-0000000a-000050c0-19609b3b8cc08660fea37052daae4f66",
+    "postBookmark": "00000008-000000ef-000050c0-250a723b5a56db4b0cb124ffc8bccbd3",
+    "evidencePath": "evidence/promote-staging-1786074996966.json",
+    "gitCommit": "4b4dc91a6d6cce4ff24cb2b1d7bc55ecb5f6e450"
   }
 ]

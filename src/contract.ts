@@ -1,6 +1,6 @@
-/** Publication contract v1 — allowlist and denylist for public D1 rows. */
+/** Publication contract v1.1 — allowlist and denylist for public D1 rows. */
 
-export const CONTRACT_VERSION = "1" as const;
+export const CONTRACT_VERSION = "1.1" as const;
 export const SCHEMA_VERSION = "1" as const;
 export const COLLECTION = "psychotherapy" as const;
 
@@ -23,6 +23,8 @@ export const ALLOWED_ENTRY_FIELDS = [
   "link_status",
   "link_checked_at",
   "updated_at",
+  "audience",
+  "authors_json",
 ] as const;
 
 export type AllowedEntryField = (typeof ALLOWED_ENTRY_FIELDS)[number];
@@ -47,6 +49,26 @@ export type LinkStatus = (typeof LINK_STATUSES)[number];
 export const CHECK_KINDS = ["identity", "legitimacy", "link"] as const;
 export type CheckKind = (typeof CHECK_KINDS)[number];
 
+/**
+ * Phase 2A: derived at export time from `format`-category tags where
+ * present, else from `resource_type` (see docs/publication-contract-v1.md's
+ * v1.1 addendum for the exact mapping, mirrored in
+ * export_allodium_snapshot.py::derive_audience()). "unknown" is a safety
+ * net for a resource_type that fell outside both mapped sets, not an
+ * intended steady state.
+ */
+export const AUDIENCE_VALUES = ["client", "clinician", "unknown"] as const;
+export type AudienceValue = (typeof AUDIENCE_VALUES)[number];
+
+/** One entry of the structured OpenAlex author list stored in
+ * `entries.authors_json` (papers only; `null` for everything else). */
+export type AuthorRecord = {
+  name: string;
+  orcid: string | null;
+  institution: string | null;
+  position: string;
+};
+
 export type PublicEntry = {
   id: string;
   title: string;
@@ -66,6 +88,8 @@ export type PublicEntry = {
   link_status: LinkStatus;
   link_checked_at: string | null;
   updated_at: string | null;
+  audience: AudienceValue;
+  authors: AuthorRecord[] | null;
   tags: Array<{ name: string; category: string }>;
   verifications: Array<{
     check_kind: CheckKind;
@@ -75,6 +99,19 @@ export type PublicEntry = {
     score: number | null;
     checked_at: string | null;
   }>;
+};
+
+/**
+ * Phase 2A: precomputed cosine-kNN row from `entry_neighbors`, rebuilt in
+ * full on every snapshot import. Declared here now so the contract file
+ * stays the single source of truth for every snapshot-produced shape, even
+ * though no repository function reads this table until Phase 2C's
+ * related-entries UI.
+ */
+export type EntryNeighbor = {
+  neighbor_id: string;
+  rank: number;
+  score: number;
 };
 
 export type SearchHit = {

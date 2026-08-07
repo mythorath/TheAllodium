@@ -1,7 +1,7 @@
 # Publication Contract v1
 
 Collection: `psychotherapy`
-Contract version: `1`
+Contract version: `1.1` (see [Phase 2A addendum](#v11-addendum-phase-2a) below)
 Schema version: `1`
 
 This contract defines the public-safe D1 row shape for The Allodium.
@@ -103,3 +103,20 @@ JSON-LD, sitemaps, or `LIKE` fallback result payloads.
 
 D1 import uses versioned `.sql` files via `wrangler d1 execute --file`,
 not a SQLite database file. A shareable SQLite dump is Phase 4.
+
+## v1.1 addendum (Phase 2A)
+
+Two new allowed entry fields, plus one new snapshot-content table:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `audience` | text | `client` \| `clinician` \| `unknown` — derived at export time from `format`-category tags (`clinician_facing`/`group_protocol` → clinician, `client_facing`/`self_help` → client) falling back to `resource_type` when no format tag is present. `unknown` is a safety net, not an intended steady state. |
+| `authors_json` | text \| null | Structured OpenAlex author list (name, ORCID, institution, position) for papers; `null` for everything else. The plain `author` display string is unchanged and still required. |
+
+`entry_neighbors(entry_id, neighbor_id, rank, score)` — precomputed
+cosine-kNN (top 10) over `backend/data/embeddings.npy`, rebuilt in full on
+every snapshot import like every other content table. Not read by any route
+until Phase 2C's related-entries UI. `snapshot_manifest.coverage_json` gains
+`audience` and `neighbors` breakdowns so the exporter's embedding-freshness
+gate (fails the export if more than 2% of public entries lack an embedding)
+has a published, honest coverage number rather than a silent gap.

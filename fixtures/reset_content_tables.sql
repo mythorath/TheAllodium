@@ -7,6 +7,7 @@
 DELETE FROM entry_search_documents;
 DELETE FROM entry_verifications;
 DELETE FROM entry_aliases;
+DELETE FROM entry_neighbors;
 DELETE FROM entry_tags;
 DELETE FROM tags;
 DELETE FROM entries;

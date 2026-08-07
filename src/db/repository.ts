@@ -1,4 +1,6 @@
 import type {
+  AudienceValue,
+  AuthorRecord,
   CheckKind,
   CoverageStats,
   LinkStatus,
@@ -33,7 +35,24 @@ type EntryRow = {
   link_status: LinkStatus;
   link_checked_at: string | null;
   updated_at: string | null;
+  audience: AudienceValue;
+  authors_json: string | null;
 };
+
+/** A parse failure here means the exporter's own preflight (which already
+ * validates authors_json parses before it's ever written to D1 — see
+ * validate_snapshot() in export_allodium_snapshot.py) was bypassed upstream.
+ * Degrading to null rather than 500ing the entry page is the safer failure
+ * mode for a non-essential citation-metadata field. */
+function parseAuthorsJson(raw: string | null): AuthorRecord[] | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as AuthorRecord[]) : null;
+  } catch {
+    return null;
+  }
+}
 
 type TagRow = { name: string; category: string };
 type VerificationRow = {
@@ -69,6 +88,8 @@ function mapEntry(
     link_status: row.link_status,
     link_checked_at: row.link_checked_at,
     updated_at: row.updated_at,
+    audience: row.audience,
+    authors: parseAuthorsJson(row.authors_json),
     tags,
     verifications,
   };
@@ -130,7 +151,8 @@ export async function getEntry(db: D1Database, id: string): Promise<PublicEntry 
     .prepare(
       `SELECT id, title, resource_type, therapy_modality, source_org, canonical_url,
               author, published_date, credibility_tier, is_link_only, citation_count,
-              oa_status, doi, pmid, pmcid, link_status, link_checked_at, updated_at
+              oa_status, doi, pmid, pmcid, link_status, link_checked_at, updated_at,
+              audience, authors_json
        FROM entries WHERE id = ?`,
     )
     .bind(id)

@@ -107,6 +107,28 @@ describe("local D1 repository + routes", () => {
     expect(JSON.stringify(entry)).not.toMatch(/file_path/i);
   });
 
+  it("parses audience and structured authors_json onto the public entry (Phase 2A)", async () => {
+    const paper = await getEntry(env.DB, "bbbbbbbb00000003");
+    expect(paper?.audience).toBe("clinician");
+    expect(paper?.authors).toEqual([
+      { name: "C. Researcher", orcid: null, institution: null, position: "first" },
+      { name: "D. Colleague", orcid: null, institution: null, position: "last" },
+    ]);
+
+    const worksheet = await getEntry(env.DB, "aaaaaaaa00000001");
+    expect(worksheet?.audience).toBe("client");
+    expect(worksheet?.authors).toBeNull();
+  });
+
+  it("degrades to null authors rather than throwing on malformed authors_json", async () => {
+    await env.DB.prepare(`UPDATE entries SET authors_json = ? WHERE id = ?`)
+      .bind("not valid json", "bbbbbbbb00000004")
+      .run();
+
+    const entry = await getEntry(env.DB, "bbbbbbbb00000004");
+    expect(entry?.authors).toBeNull();
+  });
+
   it("ranks FTS results for representative queries", async () => {
     const values = await searchEntries(env.DB, "values");
     expect(values.mode).toBe("fts");

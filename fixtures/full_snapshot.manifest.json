@@ -1,12 +1,12 @@
 {
-  "contract_version": "1",
+  "contract_version": "1.1",
   "schema_version": "1",
   "collection": "psychotherapy",
-  "source_generated_at": "2026-08-07T01:45:36.837252+00:00",
+  "source_generated_at": "2026-08-07T03:52:12.194699+00:00",
   "entry_count": 5643,
   "tag_link_count": 18654,
   "alias_count": 1,
-  "checksum": "8f23e192da000ff80e9bbc9b565160747f773cedfd51ba435b7ae5001581b7e5",
+  "checksum": "bf1222c04f7a31e9c4a0d296752f65838e56a25d98e67d7498ac963f1e2c7479",
   "abstract_search_enabled": false,
   "exclusion_counts_json": {
     "gated_excluded": 29,
@@ -65,6 +65,15 @@
       "schema": 90,
       "tf_cbt": 81,
       "up": 74
+    },
+    "audience": {
+      "clinician": 5344,
+      "client": 299
+    },
+    "authors_structured_count": 4450,
+    "neighbors": {
+      "entries_with_neighbors": 5643,
+      "entries_missing_embeddings": 0
     }
   }
 }

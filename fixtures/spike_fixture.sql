@@ -6,6 +6,7 @@
 DELETE FROM entry_search_documents;
 DELETE FROM entry_verifications;
 DELETE FROM entry_aliases;
+DELETE FROM entry_neighbors;
 DELETE FROM entry_tags;
 DELETE FROM tags;
 DELETE FROM entries;
@@ -36,7 +37,8 @@ INSERT INTO tags (id, name, category) VALUES
 INSERT INTO entries (
   id, title, resource_type, therapy_modality, source_org, canonical_url,
   author, published_date, credibility_tier, is_link_only, citation_count,
-  oa_status, doi, pmid, pmcid, link_status, link_checked_at, updated_at
+  oa_status, doi, pmid, pmcid, link_status, link_checked_at, updated_at,
+  audience, authors_json
 ) VALUES
   (
     'aaaaaaaa00000001',
@@ -56,7 +58,9 @@ INSERT INTO entries (
     NULL,
     'ok',
     '2026-07-01T12:00:00Z',
-    '2026-07-01T12:00:00Z'
+    '2026-07-01T12:00:00Z',
+    'client',
+    NULL
   ),
   (
     'aaaaaaaa00000002',
@@ -76,7 +80,9 @@ INSERT INTO entries (
     NULL,
     'ok',
     '2026-07-01T12:00:00Z',
-    '2026-07-01T12:00:00Z'
+    '2026-07-01T12:00:00Z',
+    'client',
+    NULL
   ),
   (
     'bbbbbbbb00000003',
@@ -96,7 +102,9 @@ INSERT INTO entries (
     'PMC1111111',
     'ok',
     '2026-07-02T12:00:00Z',
-    '2026-07-02T12:00:00Z'
+    '2026-07-02T12:00:00Z',
+    'clinician',
+    '[{"name":"C. Researcher","orcid":null,"institution":null,"position":"first"},{"name":"D. Colleague","orcid":null,"institution":null,"position":"last"}]'
   ),
   (
     'bbbbbbbb00000004',
@@ -116,7 +124,9 @@ INSERT INTO entries (
     NULL,
     'ok',
     '2026-07-03T12:00:00Z',
-    '2026-07-03T12:00:00Z'
+    '2026-07-03T12:00:00Z',
+    'clinician',
+    NULL
   ),
   (
     'cccccccc00000005',
@@ -136,7 +146,9 @@ INSERT INTO entries (
     NULL,
     'blocked',
     '2026-07-04T12:00:00Z',
-    '2026-07-04T12:00:00Z'
+    '2026-07-04T12:00:00Z',
+    'client',
+    NULL
   ),
   (
     'cccccccc00000006',
@@ -156,7 +168,9 @@ INSERT INTO entries (
     NULL,
     'ok',
     '2026-07-05T12:00:00Z',
-    '2026-07-05T12:00:00Z'
+    '2026-07-05T12:00:00Z',
+    'clinician',
+    '[{"name":"F. Scientist","orcid":null,"institution":null,"position":"first"}]'
   ),
   (
     'dddddddd00000007',
@@ -176,7 +190,9 @@ INSERT INTO entries (
     NULL,
     'ok',
     '2026-07-06T12:00:00Z',
-    '2026-07-06T12:00:00Z'
+    '2026-07-06T12:00:00Z',
+    'clinician',
+    NULL
   ),
   (
     'dddddddd00000008',
@@ -196,7 +212,9 @@ INSERT INTO entries (
     NULL,
     'ok',
     '2026-07-07T12:00:00Z',
-    '2026-07-07T12:00:00Z'
+    '2026-07-07T12:00:00Z',
+    'client',
+    NULL
   ),
   (
     'eeeeeeee00000009',
@@ -216,7 +234,9 @@ INSERT INTO entries (
     NULL,
     'blocked',
     '2026-07-08T12:00:00Z',
-    '2026-07-08T12:00:00Z'
+    '2026-07-08T12:00:00Z',
+    'clinician',
+    '[{"name":"I. Investigator","orcid":null,"institution":null,"position":"first"}]'
   ),
   (
     'eeeeeeee00000010',
@@ -236,7 +256,9 @@ INSERT INTO entries (
     NULL,
     'ok',
     '2026-07-09T12:00:00Z',
-    '2026-07-09T12:00:00Z'
+    '2026-07-09T12:00:00Z',
+    'client',
+    NULL
   ),
   (
     'ffffffff00000011',
@@ -256,7 +278,9 @@ INSERT INTO entries (
     NULL,
     'ok',
     '2026-07-10T12:00:00Z',
-    '2026-07-10T12:00:00Z'
+    '2026-07-10T12:00:00Z',
+    'client',
+    NULL
   ),
   (
     'ffffffff00000012',
@@ -276,8 +300,16 @@ INSERT INTO entries (
     NULL,
     'unchecked',
     NULL,
-    '2026-07-11T12:00:00Z'
+    '2026-07-11T12:00:00Z',
+    'client',
+    NULL
   );
+
+INSERT INTO entry_neighbors (entry_id, neighbor_id, rank, score) VALUES
+  ('aaaaaaaa00000001', 'aaaaaaaa00000002', 1, 0.9),
+  ('aaaaaaaa00000001', 'bbbbbbbb00000003', 2, 0.7),
+  ('aaaaaaaa00000002', 'aaaaaaaa00000001', 1, 0.9),
+  ('bbbbbbbb00000003', 'cccccccc00000006', 1, 0.6);
 
 INSERT INTO entry_tags (entry_id, tag_id) VALUES
   ('aaaaaaaa00000001', 1),
