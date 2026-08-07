@@ -26,6 +26,6 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src", "tests", "scripts"],
+  "include": ["src", "tests", "scripts", "e2e", "playwright.config.ts"],
   "exclude": ["node_modules", "dist", ".wrangler", "vitest.config.ts", "vite.config.ts"]
 }

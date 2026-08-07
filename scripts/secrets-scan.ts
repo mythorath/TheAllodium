@@ -19,6 +19,8 @@ const SKIP_DIRS = new Set([
   "dist",
   "coverage",
   "evidence",
+  "test-results",
+  "playwright-report",
 ]);
 
 function walk(dir: string, files: string[] = []): string[] {

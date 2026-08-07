@@ -73,6 +73,23 @@ npm run db:rollback:staging      # or db:rollback:production
 Every promotion and rollback appends an immutable record to the git-tracked
 `deployments/log.json`.
 
+## Phase 1E
+
+Public beta experience: a real `/standard/` methodology page backed by live
+`coverage_json`, `/disclaimer` with crisis routing, accessibility/responsive
+polish, honest error/empty states, and a Playwright + axe-core smoke suite.
+See [docs/phase-1e-decision-record.md](docs/phase-1e-decision-record.md).
+
+```bash
+npm test               # Workers-runtime vitest suite
+npm run test:e2e       # resets local D1, then runs the Playwright/axe suite
+npm run gate:1e
+```
+
+The e2e suite runs against `npm run dev` (Miniflare-backed) using the same
+local D1 spike fixture as the Vitest suite — see `playwright.config.ts` and
+`e2e/routes.spec.ts`.
+
 ## Setup
 
 ```bash
@@ -122,3 +139,5 @@ until Phase 1F.
 | `npm run db:promote:staging` / `db:promote:production` | Verify checksum, apply migrations, capture a Time Travel bookmark, atomically replace content, smoke-check, log the deployment |
 | `npm run db:rollback:staging` / `db:rollback:production` | Restore to the bookmark captured before that env's last promotion, re-verify, log the rollback |
 | `npm run gate:1d` | Close Phase 1D: secrets scan, typecheck, test, verify deployment log, write `docs/phase-1d-decision-record.md` |
+| `npm run test:e2e` | Reset local D1, then run the Playwright + axe-core accessibility/route/search suite |
+| `npm run gate:1e` | Close Phase 1E: secrets scan, typecheck, test, e2e suite, write `docs/phase-1e-decision-record.md` |

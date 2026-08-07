@@ -1,5 +1,5 @@
 import type { FC, Child } from "hono/jsx";
-import type { PublicEntry, SearchHit } from "../contract";
+import type { PublicEntry, SearchHit, SnapshotManifest } from "../contract";
 
 export const Layout: FC<{ title: string; children?: Child }> = (props) => {
   return (
@@ -11,31 +11,252 @@ export const Layout: FC<{ title: string; children?: Child }> = (props) => {
         <link rel="stylesheet" href="/styles.css" />
       </head>
       <body>
-        <main>
-          <header>
-            <p>
-              <a href="/">The Allodium</a>
-              {" · "}
-              <a href="/psychotherapy/search">Search</a>
-            </p>
-          </header>
-          {props.children}
-        </main>
+        <a class="skip-link" href="#main">
+          Skip to content
+        </a>
+        <header>
+          <nav class="site-nav" aria-label="Primary">
+            <a class="site-brand" href="/">
+              The Allodium
+            </a>
+            <a href="/psychotherapy/search">Search</a>
+            <a href="/standard">The Standard</a>
+          </nav>
+        </header>
+        <main id="main">{props.children}</main>
+        <footer class="site-footer">
+          <p class="meta">
+            <a href="/standard">The Standard</a>
+            {" · "}
+            <a href="/disclaimer">Disclaimer &amp; crisis resources</a>
+          </p>
+          <p class="meta">
+            Automated checks only, not clinical endorsement or advice. If you
+            are in crisis, help is available now — see{" "}
+            <a href="/disclaimer">the disclaimer page</a>.
+          </p>
+        </footer>
       </body>
     </html>
   );
 };
 
-export const HomePage: FC = () => (
-  <Layout title="Home">
-    <h1>The Allodium</h1>
-    <p class="meta">
-      Phase 1A spike — publication contract and D1 search path. Psychotherapy
-      collection only.
-    </p>
-    <p>
-      <a href="/psychotherapy/search">Open keyword search</a>
-    </p>
+export const HomePage: FC<{ manifest: SnapshotManifest | null }> = ({
+  manifest,
+}) => {
+  const modalityCount = manifest
+    ? Object.keys(manifest.coverage_json.modalities ?? {}).length
+    : 0;
+  return (
+    <Layout title="Home">
+      <h1>The Allodium</h1>
+      <p>
+        A free, ad-free index of published psychotherapy research and client
+        resources — every entry carries published verification provenance:
+        DOI identity checks, legitimacy triage, and live link-health status,
+        so you can judge a source before you follow it.
+      </p>
+      {manifest ? (
+        <p class="meta">
+          {manifest.entry_count.toLocaleString()} entries across{" "}
+          {modalityCount} modalities · no accounts, no cookies, no tracking.
+        </p>
+      ) : null}
+      <p>
+        <a href="/psychotherapy/search">Open keyword search</a>
+        {" · "}
+        <a href="/standard">Read how entries are verified</a>
+      </p>
+    </Layout>
+  );
+};
+
+function CountList(props: { counts: Record<string, number>; label: string }) {
+  const entries = Object.entries(props.counts).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) {
+    return <p class="meta">No {props.label} data in this snapshot.</p>;
+  }
+  return (
+    <ul class="stat-list">
+      {entries.map(([key, count]) => (
+        <li key={key}>
+          <span>{key}</span>
+          <span class="stat-count">{count.toLocaleString()}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const EXCLUSION_LABELS: Record<string, string> = {
+  gated_excluded: "Access-gated (member-only) entries",
+  retracted_excluded: "Retracted publications",
+  junk_titles_rejected: "Junk or placeholder titles",
+  dead_links_excluded: "Dead outbound links",
+  already_aliased_excluded: "Superseded by a canonical alias",
+  duplicate_rows_merged: "Duplicate rows merged",
+};
+
+export const StandardPage: FC<{ manifest: SnapshotManifest | null }> = ({
+  manifest,
+}) => {
+  const exclusions: Record<string, number> = manifest
+    ? JSON.parse(manifest.exclusion_counts_json)
+    : {};
+  return (
+    <Layout title="The Standard">
+      <h1>The Standard</h1>
+      <p>
+        No competitor in this space publishes its link-integrity and
+        identity-verification provenance. The Allodium does, for every entry,
+        because a resource list is only as trustworthy as the checks behind
+        it.
+      </p>
+
+      <h2>How an entry is verified</h2>
+      <dl>
+        <dt>Identity check</dt>
+        <dd>
+          For entries carrying a DOI, the stored title is compared against
+          publisher metadata from Crossref and OpenAlex. A confirmed match is
+          recorded as <code>identity: ok</code>; a strong mismatch is
+          demoted for review rather than published as-is.
+        </dd>
+        <dt>Legitimacy triage</dt>
+        <dd>
+          Entries are screened for topical relevance, source legitimacy, and
+          identity agreement. Screens that don't clear a confidence
+          threshold are marked <code>needs_review</code> rather than kept —
+          the default when a check is uncertain is exclusion, not inclusion.
+        </dd>
+        <dt>Link health</dt>
+        <dd>
+          Outbound links are checked and labeled <code>ok</code>,{" "}
+          <code>blocked</code>, or <code>unchecked</code>. A dead link is
+          removed from the public set entirely; a <code>blocked</code> link
+          (for example, one behind a bot check) stays listed but is clearly
+          marked inconclusive rather than presented as broken or as working.
+        </dd>
+      </dl>
+      <p class="meta">
+        Every check above is a normalized, timestamped record — see the
+        "Verification" section on any entry page. Automated checks are not
+        clinical endorsement or advice.
+      </p>
+
+      <h2>Coverage</h2>
+      {manifest ? (
+        <>
+          <p class="meta">
+            {manifest.entry_count.toLocaleString()} entries · snapshot
+            generated {manifest.source_generated_at} · contract v
+            {manifest.contract_version} / schema v{manifest.schema_version}
+          </p>
+          <h3>Identity checks</h3>
+          <CountList
+            counts={manifest.coverage_json.verifications?.identity ?? {}}
+            label="identity check"
+          />
+          <h3>Legitimacy triage</h3>
+          <CountList
+            counts={manifest.coverage_json.verifications?.legitimacy ?? {}}
+            label="legitimacy triage"
+          />
+          <h3>Link health</h3>
+          <CountList
+            counts={manifest.coverage_json.link_status ?? {}}
+            label="link status"
+          />
+          <h3>Identifiers present</h3>
+          <CountList
+            counts={manifest.coverage_json.identifiers ?? {}}
+            label="identifier"
+          />
+          <h3>Modalities covered</h3>
+          <CountList
+            counts={manifest.coverage_json.modalities ?? {}}
+            label="modality"
+          />
+        </>
+      ) : (
+        <p class="meta">Coverage data is not available right now.</p>
+      )}
+
+      <h2>What's excluded, and why</h2>
+      <p class="meta">
+        Publishing the index, never the contents — and never a row that
+        failed a check.
+      </p>
+      <CountList
+        counts={Object.fromEntries(
+          Object.entries(exclusions).map(([key, count]) => [
+            EXCLUSION_LABELS[key] ?? key,
+            count,
+          ]),
+        )}
+        label="exclusion"
+      />
+
+      <h2>Limitations</h2>
+      <ul>
+        <li>
+          Checks are automated and deterministic where possible; they are
+          not a substitute for reading the source or for professional
+          clinical judgment.
+        </li>
+        <li>
+          A <code>blocked</code> link means the automated check was
+          inconclusive (for example, a bot wall) — not that the resource is
+          gone. Verify manually if it matters for your use case.
+        </li>
+        <li>
+          No full text, abstracts, or stored files are published here — only
+          index metadata and an outbound link to the original source.
+        </li>
+      </ul>
+
+      <h2>Update cadence</h2>
+      <p>
+        The public snapshot is regenerated from the source catalog and
+        redeployed as a whole — coverage numbers on this page always
+        describe exactly the entries currently live, not a newer or older
+        dataset.
+      </p>
+    </Layout>
+  );
+};
+
+export const DisclaimerPage: FC = () => (
+  <Layout title="Disclaimer">
+    <h1>Disclaimer</h1>
+    <div class="prose">
+      <p>
+        The Allodium is a published index of psychotherapy research and
+        client resources, verified by the automated checks described on{" "}
+        <a href="/standard">The Standard</a>. It is not therapy, not a
+        clinical service, and not a substitute for professional care.
+      </p>
+      <p>
+        Listing a resource here means it passed our identity, legitimacy,
+        and link-health checks — it is not a clinical endorsement of any
+        specific treatment, provider, or organization.
+      </p>
+      <p>
+        Referenced third-party materials belong to their original authors.
+        This site links out to sources and does not host or republish
+        copyrighted files.
+      </p>
+      <h2>If you need help now</h2>
+      <p>
+        In the US, call or text <strong>988</strong> (Suicide &amp; Crisis
+        Lifeline), or text <strong>HOME to 741741</strong> (Crisis Text
+        Line). Outside the US,{" "}
+        <a href="https://findahelpline.com" target="_blank" rel="noopener noreferrer">
+          findahelpline.com
+        </a>{" "}
+        lists local lines.
+      </p>
+    </div>
   </Layout>
 );
 
@@ -46,6 +267,22 @@ export const NotFoundPage: FC<{ id?: string }> = (props) => (
       {props.id
         ? `No public entry for id ${props.id}.`
         : "That page does not exist."}
+    </p>
+    <p>
+      <a href="/psychotherapy/search">Back to search</a>
+    </p>
+  </Layout>
+);
+
+export const ErrorPage: FC = () => (
+  <Layout title="Something went wrong">
+    <h1>Something went wrong</h1>
+    <p class="meta">
+      An unexpected error occurred while handling that request. Nothing was
+      lost — please try again.
+    </p>
+    <p>
+      <a href="/">Back to home</a>
     </p>
   </Layout>
 );
@@ -146,35 +383,45 @@ export const SearchPage: FC<{
     <Layout title="Search">
       <h1>Psychotherapy search</h1>
       <form class="search-form" method="get" action="/psychotherapy/search">
+        <label class="visually-hidden" for="search-query">
+          Search query
+        </label>
         <input
+          id="search-query"
           type="search"
           name="q"
           value={props.query}
           placeholder="Keyword search"
-          aria-label="Search query"
         />
         <button type="submit">Search</button>
       </form>
       {props.query ? (
-        <p class="meta">
+        <p class="meta" aria-live="polite">
           {props.total} result{props.total === 1 ? "" : "s"} · mode {props.mode} ·
           page {props.page}/{totalPages}
         </p>
       ) : (
         <p class="meta">Enter a keyword to search the public index.</p>
       )}
-      <ul class="result-list">
-        {props.hits.map((hit) => (
-          <li key={hit.id}>
-            <a href={`/psychotherapy/entries/${hit.id}`}>{hit.title}</a>
-            <div class="meta">
-              {hit.therapy_modality} · {hit.resource_type}
-              {hit.source_org ? ` · ${hit.source_org}` : ""}
-              {hit.link_status === "blocked" ? " · link inconclusive" : ""}
-            </div>
-          </li>
-        ))}
-      </ul>
+      {props.query && props.total === 0 ? (
+        <p class="meta" role="status">
+          No results for "{props.query}". Try a broader or differently
+          spelled term.
+        </p>
+      ) : (
+        <ul class="result-list">
+          {props.hits.map((hit) => (
+            <li key={hit.id}>
+              <a href={`/psychotherapy/entries/${hit.id}`}>{hit.title}</a>
+              <div class="meta">
+                {hit.therapy_modality} · {hit.resource_type}
+                {hit.source_org ? ` · ${hit.source_org}` : ""}
+                {hit.link_status === "blocked" ? " · link inconclusive" : ""}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
       {props.total > props.pageSize ? (
         <nav class="pager" aria-label="Pagination">
           {props.page > 1 ? (

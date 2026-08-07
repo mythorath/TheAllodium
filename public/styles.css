@@ -1,3 +1,7 @@
+:root {
+  color-scheme: light;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -6,25 +10,90 @@ body {
   background: #fafafa;
 }
 
-main {
+main,
+header .site-nav,
+footer.site-footer {
   max-width: 52rem;
   margin: 0 auto;
   padding: 1.5rem;
+}
+
+header {
+  border-bottom: 1px solid #e5e5e5;
+  background: #fff;
+}
+
+footer.site-footer {
+  border-top: 1px solid #e5e5e5;
+  margin-top: 2rem;
 }
 
 a {
   color: #0b57d0;
 }
 
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid #0b57d0;
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: auto;
+  padding: 0.5rem 1rem;
+  background: #0b57d0;
+  color: #fff;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.site-brand {
+  font-weight: 700;
+  color: #1a1a1a;
+  text-decoration: none;
+  margin-right: auto;
+}
+
 .meta {
-  color: #555;
+  color: #4b4b4b;
   font-size: 0.95rem;
+}
+
+.prose > * + * {
+  margin-top: 1rem;
 }
 
 .badge {
   display: inline-block;
   padding: 0.1rem 0.45rem;
   border: 1px solid #ccc;
+  background: #f0f0f0;
   border-radius: 0.25rem;
   font-size: 0.8rem;
   margin-right: 0.35rem;
@@ -32,22 +101,28 @@ a {
 
 .badge-blocked {
   border-color: #b45309;
-  color: #92400e;
+  background: #fef3e2;
+  color: #7c3a09;
 }
 
 .search-form {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin: 1rem 0;
 }
 
 .search-form input {
   flex: 1;
-  padding: 0.5rem 0.65rem;
+  min-width: 12rem;
+  padding: 0.6rem 0.65rem;
+  font-size: 1rem;
 }
 
 .search-form button {
-  padding: 0.5rem 0.9rem;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  min-height: 2.5rem;
 }
 
 .result-list {
@@ -64,4 +139,48 @@ a {
   display: flex;
   gap: 1rem;
   margin-top: 1.25rem;
+}
+
+.pager a {
+  padding: 0.4rem 0.1rem;
+  min-height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.stat-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.stat-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px dotted #ddd;
+  padding: 0.2rem 0;
+}
+
+.stat-count {
+  font-variant-numeric: tabular-nums;
+  color: #4b4b4b;
+}
+
+@media (max-width: 30rem) {
+  main,
+  header .site-nav,
+  footer.site-footer {
+    padding: 1rem;
+  }
+
+  .search-form {
+    flex-direction: column;
+  }
+
+  .search-form button {
+    width: 100%;
+  }
 }

@@ -10,8 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "npm run db:reset:local && playwright test",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "db:migrate:local": "wrangler d1 execute DB --local --file=./migrations/0001_schema.sql && wrangler d1 execute DB --local --file=./migrations/0002_fts.sql",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:fixture:local": "wrangler d1 execute DB --local --file=./fixtures/spike_fixture.sql && wrangler d1 execute DB --local --file=./migrations/0002_fts.sql",
     "db:reset:local": "rm -rf .wrangler/state && npm run db:migrate:local && npm run db:fixture:local",
     "db:smoke:local": "tsx scripts/smoke-local.ts",
@@ -28,15 +29,18 @@
     "gate:1a": "tsx scripts/close-1a-gate.ts",
     "gate:1c": "tsx scripts/close-1c-gate.ts",
     "gate:1d": "tsx scripts/close-1d-gate.ts",
+    "gate:1e": "tsx scripts/close-1e-gate.ts",
     "secrets:scan": "tsx scripts/secrets-scan.ts"
   },
   "dependencies": {
     "hono": "^4.9.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@cloudflare/vite-plugin": "^1.11.0",
     "@cloudflare/vitest-pool-workers": "^0.12.0",
     "@cloudflare/workers-types": "^4.20250801.0",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^22.0.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0",

@@ -1,5 +1,6 @@
 import type {
   CheckKind,
+  CoverageStats,
   LinkStatus,
   PublicEntry,
   SearchHit,
@@ -80,7 +81,7 @@ export async function getManifest(db: D1Database): Promise<SnapshotManifest | nu
     .prepare(
       `SELECT contract_version, schema_version, collection, source_generated_at,
               entry_count, tag_link_count, alias_count, checksum,
-              abstract_search_enabled, exclusion_counts_json
+              abstract_search_enabled, exclusion_counts_json, coverage_json
        FROM snapshot_manifest WHERE id = 1`,
     )
     .first<{
@@ -94,12 +95,14 @@ export async function getManifest(db: D1Database): Promise<SnapshotManifest | nu
       checksum: string;
       abstract_search_enabled: number;
       exclusion_counts_json: string;
+      coverage_json: string;
     }>();
 
   if (!row) return null;
   return {
     ...row,
     abstract_search_enabled: row.abstract_search_enabled === 1,
+    coverage_json: JSON.parse(row.coverage_json) as CoverageStats,
   };
 }
 

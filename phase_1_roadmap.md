@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: plan-1e
     content: Plan the public-beta search, entry, and methodology experience
-    status: pending
+    status: completed
   - id: plan-1f
     content: Plan discoverability, domain, operations, and launch-readiness work
     status: pending

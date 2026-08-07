@@ -1,9 +1,15 @@
-import { env } from "cloudflare:test";
+import {
+  env,
+  createExecutionContext,
+  waitOnExecutionContext,
+} from "cloudflare:test";
 import { describe, expect, it, beforeAll } from "vitest";
+import app from "../src/index";
 import fullSnapshotSql from "../fixtures/full_snapshot.sql?raw";
 import fullSnapshotManifest from "../fixtures/full_snapshot.manifest.json";
 import ftsSql from "../migrations/0002_fts.sql?raw";
 import { execStatements } from "./sql-test-utils";
+import { getManifest } from "../src/db/repository";
 
 /**
  * Phase 1D: validates the complete 5,643-row deterministic snapshot -- the
@@ -80,6 +86,54 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     for (const { therapy_modality, c } of modalityRows.results) {
       expect(coverage.modalities[therapy_modality]).toBe(c);
     }
+  });
+
+  it("surfaces coverage_json as a typed object via getManifest (Phase 1E)", async () => {
+    const manifest = await getManifest(env.DB);
+    expect(manifest).not.toBeNull();
+    expect(manifest?.coverage_json.total_entries).toBe(
+      fullSnapshotManifest.coverage_json.total_entries,
+    );
+    expect(manifest?.coverage_json.modalities).toEqual(
+      fullSnapshotManifest.coverage_json.modalities,
+    );
+    expect(manifest?.coverage_json.verifications.identity).toEqual(
+      fullSnapshotManifest.coverage_json.verifications.identity,
+    );
+  });
+
+  it("paginates search results with working Next/Previous links (Phase 1E)", async () => {
+    // "act" prefix-matches thousands of rows in the real corpus -- the
+    // synthetic 12-row spike fixture used elsewhere never exceeds one page,
+    // so real Prev/Next rendering can only be proven against this dataset.
+    const page1Ctx = createExecutionContext();
+    const page1Res = await app.request(
+      "/psychotherapy/search?q=act",
+      {},
+      env,
+      page1Ctx,
+    );
+    await waitOnExecutionContext(page1Ctx);
+    expect(page1Res.status).toBe(200);
+    const page1Html = await page1Res.text();
+    expect(page1Html).toContain("page 1/");
+    expect(page1Html).toContain(">Next<");
+    expect(page1Html).not.toContain(">Previous<");
+
+    const page2Ctx = createExecutionContext();
+    const page2Res = await app.request(
+      "/psychotherapy/search?q=act&page=2",
+      {},
+      env,
+      page2Ctx,
+    );
+    await waitOnExecutionContext(page2Ctx);
+    expect(page2Res.status).toBe(200);
+    const page2Html = await page2Res.text();
+    expect(page2Html).toContain("page 2/");
+    expect(page2Html).toContain(">Next<");
+    expect(page2Html).toContain(">Previous<");
+    expect(page2Html).not.toBe(page1Html);
   });
 
   it("matches the manifest's row-set checksum and row counts", async () => {

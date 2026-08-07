@@ -25,3 +25,9 @@ tmp/
 *.sql.bak
 evidence/
 !evidence/.gitkeep
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

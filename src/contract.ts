@@ -87,6 +87,22 @@ export type SearchHit = {
   score: number | null;
 };
 
+/**
+ * Shape of `snapshot_manifest.coverage_json`, computed once at snapshot-build
+ * time in ACT's `export_allodium_snapshot.py::compute_coverage()` and stored
+ * immutably so /standard/'s published numbers always describe exactly the
+ * deployed snapshot. Inner keys are dynamic (whatever check_kind/result,
+ * link_status, or therapy_modality values actually occur) — no hardcoded
+ * enum on either side of the contract.
+ */
+export type CoverageStats = {
+  total_entries: number;
+  verifications: Record<string, Record<string, number>>;
+  link_status: Record<string, number>;
+  identifiers: Record<string, number>;
+  modalities: Record<string, number>;
+};
+
 export type SnapshotManifest = {
   contract_version: string;
   schema_version: string;
@@ -98,6 +114,7 @@ export type SnapshotManifest = {
   checksum: string;
   abstract_search_enabled: boolean;
   exclusion_counts_json: string;
+  coverage_json: CoverageStats;
 };
 
 export function assertNoForbiddenKeys(record: Record<string, unknown>): void {

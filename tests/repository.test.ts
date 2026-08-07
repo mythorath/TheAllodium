@@ -10,6 +10,7 @@ import {
   sanitizeLikeNeedle,
   searchEntries,
   getEntry,
+  getManifest,
   resolveCanonicalId,
 } from "../src/db/repository";
 import fixtureSql from "../fixtures/spike_fixture.sql?raw";
@@ -45,6 +46,14 @@ describe("local D1 repository + routes", () => {
     ).first<{ entry_count: number; abstract_search_enabled: number }>();
     expect(row?.entry_count).toBe(12);
     expect(row?.abstract_search_enabled).toBe(0);
+  });
+
+  it("parses coverage_json into a typed object via getManifest", async () => {
+    const manifest = await getManifest(env.DB);
+    expect(manifest).not.toBeNull();
+    expect(manifest?.entry_count).toBe(12);
+    // Fixture predates migration 0003's default; parsing '{}' must not throw.
+    expect(manifest?.coverage_json).toEqual({});
   });
 
   it("rebuilds FTS without indexing abstracts when gate is off", async () => {
@@ -163,6 +172,68 @@ describe("local D1 repository + routes", () => {
     const html = await res.text();
     expect(html).toContain("Trauma-Focused CBT Overview");
     expect(html).toContain("link inconclusive");
+  });
+
+  it("shows an explicit empty state for a query with zero hits", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request(
+      "/psychotherapy/search?q=zzzznoresultsxyz",
+      {},
+      env,
+      ctx,
+    );
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("No results for");
+  });
+
+  it("serves the home page with live manifest stats", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request("/", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("12 entries");
+    expect(html).toContain("/standard");
+  });
+
+  it("serves /standard with coverage numbers and no forbidden fields", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request("/standard", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("The Standard");
+    expect(html).not.toMatch(/SYNTHETIC ABSTRACT/i);
+    expect(html).not.toMatch(/file_path/i);
+  });
+
+  it("serves /disclaimer with crisis routing", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request("/disclaimer", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("988");
+    expect(html).toContain("findahelpline.com");
+  });
+
+  it("never sets a Set-Cookie header on any route (no accounts, no tracking)", async () => {
+    const routes = [
+      "/",
+      "/standard",
+      "/disclaimer",
+      "/psychotherapy/search?q=trauma",
+      "/psychotherapy/entries/aaaaaaaa00000001",
+      "/does-not-exist",
+    ];
+    for (const path of routes) {
+      const ctx = createExecutionContext();
+      const res = await app.request(path, {}, env, ctx);
+      await waitOnExecutionContext(ctx);
+      expect(res.headers.get("Set-Cookie")).toBeNull();
+    }
   });
 
   it("escapes HTML in titles", async () => {

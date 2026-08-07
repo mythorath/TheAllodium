@@ -6,10 +6,13 @@ import {
   searchEntries,
 } from "./db/repository";
 import {
+  DisclaimerPage,
   EntryPage,
+  ErrorPage,
   HomePage,
   NotFoundPage,
   SearchPage,
+  StandardPage,
 } from "./views/pages";
 
 export type AppBindings = {
@@ -20,7 +23,17 @@ export type AppBindings = {
 
 const app = new Hono<{ Bindings: AppBindings }>();
 
-app.get("/", (c) => c.html(<HomePage />));
+app.get("/", async (c) => {
+  const manifest = await getManifest(c.env.DB);
+  return c.html(<HomePage manifest={manifest} />);
+});
+
+app.get("/standard", async (c) => {
+  const manifest = await getManifest(c.env.DB);
+  return c.html(<StandardPage manifest={manifest} />);
+});
+
+app.get("/disclaimer", (c) => c.html(<DisclaimerPage />));
 
 app.get("/psychotherapy/entries/:id", async (c) => {
   const id = c.req.param("id");
@@ -71,5 +84,10 @@ app.get("/health", async (c) => {
 });
 
 app.notFound((c) => c.html(<NotFoundPage />, 404));
+
+app.onError((err, c) => {
+  console.error(err);
+  return c.html(<ErrorPage />, 500);
+});
 
 export default app;
