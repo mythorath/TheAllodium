@@ -1,0 +1,27 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Dependencies and build
+node_modules/
+dist/
+.wrangler/
+.vite/
+worker-configuration.d.ts
+
+# Test / coverage
+coverage/
+*.log
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Local artifacts
+tmp/
+*.sql.bak
+evidence/
+!evidence/.gitkeep

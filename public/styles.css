@@ -1,0 +1,67 @@
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+main {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+a {
+  color: #0b57d0;
+}
+
+.meta {
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  margin-right: 0.35rem;
+}
+
+.badge-blocked {
+  border-color: #b45309;
+  color: #92400e;
+}
+
+.search-form {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.search-form input {
+  flex: 1;
+  padding: 0.5rem 0.65rem;
+}
+
+.search-form button {
+  padding: 0.5rem 0.9rem;
+}
+
+.result-list {
+  list-style: none;
+  padding: 0;
+}
+
+.result-list li {
+  border-top: 1px solid #e5e5e5;
+  padding: 0.85rem 0;
+}
+
+.pager {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}

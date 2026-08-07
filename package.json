@@ -1,0 +1,38 @@
+{
+  "name": "the-allodium",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "db:migrate:local": "wrangler d1 execute DB --local --file=./migrations/0001_schema.sql && wrangler d1 execute DB --local --file=./migrations/0002_fts.sql",
+    "db:fixture:local": "wrangler d1 execute DB --local --file=./fixtures/spike_fixture.sql && wrangler d1 execute DB --local --file=./migrations/0002_fts.sql",
+    "db:reset:local": "rm -rf .wrangler/state && npm run db:migrate:local && npm run db:fixture:local",
+    "db:smoke:local": "tsx scripts/smoke-local.ts",
+    "db:create:staging": "tsx scripts/create-staging-d1.ts",
+    "db:migrate:staging": "tsx scripts/migrate-staging.ts",
+    "db:smoke:staging": "tsx scripts/smoke-staging.ts",
+    "gate:1a": "tsx scripts/close-1a-gate.ts",
+    "secrets:scan": "tsx scripts/secrets-scan.ts"
+  },
+  "dependencies": {
+    "hono": "^4.9.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.11.0",
+    "@cloudflare/vitest-pool-workers": "^0.12.0",
+    "@cloudflare/workers-types": "^4.20250801.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vite": "^6.3.0",
+    "vitest": "~3.2.0",
+    "wrangler": "^4.34.0"
+  }
+}

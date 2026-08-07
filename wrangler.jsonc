@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "theallodium",
+  "main": "src/index.tsx",
+  "compatibility_date": "2026-03-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  // Local / default: placeholder UUID until staging DB is created.
+  // Remote staging ID is written by scripts/create-staging-d1.ts into the
+  // "staging" environment below — never put API tokens here.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "theallodium-psychotherapy-local",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "env": {
+    "staging": {
+      "name": "theallodium-staging",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "theallodium-psychotherapy-staging",
+          // Replaced by create-staging-d1.ts after wrangler d1 create
+          "database_id": "b3ded3ce-abf6-499f-acfd-ba35ea869313",
+          "migrations_dir": "migrations"
+        }
+      ]
+    }
+  }
+}
