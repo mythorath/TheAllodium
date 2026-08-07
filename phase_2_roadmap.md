@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: plan-2e
     content: Plan the Selis-rendered OG card pipeline through R2 and Worker meta tags
-    status: pending
+    status: completed
 isProject: false
 ---
 

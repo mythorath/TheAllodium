@@ -54,6 +54,8 @@ isProject: false
 - Define field-level rights states for future entry expansion. Keep abstracts non-displayable and make production indexing feature-gated.
 - Exit gate: a tested, versioned public snapshot contains only approved fields and reproduces the confirmed 5,643-row public-safe inclusion count and documented exclusions.
 
+*Status note: 1B shipped bundled into the repository's initial commit (`75b9e9c`, "Phase 1A scaffold + Phase 1B publication contract"), before the per-phase `close-*-gate.ts`/decision-record convention started with 1A. There is no standalone `close-1b-gate.ts` or `docs/phase-1b-decision-record.md` for this reason — its actual deliverable is [`docs/publication-contract-v1.md`](/tank/TheAllodium/docs/publication-contract-v1.md) (structured verification fields, alias table, forbidden-fields rights policy), backed by ACT's pre-existing `verify_identity.py`/`verify_legitimacy.py`/`verify_corpus.py` and the `entry_verifications`/`entry_aliases` tables that every later phase's tests exercise against real data. Functionally complete and proven; just never received its own formal gate run.*
+
 ## 1C — Thin vertical slice on staging
 - Export a representative fixture spanning papers, client resources, blocked links, missing bibliographic fields, tags, and aliases.
 - Import it into staging D1 and serve the canonical entry URL, alias redirect, basic keyword results, and `LIKE` fallback through Hono.

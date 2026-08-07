@@ -4,25 +4,25 @@ overview: Build The Allodium as a Cloudflare Worker with D1 — entries are data
 todos:
   - id: schema-design
     content: Design the D1 entry schema and FTS5 virtual table for the psychotherapy collection, mirroring the public-safe fields already in export_showcase.py
-    status: pending
+    status: completed
   - id: worker-skeleton
     content: Scaffold the Allodium Worker (Static Assets + D1 binding) with a lean server-rendered framework, path-routed at theallodium.org/psychotherapy/*
-    status: pending
+    status: completed
   - id: d1-import-pipeline
     content: Build an export step from act.db to a D1-importable SQLite file (wrangler d1 execute --file, under the 5 GB import ceiling), run from Selis
-    status: pending
+    status: completed
   - id: provenance-fields
     content: "Extend export_showcase.py output with verification provenance (link_status, link_checked_at, identity and legitimacy flags parsed from notes) before it feeds the D1 import"
-    status: pending
+    status: completed
   - id: fts5-search
     content: Stand up the FTS5 table with a full-rebuild-on-import strategy (avoiding incremental triggers, which have a known D1 shadow-table stability issue) plus a LIKE-query fallback path
-    status: pending
+    status: completed
   - id: standard-page
     content: Write /standard/ documenting deterministic gates, DOI identity matching, 5090 legitimacy triage, and health gates, with live coverage numbers
-    status: pending
+    status: completed
   - id: structured-data
     content: Add per-entry JSON-LD, a sitemap generated from D1 at build/deploy time, robots.txt, and llms.txt
-    status: pending
+    status: completed
   - id: precompute-neighbors
     content: Build-time kNN over backend/data/embeddings.npy, written into D1 as a neighbor table, so related-resources works with Selis offline
     status: completed
