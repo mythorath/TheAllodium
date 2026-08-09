@@ -38,7 +38,10 @@ test.describe("home", () => {
     );
     await expect(page.getByText(/entries across/)).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "Open keyword search" }),
+      page.getByRole("link", { name: "Search the index" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "How verification works" }),
     ).toBeVisible();
     await expectNoSeriousA11yViolations(page);
   });
@@ -55,7 +58,7 @@ test.describe("search", () => {
   test("prompts for a query when none is given", async ({ page }) => {
     await page.goto("/psychotherapy/search");
     await expect(
-      page.getByText("Enter a keyword to search the public index."),
+      page.getByText(/Enter a keyword to search the public index/),
     ).toBeVisible();
     await expectNoSeriousA11yViolations(page);
   });
@@ -309,7 +312,7 @@ test.describe("shortlists and print (Phase 2D)", () => {
     ).toBeVisible();
     await expectNoSeriousA11yViolations(page);
 
-    await page.getByRole("link", { name: "Remove from this list" }).first().click();
+    await page.getByRole("link", { name: "Remove from this shared list" }).first().click();
     await expect(page).toHaveURL(/\?ids=bbbbbbbb00000003$/);
     await expect(page.getByText("1 entry in this shortlist")).toBeVisible();
   });
@@ -380,7 +383,7 @@ test.describe("shortlists and print (Phase 2D)", () => {
         page.getByRole("button", { name: "Add to shortlist" }).first(),
       ).toBeVisible();
 
-      await page.getByRole("link", { name: "Remove from this list" }).first().click();
+      await page.getByRole("link", { name: "Remove from this shared list" }).first().click();
       await expect(page).toHaveURL(/\?ids=bbbbbbbb00000003$/);
       await expect(page.getByText("1 entry in this shortlist")).toBeVisible();
     });

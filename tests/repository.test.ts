@@ -553,8 +553,9 @@ describe("local D1 repository + routes", () => {
     expect(html).toContain("Values Clarification Worksheet");
     expect(html).toContain("Acceptance and Commitment Therapy for Depression");
 
-    // Each row's "Remove from this list" link points at the URL with just
+    // Each row's "Remove from this shared list" link points at the URL with just
     // the *other* id left.
+    expect(html).toContain("Remove from this shared list");
     expect(html).toContain('href="/psychotherapy/list?ids=bbbbbbbb00000003"');
     expect(html).toContain('href="/psychotherapy/list?ids=aaaaaaaa00000001"');
 
@@ -815,6 +816,9 @@ describe("local D1 repository + routes", () => {
       );
       expect(res.headers.get("Content-Security-Policy")).toContain(
         "default-src 'self'",
+      );
+      expect(res.headers.get("Content-Security-Policy")).toContain(
+        "font-src 'self'",
       );
       expect(res.headers.get("Permissions-Policy")).toContain(
         "geolocation=()",

@@ -42,7 +42,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   "X-Frame-Options": "DENY",
   "Permissions-Policy": "geolocation=(), camera=(), microphone=(), interest-cohort=()",
   "Content-Security-Policy":
-    "default-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'",
+    "default-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'",
 };
 
 const app = new Hono<{ Bindings: AppBindings }>();
