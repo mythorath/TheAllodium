@@ -8,7 +8,7 @@ import {
   pickAllowedEntryFields,
 } from "../src/contract";
 
-describe("publication contract v1.1", () => {
+describe("publication contract v1.2", () => {
   it("includes identifiers needed for JSON-LD and citations", () => {
     expect(ALLOWED_ENTRY_FIELDS).toContain("doi");
     expect(ALLOWED_ENTRY_FIELDS).toContain("pmid");
@@ -16,13 +16,19 @@ describe("publication contract v1.1", () => {
     expect(ALLOWED_ENTRY_FIELDS).toContain("link_status");
   });
 
-  it("bumped the contract version for Phase 2A's audience/authors/neighbors additions", () => {
-    expect(CONTRACT_VERSION).toBe("1.1");
+  it("bumped the contract version for the overview field", () => {
+    expect(CONTRACT_VERSION).toBe("1.2");
   });
 
   it("includes the Phase 2A audience and authors_json fields", () => {
     expect(ALLOWED_ENTRY_FIELDS).toContain("audience");
     expect(ALLOWED_ENTRY_FIELDS).toContain("authors_json");
+  });
+
+  it("includes the v1.2 overview field while keeping abstracts forbidden", () => {
+    expect(ALLOWED_ENTRY_FIELDS).toContain("overview");
+    expect(FORBIDDEN_FIELDS).toContain("abstract");
+    expect(FORBIDDEN_FIELDS).toContain("abstract_text");
   });
 
   it("defines exactly the three contract audience values", () => {
@@ -69,6 +75,7 @@ describe("publication contract v1.1", () => {
       updated_at: null,
       audience: "client",
       authors_json: null,
+      overview: "A short generated paraphrase.",
       notes: "must not survive",
       file_path: "/tank/secret.pdf",
       abstract_text: "must not survive",
@@ -78,5 +85,6 @@ describe("publication contract v1.1", () => {
     expect(picked).not.toHaveProperty("abstract_text");
     expect(picked.id).toBe("aaaaaaaa00000001");
     expect(picked.audience).toBe("client");
+    expect(picked.overview).toBe("A short generated paraphrase.");
   });
 });

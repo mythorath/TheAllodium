@@ -130,12 +130,26 @@ describe("OpenGraph / Twitter meta tags (Phase 2E)", () => {
       `<meta name="twitter:image" content="${SITE_URL}/og/aaaaaaaa00000001.png"/>`,
     );
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image"/>');
-    // Synthesized only from resource_type/therapy_modality/source_org --
-    // never abstract/notes/rationale.
+    // Prefers the contract-safe machine overview when present; never
+    // abstract/notes/rationale.
     expect(html).toContain(
-      '<meta property="og:description" content="worksheet · act · Example Clinical Org"/>',
+      '<meta property="og:description" content="A brief client-facing worksheet that helps people name personal values and notice small actions that move toward them. Intended for use alongside ACT-informed therapy or psychoeducation, not as standalone treatment."/>',
     );
     expect(html).not.toMatch(/SYNTHETIC ABSTRACT/i);
+
+    // Entries without an overview still fall back to type · modality · org.
+    const ctx2 = createExecutionContext();
+    const res2 = await app.request(
+      "/psychotherapy/entries/aaaaaaaa00000002",
+      {},
+      env,
+      ctx2,
+    );
+    await waitOnExecutionContext(ctx2);
+    const html2 = await res2.text();
+    expect(html2).toContain(
+      '<meta property="og:description" content="handout · act · Example Clinical Org"/>',
+    );
   });
 
   it("falls back to the default card image on pages with no per-entry card", async () => {

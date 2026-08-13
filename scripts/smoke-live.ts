@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { config } from "./load-env";
 import { parseFlags } from "./cli";
 import { SITE_URL } from "../src/site-config";
+import { STATIC_SITEMAP_PATHS } from "../src/sitemap";
 
 config();
 
@@ -74,6 +75,8 @@ async function main() {
 
   await checkPage("/", "The Allodium");
   await checkPage("/psychotherapy/search", "Psychotherapy search");
+  await checkPage("/psychotherapy/topics", "Topics");
+  await checkPage("/psychotherapy/hexaflex", "Hexaflex");
   await checkPage("/standard", "The Standard");
   await checkPage("/disclaimer", "988");
 
@@ -81,9 +84,9 @@ async function main() {
   record("GET /sitemap.xml -> 200", sitemapRes.status === 200, `status=${sitemapRes.status}`);
   const sitemapXml = await sitemapRes.text();
   const urlCount = (sitemapXml.match(/<url>/g) ?? []).length;
-  const expectedCount = (health.entry_count ?? 0) + 4;
+  const expectedCount = (health.entry_count ?? 0) + STATIC_SITEMAP_PATHS.length;
   record(
-    "sitemap.xml url count matches /health entry_count plus 4 static routes",
+    "sitemap.xml url count matches /health entry_count plus static routes",
     urlCount === expectedCount,
     `sitemap=${urlCount}, expected=${expectedCount}`,
   );

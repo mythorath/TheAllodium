@@ -9,8 +9,10 @@ import fullSnapshotSql from "../fixtures/full_snapshot.sql?raw";
 import fullSnapshotManifest from "../fixtures/full_snapshot.manifest.json";
 import ftsSql from "../migrations/0002_fts.sql?raw";
 import { execStatements } from "./sql-test-utils";
-import { getEntriesByIds, getManifest, getRelatedEntries, searchEntries } from "../src/db/repository";
+import { getEntriesByIds, getKindCounts, getManifest, getRelatedEntries, getTagCounts, searchEntries } from "../src/db/repository";
 import { EMPTY_FACET_FILTERS } from "../src/db/facets";
+import { STATIC_SITEMAP_PATHS } from "../src/sitemap";
+import { CONTRACT_VERSION } from "../src/contract";
 
 /**
  * Phase 1D: validates the complete 5,643-row deterministic snapshot -- the
@@ -191,9 +193,11 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     await waitOnExecutionContext(page1Ctx);
     expect(page1Res.status).toBe(200);
     const page1Html = await page1Res.text();
-    expect(page1Html).toContain("page 1/");
+    expect(page1Html).toContain("Page 1 of");
     expect(page1Html).toContain(">Next<");
+    expect(page1Html).toContain(">Last<");
     expect(page1Html).not.toContain(">Previous<");
+    expect(page1Html).not.toContain(">First<");
 
     const page2Ctx = createExecutionContext();
     const page2Res = await app.request(
@@ -205,10 +209,28 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     await waitOnExecutionContext(page2Ctx);
     expect(page2Res.status).toBe(200);
     const page2Html = await page2Res.text();
-    expect(page2Html).toContain("page 2/");
+    expect(page2Html).toContain("Page 2 of");
     expect(page2Html).toContain(">Next<");
     expect(page2Html).toContain(">Previous<");
+    expect(page2Html).toContain(">Last<");
+    expect(page2Html).not.toContain(">First<");
     expect(page2Html).not.toBe(page1Html);
+
+    const page3Ctx = createExecutionContext();
+    const page3Res = await app.request(
+      "/psychotherapy/search?q=act&page=3",
+      {},
+      env,
+      page3Ctx,
+    );
+    await waitOnExecutionContext(page3Ctx);
+    expect(page3Res.status).toBe(200);
+    const page3Html = await page3Res.text();
+    expect(page3Html).toContain("Page 3 of");
+    expect(page3Html).toContain(">First<");
+    expect(page3Html).toContain(">Previous<");
+    expect(page3Html).toContain(">Next<");
+    expect(page3Html).toContain(">Last<");
   });
 
   it("serves a full sitemap.xml under the 50,000-URL single-sitemap limit (Phase 1F)", async () => {
@@ -218,9 +240,10 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     expect(res.status).toBe(200);
     const xml = await res.text();
     const urlCount = (xml.match(/<url>/g) ?? []).length;
-    // 4 static routes + one <url> per real entry.
-    expect(urlCount).toBe(4 + fullSnapshotManifest.entry_count);
+    expect(urlCount).toBe(STATIC_SITEMAP_PATHS.length + fullSnapshotManifest.entry_count);
     expect(urlCount).toBeLessThan(50_000);
+    expect(xml).toContain("/psychotherapy/topics");
+    expect(xml).toContain("/psychotherapy/hexaflex");
   });
 
   it("returns getRelatedEntries() results matching a raw entry_neighbors query, in rank order (Phase 2C)", async () => {
@@ -317,7 +340,7 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     );
     await waitOnExecutionContext(ctx);
     const html = await res.text();
-    expect(html).toContain("page 1/");
+    expect(html).toContain("Page 1 of");
   });
 
   it("matches the manifest's row-set checksum and row counts", async () => {
@@ -333,5 +356,172 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     expect(manifestRow?.entry_count).toBe(fullSnapshotManifest.entry_count);
     expect(manifestRow?.tag_link_count).toBe(fullSnapshotManifest.tag_link_count);
     expect(manifestRow?.alias_count).toBe(fullSnapshotManifest.alias_count);
+  });
+
+  it("splits the corpus into literature (papers) and materials (Phase 2.5A)", async () => {
+    const counts = await getKindCounts(env.DB);
+    expect(counts.literature + counts.materials).toBe(fullSnapshotManifest.entry_count);
+    expect(counts.literature).toBeGreaterThan(counts.materials);
+
+    const paperCount = await env.DB.prepare(
+      "SELECT COUNT(*) AS c FROM entries WHERE resource_type = 'paper'",
+    ).first<{ c: number }>();
+    expect(counts.literature).toBe(paperCount?.c);
+
+    const literature = await searchEntries(env.DB, "", 1, {
+      ...EMPTY_FACET_FILTERS,
+      kind: "literature",
+    });
+    expect(literature.mode).toBe("browse");
+    expect(literature.total).toBe(counts.literature);
+    expect(literature.hits.every((h) => h.resource_type === "paper")).toBe(true);
+    expect(literature.hits[0]?.published_date !== undefined).toBe(true);
+    expect(literature.hits[0]?.audience).toBeTruthy();
+
+    const materials = await searchEntries(env.DB, "", 1, {
+      ...EMPTY_FACET_FILTERS,
+      kind: "materials",
+    });
+    expect(materials.mode).toBe("browse");
+    expect(materials.total).toBe(counts.materials);
+    expect(materials.hits.some((h) => h.resource_type === "paper")).toBe(false);
+  });
+
+  it("renders literature and materials doors with live counts on the home page (Phase 2.5A)", async () => {
+    const counts = await getKindCounts(env.DB);
+    const ctx = createExecutionContext();
+    const res = await app.request("/", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    const html = await res.text();
+    expect(html).toContain("/psychotherapy/search?kind=literature");
+    expect(html).toContain("/psychotherapy/search?kind=materials");
+    expect(html).toContain(`${counts.literature.toLocaleString()} papers`);
+    expect(html).toContain(`${counts.materials.toLocaleString()} resources`);
+    expect(html).toContain("Search everything");
+  });
+
+  it("exposes topic/hexaflex/type/decade facets within each corpus (Phase 2.5B)", async () => {
+    const topicNames = new Set([
+      "anxiety",
+      "bpd",
+      "depression",
+      "emotion_dysregulation",
+      "ocd",
+      "relationships",
+      "schema_adjacent",
+      "self_compassion",
+      "sleep",
+      "substance_use",
+      "suicidality",
+      "trauma",
+    ]);
+    const hexaflexNames = new Set([
+      "acceptance",
+      "committed_action",
+      "defusion",
+      "present_moment",
+      "self_as_context",
+      "values",
+    ]);
+    const decadeNames = new Set(["2020s", "2010s", "2000s", "pre-2000"]);
+
+    const literature = await searchEntries(env.DB, "", 1, {
+      ...EMPTY_FACET_FILTERS,
+      kind: "literature",
+    });
+    expect(literature.facets.topic.every((o) => topicNames.has(o.value))).toBe(true);
+    expect(literature.facets.hexaflex.every((o) => hexaflexNames.has(o.value))).toBe(true);
+    expect(literature.facets.decade.length).toBeGreaterThan(0);
+    expect(literature.facets.decade.every((o) => decadeNames.has(o.value))).toBe(true);
+
+    const twenties = await searchEntries(env.DB, "", 1, {
+      ...EMPTY_FACET_FILTERS,
+      kind: "literature",
+      decade: ["2020s"],
+    });
+    expect(twenties.mode).toBe("browse");
+    expect(twenties.total).toBeGreaterThan(0);
+    expect(
+      twenties.hits.every((h) => {
+        const date = h.published_date;
+        return date != null && date >= "2020" && date < "2030";
+      }),
+    ).toBe(true);
+
+    const materials = await searchEntries(env.DB, "", 1, {
+      ...EMPTY_FACET_FILTERS,
+      kind: "materials",
+    });
+    expect(materials.facets.type.some((o) => o.value === "paper")).toBe(false);
+    expect(materials.facets.topic.every((o) => topicNames.has(o.value))).toBe(true);
+    expect(materials.facets.hexaflex.every((o) => hexaflexNames.has(o.value))).toBe(true);
+
+    const handouts = await searchEntries(env.DB, "", 1, {
+      ...EMPTY_FACET_FILTERS,
+      kind: "materials",
+      type: ["handout"],
+    });
+    expect(handouts.mode).toBe("browse");
+    expect(handouts.total).toBeGreaterThan(0);
+    expect(handouts.hits.every((h) => h.resource_type === "handout")).toBe(true);
+  });
+
+  it("renders topic and hexaflex directory landings that emit search URLs (Phase 2.5C)", async () => {
+    const hexaflexNames = new Set([
+      "acceptance",
+      "committed_action",
+      "defusion",
+      "present_moment",
+      "self_as_context",
+      "values",
+    ]);
+
+    const topicCounts = await getTagCounts(env.DB, "topic");
+    expect(topicCounts.length).toBeGreaterThan(0);
+
+    const topicCtx = createExecutionContext();
+    const topicRes = await app.request("/psychotherapy/topics", {}, env, topicCtx);
+    await waitOnExecutionContext(topicCtx);
+    const topicHtml = await topicRes.text();
+    const topicHrefs = [...topicHtml.matchAll(/href="(\/psychotherapy\/search\?topic=[^"]+)"/g)].map(
+      (m) => m[1],
+    );
+    expect(topicHrefs.length).toBe(topicCounts.length);
+    expect(topicHrefs.every((href) => href.startsWith("/psychotherapy/search?topic="))).toBe(true);
+    expect(topicHrefs.some((href) => href.includes("kind="))).toBe(false);
+
+    const hexCounts = await getTagCounts(env.DB, "hexaflex");
+    expect(hexCounts.length).toBeGreaterThan(0);
+    expect(hexCounts.every((t) => hexaflexNames.has(t.name))).toBe(true);
+
+    const hexCtx = createExecutionContext();
+    const hexRes = await app.request("/psychotherapy/hexaflex", {}, env, hexCtx);
+    await waitOnExecutionContext(hexCtx);
+    const hexHtml = await hexRes.text();
+    const hexHrefs = [...hexHtml.matchAll(/href="(\/psychotherapy\/search\?[^"]+)"/g)].map(
+      (m) => m[1].replaceAll("&amp;", "&"),
+    );
+    const processHrefs = hexHrefs.filter((href) => href.includes("hexaflex="));
+    expect(processHrefs.length).toBe(hexCounts.length);
+    expect(processHrefs.every((href) => href.includes("kind=materials"))).toBe(true);
+  });
+
+  it("treats ?like= as a neighbors search matching getRelatedEntries order (Phase 2.5D)", async () => {
+    const sample = await env.DB.prepare(
+      `SELECT entry_id, COUNT(*) AS c FROM entry_neighbors
+       GROUP BY entry_id HAVING c = 10 LIMIT 1`,
+    ).first<{ entry_id: string; c: number }>();
+    expect(sample).not.toBeNull();
+    expect(sample!.c).toBe(10);
+    expect(CONTRACT_VERSION).toBe("1.2");
+
+    const related = await getRelatedEntries(env.DB, sample!.entry_id);
+    const result = await searchEntries(env.DB, "", 1, EMPTY_FACET_FILTERS, {
+      likeId: sample!.entry_id,
+    });
+    expect(result.mode).toBe("neighbors");
+    expect(result.likeId).toBe(sample!.entry_id);
+    expect(result.total).toBe(10);
+    expect(result.hits.map((h) => h.id)).toEqual(related.map((r) => r.id));
   });
 });

@@ -13,6 +13,12 @@ export function run(
     cwd: resolve(process.cwd()),
     encoding: "utf8",
     env: { ...process.env, ...options?.env },
+    // Default Node maxBuffer (1MB) is too small for a `wrangler d1 execute
+    // --json` dump of thousands of rows (diff-snapshot-links.ts's
+    // whole-table id/title/canonical_url query in particular) — spawnSync
+    // silently kills the process (status: null) rather than throwing when
+    // it's exceeded, which is easy to misread as an unrelated failure.
+    maxBuffer: 1024 * 1024 * 200,
   });
   const stdout = result.stdout ?? "";
   const stderr = result.stderr ?? "";

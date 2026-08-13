@@ -1,7 +1,10 @@
 import type { FC, Child } from "hono/jsx";
 import type { PublicEntry, RelatedEntry, SearchHit, SnapshotManifest } from "../contract";
 import { SITE_URL } from "../site-config";
-import type { AccessValue, FacetCounts, FacetFilters, StorageValue } from "../db/facets";
+import type { AccessValue, FacetCounts, FacetFilters, KindValue, StorageValue } from "../db/facets";
+import { EMPTY_FACET_FILTERS, KIND_LABELS, KIND_VALUES } from "../db/facets";
+import type { SortOption } from "../db/sort";
+import { DEFAULT_SORT, SORT_LABELS, SORT_OPTIONS } from "../db/sort";
 import { buildApa, buildBibtexList, buildCitations, buildRisList, citationUrl } from "../citations";
 
 export const Layout: FC<{
@@ -83,6 +86,8 @@ export const Layout: FC<{
               The Allodium
             </a>
             <a href="/psychotherapy/search">Search</a>
+            <a href="/psychotherapy/topics">Topics</a>
+            <a href="/psychotherapy/hexaflex">Hexaflex</a>
             <a href="/standard">The Standard</a>
             {/* Phase 2D: a real link so it works with JS off (the empty
              * shortlist state is a harmless, honest destination); `app.js`
@@ -117,9 +122,10 @@ export const Layout: FC<{
   );
 };
 
-export const HomePage: FC<{ manifest: SnapshotManifest | null }> = ({
-  manifest,
-}) => {
+export const HomePage: FC<{
+  manifest: SnapshotManifest | null;
+  kindCounts: { literature: number; materials: number };
+}> = ({ manifest, kindCounts }) => {
   const modalityCount = manifest
     ? Object.keys(manifest.coverage_json.modalities ?? {}).length
     : 0;
@@ -141,9 +147,28 @@ export const HomePage: FC<{ manifest: SnapshotManifest | null }> = ({
             {modalityCount} modalities · no accounts, no cookies, no tracking.
           </p>
         ) : null}
+        <div class="home-doors">
+          <a class="button-primary" href="/psychotherapy/search?kind=literature">
+            Literature
+            <span class="home-door-count">
+              {kindCounts.literature.toLocaleString()} papers
+            </span>
+          </a>
+          <a class="button-primary" href="/psychotherapy/search?kind=materials">
+            Materials
+            <span class="home-door-count">
+              {kindCounts.materials.toLocaleString()} resources
+            </span>
+          </a>
+        </div>
+        <nav class="home-directory" aria-label="Catalog">
+          <a href="/psychotherapy/topics">Topics</a>
+          <a href="/psychotherapy/hexaflex">Hexaflex</a>
+          <a href="/psychotherapy/search">Search</a>
+        </nav>
         <p class="home-cta">
-          <a class="button-primary" href="/psychotherapy/search">
-            Search the index
+          <a class="button-secondary" href="/psychotherapy/search">
+            Search everything
           </a>
           <a class="button-secondary" href="/standard">
             How verification works
@@ -153,6 +178,81 @@ export const HomePage: FC<{ manifest: SnapshotManifest | null }> = ({
     </Layout>
   );
 };
+
+export const TopicsPage: FC<{ tags: Array<{ name: string; count: number }> }> = ({
+  tags,
+}) => {
+  return (
+    <Layout
+      title="Topics"
+      canonicalPath="/psychotherapy/topics"
+      ogDescription="Browse The Allodium's psychotherapy catalog by topic — depression, anxiety, trauma, and more."
+    >
+      <h1>Topics</h1>
+      <p>
+        Browse the catalog by topic. Each link opens a search across literature
+        and materials.
+      </p>
+      <DirectoryList
+        tags={tags}
+        emptyLabel="topic"
+        hrefFor={(name) => buildSearchHref("", { ...EMPTY_FACET_FILTERS, topic: [name] })}
+      />
+    </Layout>
+  );
+};
+
+export const HexaflexPage: FC<{ tags: Array<{ name: string; count: number }> }> = ({
+  tags,
+}) => {
+  return (
+    <Layout
+      title="Hexaflex"
+      canonicalPath="/psychotherapy/hexaflex"
+      ogDescription="Browse ACT hexaflex processes in The Allodium — acceptance, defusion, values, and the rest."
+    >
+      <h1>Hexaflex</h1>
+      <p>
+        The six ACT processes. Each link opens client materials first so
+        exercises are not buried under papers — switch Corpus to Literature on
+        the search page to include papers.
+      </p>
+      <DirectoryList
+        tags={tags}
+        emptyLabel="hexaflex"
+        hrefFor={(name) =>
+          buildSearchHref("", {
+            ...EMPTY_FACET_FILTERS,
+            kind: "materials",
+            hexaflex: [name],
+          })
+        }
+      />
+    </Layout>
+  );
+};
+
+function DirectoryList(props: {
+  tags: Array<{ name: string; count: number }>;
+  emptyLabel: string;
+  hrefFor: (name: string) => string;
+}) {
+  if (props.tags.length === 0) {
+    return <p class="meta">No {props.emptyLabel} tags in this snapshot.</p>;
+  }
+  return (
+    <ul class="stat-list directory-list">
+      {props.tags.map((tag) => (
+        <li key={tag.name}>
+          <a href={props.hrefFor(tag.name)}>
+            <span>{facetNameLabel(tag.name)}</span>
+            <span class="stat-count">{tag.count.toLocaleString()}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function CountList(props: { counts: Record<string, number>; label: string }) {
   const entries = Object.entries(props.counts).sort((a, b) => b[1] - a[1]);
@@ -409,12 +509,14 @@ function buildEntryJsonLd(entry: PublicEntry): Record<string, unknown> {
   if (entry.source_org) mainEntity.publisher = { "@type": "Organization", name: entry.source_org };
   if (entry.doi) mainEntity.identifier = `https://doi.org/${entry.doi}`;
   if (entry.oa_status && entry.oa_status !== "closed") mainEntity.isAccessibleForFree = true;
+  if (entry.overview) mainEntity.description = entry.overview;
 
   return {
     "@context": "https://schema.org",
     "@type": "WebPage",
     url: `${SITE_URL}/psychotherapy/entries/${entry.id}`,
     name: entry.title,
+    description: entry.overview ?? undefined,
     mainEntity,
   };
 }
@@ -437,6 +539,43 @@ function LinkBadge(props: { status: PublicEntry["link_status"] }) {
     return <span class="badge badge-unchecked">link unchecked</span>;
   }
   return <span class="badge badge-ok">link ok</span>;
+}
+
+function formatEntryAuthors(entry: PublicEntry): string {
+  if (entry.authors && entry.authors.length > 0) {
+    return entry.authors
+      .map((a) => (a.institution ? `${a.name} (${a.institution})` : a.name))
+      .join(", ");
+  }
+  return entry.author ?? "—";
+}
+
+type ResultMetaFields = {
+  therapy_modality: string;
+  resource_type: string;
+  audience: PublicEntry["audience"];
+  published_date: string | null;
+  citation_count: number | null;
+  source_org: string | null;
+  link_status: PublicEntry["link_status"];
+};
+
+function hitYear(publishedDate: string | null): string | null {
+  const match = publishedDate?.match(/\d{4}/);
+  return match ? match[0] : null;
+}
+
+function resultMetaParts(hit: ResultMetaFields): string {
+  const parts: string[] = [hit.therapy_modality, hit.resource_type, hit.audience];
+  const year = hitYear(hit.published_date);
+  if (year) parts.push(year);
+  if (hit.citation_count !== null) {
+    parts.push(
+      hit.citation_count === 1 ? "1 citation" : `${hit.citation_count.toLocaleString()} citations`,
+    );
+  }
+  if (hit.source_org) parts.push(hit.source_org);
+  return parts.join(" · ");
 }
 
 const CITATION_LABELS = {
@@ -486,10 +625,15 @@ function ApaCitationList(props: { items: Array<{ id: string; text: string; url: 
   );
 }
 
-/** Phase 2E: og:description for an entry page, built only from
- * public-contract fields already rendered elsewhere on the page (resource
- * type, modality, source org) — never abstract/notes/rationale. */
+/** Phase 2E / v1.2: og:description for an entry page. Prefer the
+ * machine-generated overview when present; otherwise fall back to
+ * resource type · modality · source org. Never abstract/notes/rationale. */
 function buildEntryOgDescription(entry: PublicEntry): string {
+  if (entry.overview) {
+    const trimmed = entry.overview.trim();
+    if (trimmed.length <= 280) return trimmed;
+    return `${trimmed.slice(0, 279).trimEnd()}…`;
+  }
   const parts = [entry.resource_type, entry.therapy_modality];
   if (entry.source_org) parts.push(entry.source_org);
   return parts.filter(Boolean).join(" · ");
@@ -526,6 +670,7 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
       <p class="meta entry-meta">
         <span class="badge">{entry.therapy_modality}</span>
         <span class="badge">{entry.resource_type}</span>
+        <span class="badge">{entry.audience}</span>
         <span class="badge">tier {entry.credibility_tier}</span>
         <LinkBadge status={entry.link_status} />
         {entry.is_link_only ? <span class="badge badge-unchecked">link-only</span> : null}
@@ -548,6 +693,15 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
           Add to shortlist
         </button>
       </p>
+      {entry.overview ? (
+        <section class="entry-overview" aria-labelledby="entry-overview-heading">
+          <h2 id="entry-overview-heading">Overview</h2>
+          <p class="meta">
+            AI-generated summary — not a substitute for reading the source.
+          </p>
+          <p class="entry-overview-body">{entry.overview}</p>
+        </section>
+      ) : null}
       <dl class="entry-fields">
         <dt>ID</dt>
         <dd>
@@ -556,7 +710,7 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
         <dt>Source org</dt>
         <dd>{entry.source_org ?? "—"}</dd>
         <dt>Author</dt>
-        <dd>{entry.author ?? "—"}</dd>
+        <dd>{formatEntryAuthors(entry)}</dd>
         <dt>Published</dt>
         <dd>{entry.published_date ?? "—"}</dd>
         <dt>OA status</dt>
@@ -576,11 +730,15 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
         <p class="meta">No tags</p>
       ) : (
         <ul class="tag-list">
-          {entry.tags.map((t) => (
-            <li key={`${t.category}:${t.name}`}>
-              {t.name} <span class="meta">({t.category})</span>
-            </li>
-          ))}
+          {entry.tags.map((t) => {
+            const href = tagSearchHref(t);
+            return (
+              <li key={`${t.category}:${t.name}`}>
+                {href ? <a href={href}>{t.name}</a> : t.name}{" "}
+                <span class="meta">({t.category})</span>
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -621,28 +779,40 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
       {related.length === 0 ? (
         <p class="meta">No related entries in this snapshot</p>
       ) : (
-        <ul class="result-list">
-          {related.map((r) => (
-            <li key={r.id}>
-              <a href={`/psychotherapy/entries/${r.id}`}>{r.title}</a>
-              <div class="meta">
-                <span class="badge">{r.therapy_modality}</span>
-                <LinkBadge status={r.link_status} />
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          <p class="meta">
+            <a href={`/psychotherapy/search?like=${encodeURIComponent(entry.id)}`}>
+              More like this
+            </a>
+          </p>
+          <ul class="result-list">
+            {related.map((r) => (
+              <li key={r.id}>
+                <a href={`/psychotherapy/entries/${r.id}`}>{r.title}</a>
+                <div class="meta">
+                  <span class="badge">{r.therapy_modality}</span>
+                  <LinkBadge status={r.link_status} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </Layout>
   );
 };
 
 const FACET_PARAM_NAMES = {
+  kind: "kind",
   modality: "modality",
   audience: "audience",
   access: "access",
   storage: "storage",
   linkStatus: "link_status",
+  topic: "topic",
+  hexaflex: "hexaflex",
+  type: "type",
+  decade: "decade",
 } as const;
 
 const ACCESS_LABELS: Record<AccessValue, string> = {
@@ -661,12 +831,36 @@ const STORAGE_LABELS: Record<StorageValue, string> = {
  * actually selected. */
 function filterEntries(filters: FacetFilters): Array<[string, string]> {
   return [
+    ...(filters.kind ? [[FACET_PARAM_NAMES.kind, filters.kind] as [string, string]] : []),
     ...filters.modality.map((v): [string, string] => [FACET_PARAM_NAMES.modality, v]),
     ...filters.audience.map((v): [string, string] => [FACET_PARAM_NAMES.audience, v]),
     ...filters.access.map((v): [string, string] => [FACET_PARAM_NAMES.access, v]),
     ...filters.storage.map((v): [string, string] => [FACET_PARAM_NAMES.storage, v]),
     ...filters.linkStatus.map((v): [string, string] => [FACET_PARAM_NAMES.linkStatus, v]),
+    ...filters.topic.map((v): [string, string] => [FACET_PARAM_NAMES.topic, v]),
+    ...filters.hexaflex.map((v): [string, string] => [FACET_PARAM_NAMES.hexaflex, v]),
+    ...filters.type.map((v): [string, string] => [FACET_PARAM_NAMES.type, v]),
+    ...filters.decade.map((v): [string, string] => [FACET_PARAM_NAMES.decade, v]),
   ];
+}
+
+/** Topic and hexaflex tags start a fresh search; other categories stay text. */
+function tagSearchHref(tag: { name: string; category: string }): string | null {
+  if (tag.category === "topic") {
+    return buildSearchHref("", { ...EMPTY_FACET_FILTERS, topic: [tag.name] });
+  }
+  if (tag.category === "hexaflex") {
+    return buildSearchHref("", { ...EMPTY_FACET_FILTERS, hexaflex: [tag.name] });
+  }
+  return null;
+}
+
+function facetNameLabel(value: string): string {
+  return value.replaceAll("_", " ");
+}
+
+function clearableFilters(filters: FacetFilters): FacetFilters {
+  return { ...EMPTY_FACET_FILTERS, kind: filters.kind };
 }
 
 /** Phase 2D: the shortlist's entire state is this one query param, so
@@ -677,12 +871,20 @@ function buildListHref(ids: string[]): string {
   return `/psychotherapy/list?ids=${ids.map(encodeURIComponent).join(",")}`;
 }
 
-function buildSearchHref(query: string, filters: FacetFilters, page?: number): string {
+function buildSearchHref(
+  query: string,
+  filters: FacetFilters,
+  page?: number,
+  sort: SortOption = DEFAULT_SORT,
+  likeId?: string | null,
+): string {
   const parts: string[] = [];
   if (query) parts.push(`q=${encodeURIComponent(query)}`);
+  else if (likeId) parts.push(`like=${encodeURIComponent(likeId)}`);
   for (const [name, value] of filterEntries(filters)) {
     parts.push(`${name}=${encodeURIComponent(value)}`);
   }
+  if (sort !== DEFAULT_SORT) parts.push(`sort=${encodeURIComponent(sort)}`);
   if (page && page > 1) parts.push(`page=${page}`);
   return `/psychotherapy/search${parts.length > 0 ? `?${parts.join("&")}` : ""}`;
 }
@@ -704,6 +906,7 @@ function FacetGroup(props: {
             name={props.paramName}
             value={opt.value}
             checked={opt.selected}
+            data-auto-submit
           />
           {(props.labelFor ? props.labelFor(opt.value) : opt.value)} (
           {opt.count.toLocaleString()})
@@ -722,15 +925,46 @@ export const SearchPage: FC<{
   mode: string;
   filters: FacetFilters;
   facets: FacetCounts;
+  sort: SortOption;
+  likeId: string | null;
+  likeTitle: string | null;
 }> = (props) => {
   const totalPages = Math.max(1, Math.ceil(props.total / props.pageSize));
   const hasFilters = filterEntries(props.filters).length > 0;
+  const isNeighbors = props.mode === "neighbors";
+  const likeId = isNeighbors ? props.likeId : null;
+  const hasClearableFilters =
+    props.filters.modality.length > 0 ||
+    props.filters.audience.length > 0 ||
+    props.filters.access.length > 0 ||
+    props.filters.storage.length > 0 ||
+    props.filters.linkStatus.length > 0 ||
+    props.filters.topic.length > 0 ||
+    props.filters.hexaflex.length > 0 ||
+    props.filters.type.length > 0 ||
+    props.filters.decade.length > 0;
   const hasFacetOptions =
     props.facets.modality.length > 0 ||
     props.facets.audience.length > 0 ||
     props.facets.access.length > 0 ||
     props.facets.storage.length > 0 ||
-    props.facets.linkStatus.length > 0;
+    props.facets.linkStatus.length > 0 ||
+    props.facets.topic.length > 0 ||
+    props.facets.hexaflex.length > 0 ||
+    props.facets.type.length > 0 ||
+    props.facets.decade.length > 0;
+  const sortOptions = props.query || isNeighbors
+    ? SORT_OPTIONS
+    : SORT_OPTIONS.filter((opt) => opt !== "relevance");
+  const effectiveSort =
+    !props.query && !isNeighbors && props.sort === "relevance" ? "title_asc" : props.sort;
+  const kindCountByValue = Object.fromEntries(
+    props.facets.kind.map((o) => [o.value, o.count]),
+  ) as Partial<Record<KindValue, number>>;
+  const allKindCount = KIND_VALUES.reduce(
+    (sum, value) => sum + (kindCountByValue[value] ?? 0),
+    0,
+  );
 
   return (
     <Layout
@@ -753,9 +987,58 @@ export const SearchPage: FC<{
           />
           <button type="submit">Search</button>
         </div>
+        {likeId ? <input type="hidden" name="like" value={likeId} /> : null}
+        <fieldset class="corpus-switch">
+          <legend>Corpus</legend>
+          <label class="corpus-option">
+            <input type="radio" name="kind" value="" checked={props.filters.kind === null} />
+            All{allKindCount > 0 ? ` (${allKindCount.toLocaleString()})` : ""}
+          </label>
+          {KIND_VALUES.map((value) => {
+            const count = kindCountByValue[value];
+            return (
+              <label class="corpus-option" key={value}>
+                <input
+                  type="radio"
+                  name="kind"
+                  value={value}
+                  checked={props.filters.kind === value}
+                />
+                {KIND_LABELS[value]}
+                {count !== undefined ? ` (${count.toLocaleString()})` : ""}
+              </label>
+            );
+          })}
+        </fieldset>
         {hasFacetOptions ? (
           <div class="facet-band">
             <div class="facet-groups">
+              <FacetGroup
+                legend="Topic"
+                paramName={FACET_PARAM_NAMES.topic}
+                options={props.facets.topic}
+                labelFor={facetNameLabel}
+              />
+              <FacetGroup
+                legend="Hexaflex"
+                paramName={FACET_PARAM_NAMES.hexaflex}
+                options={props.facets.hexaflex}
+                labelFor={facetNameLabel}
+              />
+              {props.filters.kind === "materials" ? (
+                <FacetGroup
+                  legend="Type"
+                  paramName={FACET_PARAM_NAMES.type}
+                  options={props.facets.type}
+                />
+              ) : null}
+              {props.filters.kind === "literature" ? (
+                <FacetGroup
+                  legend="Decade"
+                  paramName={FACET_PARAM_NAMES.decade}
+                  options={props.facets.decade}
+                />
+              ) : null}
               <FacetGroup
                 legend="Modality"
                 paramName={FACET_PARAM_NAMES.modality}
@@ -784,32 +1067,74 @@ export const SearchPage: FC<{
                 options={props.facets.linkStatus}
               />
             </div>
-            {hasFilters ? (
+            {hasClearableFilters ? (
               <p class="facet-toolbar">
-                <a href={buildSearchHref(props.query, { modality: [], audience: [], access: [], storage: [], linkStatus: [] })}>
+                <a
+                  href={buildSearchHref(
+                    props.query,
+                    clearableFilters(props.filters),
+                    undefined,
+                    props.sort,
+                    likeId,
+                  )}
+                >
                   Clear filters
                 </a>
               </p>
             ) : null}
           </div>
         ) : null}
+        {props.mode !== "empty" || hasFacetOptions ? (
+          <div class="sort-bar">
+            <label for="search-sort">Sort by</label>
+            <select
+              id="search-sort"
+              name="sort"
+              data-auto-submit
+              value={effectiveSort}
+            >
+              {sortOptions.map((opt) => (
+                <option key={opt} value={opt} selected={opt === effectiveSort}>
+                  {SORT_LABELS[opt]}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
       </form>
       {props.mode === "empty" ? (
         <p class="status-prompt">
-          Enter a keyword to search the public index, or browse with the filters
-          above.
+          Browse{" "}
+          <a href="/psychotherapy/search?kind=literature">literature</a>
+          {" or "}
+          <a href="/psychotherapy/search?kind=materials">materials</a>
+          , or type a keyword to search both.
         </p>
       ) : (
         <p class="meta" aria-live="polite">
           {props.total} result{props.total === 1 ? "" : "s"}
-          {props.query ? ` for "${props.query}"` : hasFilters ? " matching your filters" : ""}
-          {" · "}page {props.page}/{totalPages}
+          {props.query ? (
+            ` for "${props.query}"`
+          ) : isNeighbors && likeId ? (
+            <>
+              {" similar to "}
+              <a href={`/psychotherapy/entries/${likeId}`}>
+                {props.likeTitle ?? likeId}
+              </a>
+            </>
+          ) : hasFilters ? (
+            " matching your filters"
+          ) : (
+            ""
+          )}
         </p>
       )}
       {props.mode !== "empty" && props.total === 0 ? (
         <p class="status-prompt" role="status">
           {props.query ? (
             <>No results for "{props.query}". Try a broader or differently spelled term.</>
+          ) : isNeighbors ? (
+            <>No similar entries for this item.</>
           ) : (
             <>No entries match the selected filters. Try removing one.</>
           )}
@@ -820,8 +1145,7 @@ export const SearchPage: FC<{
             <li key={hit.id}>
               <a href={`/psychotherapy/entries/${hit.id}`}>{hit.title}</a>
               <div class="meta">
-                {hit.therapy_modality} · {hit.resource_type}
-                {hit.source_org ? ` · ${hit.source_org}` : ""}
+                {resultMetaParts(hit)}
                 {hit.link_status === "blocked" ? " · link inconclusive" : ""}
               </div>
               <button
@@ -838,13 +1162,28 @@ export const SearchPage: FC<{
       ) : null}
       {props.total > props.pageSize ? (
         <nav class="pager" aria-label="Pagination">
+          {props.page > 2 ? (
+            <a href={buildSearchHref(props.query, props.filters, 1, props.sort, likeId)}>
+              First
+            </a>
+          ) : null}
           {props.page > 1 ? (
-            <a href={buildSearchHref(props.query, props.filters, props.page - 1)}>
+            <a href={buildSearchHref(props.query, props.filters, props.page - 1, props.sort, likeId)}>
               Previous
             </a>
           ) : null}
+          <span class="pager-status">
+            Page {props.page} of {totalPages}
+          </span>
           {props.page < totalPages ? (
-            <a href={buildSearchHref(props.query, props.filters, props.page + 1)}>Next</a>
+            <a href={buildSearchHref(props.query, props.filters, props.page + 1, props.sort, likeId)}>
+              Next
+            </a>
+          ) : null}
+          {props.page < totalPages - 1 ? (
+            <a href={buildSearchHref(props.query, props.filters, totalPages, props.sort, likeId)}>
+              Last
+            </a>
           ) : null}
         </nav>
       ) : null}
@@ -900,8 +1239,8 @@ export const ListPage: FC<{
                   <li key={entry.id}>
                     <a href={`/psychotherapy/entries/${entry.id}`}>{entry.title}</a>
                     <div class="meta">
-                      {entry.therapy_modality} · {entry.resource_type}
-                      {entry.source_org ? ` · ${entry.source_org}` : ""}
+                      {resultMetaParts(entry)}
+                      {" "}
                       <LinkBadge status={entry.link_status} />
                     </div>
                     <div class="list-row-actions">

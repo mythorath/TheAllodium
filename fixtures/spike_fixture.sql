@@ -38,7 +38,7 @@ INSERT INTO entries (
   id, title, resource_type, therapy_modality, source_org, canonical_url,
   author, published_date, credibility_tier, is_link_only, citation_count,
   oa_status, doi, pmid, pmcid, link_status, link_checked_at, updated_at,
-  audience, authors_json
+  audience, authors_json, overview
 ) VALUES
   (
     'aaaaaaaa00000001',
@@ -60,7 +60,8 @@ INSERT INTO entries (
     '2026-07-01T12:00:00Z',
     '2026-07-01T12:00:00Z',
     'client',
-    NULL
+    NULL,
+    'A brief client-facing worksheet that helps people name personal values and notice small actions that move toward them. Intended for use alongside ACT-informed therapy or psychoeducation, not as standalone treatment.'
   ),
   (
     'aaaaaaaa00000002',
@@ -82,6 +83,7 @@ INSERT INTO entries (
     '2026-07-01T12:00:00Z',
     '2026-07-01T12:00:00Z',
     'client',
+    NULL,
     NULL
   ),
   (
@@ -104,7 +106,8 @@ INSERT INTO entries (
     '2026-07-02T12:00:00Z',
     '2026-07-02T12:00:00Z',
     'clinician',
-    '[{"name":"C. Researcher","orcid":null,"institution":null,"position":"first"},{"name":"D. Colleague","orcid":null,"institution":null,"position":"last"}]'
+    '[{"name":"C. Researcher","orcid":null,"institution":null,"position":"first"},{"name":"D. Colleague","orcid":null,"institution":null,"position":"last"}]',
+    NULL
   ),
   (
     'bbbbbbbb00000004',
@@ -126,6 +129,7 @@ INSERT INTO entries (
     '2026-07-03T12:00:00Z',
     '2026-07-03T12:00:00Z',
     'clinician',
+    NULL,
     NULL
   ),
   (
@@ -148,6 +152,7 @@ INSERT INTO entries (
     '2026-07-04T12:00:00Z',
     '2026-07-04T12:00:00Z',
     'client',
+    NULL,
     NULL
   ),
   (
@@ -170,7 +175,8 @@ INSERT INTO entries (
     '2026-07-05T12:00:00Z',
     '2026-07-05T12:00:00Z',
     'clinician',
-    '[{"name":"F. Scientist","orcid":null,"institution":null,"position":"first"}]'
+    '[{"name":"F. Scientist","orcid":null,"institution":null,"position":"first"}]',
+    NULL
   ),
   (
     'dddddddd00000007',
@@ -192,6 +198,7 @@ INSERT INTO entries (
     '2026-07-06T12:00:00Z',
     '2026-07-06T12:00:00Z',
     'clinician',
+    NULL,
     NULL
   ),
   (
@@ -214,6 +221,7 @@ INSERT INTO entries (
     '2026-07-07T12:00:00Z',
     '2026-07-07T12:00:00Z',
     'client',
+    NULL,
     NULL
   ),
   (
@@ -236,7 +244,8 @@ INSERT INTO entries (
     '2026-07-08T12:00:00Z',
     '2026-07-08T12:00:00Z',
     'clinician',
-    '[{"name":"I. Investigator","orcid":null,"institution":null,"position":"first"}]'
+    '[{"name":"I. Investigator","orcid":null,"institution":null,"position":"first"}]',
+    NULL
   ),
   (
     'eeeeeeee00000010',
@@ -258,6 +267,7 @@ INSERT INTO entries (
     '2026-07-09T12:00:00Z',
     '2026-07-09T12:00:00Z',
     'client',
+    NULL,
     NULL
   ),
   (
@@ -280,6 +290,7 @@ INSERT INTO entries (
     '2026-07-10T12:00:00Z',
     '2026-07-10T12:00:00Z',
     'client',
+    NULL,
     NULL
   ),
   (
@@ -302,6 +313,7 @@ INSERT INTO entries (
     NULL,
     '2026-07-11T12:00:00Z',
     'client',
+    NULL,
     NULL
   );
 

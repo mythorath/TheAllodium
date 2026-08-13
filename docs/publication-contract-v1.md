@@ -1,7 +1,7 @@
 # Publication Contract v1
 
 Collection: `psychotherapy`
-Contract version: `1.1` (see [Phase 2A addendum](#v11-addendum-phase-2a) below)
+Contract version: `1.2` (see [Phase 2A addendum](#v11-addendum-phase-2a) and [v1.2 addendum](#v12-addendum-entry-overviews) below)
 Schema version: `1`
 
 This contract defines the public-safe D1 row shape for The Allodium.
@@ -120,3 +120,13 @@ until Phase 2C's related-entries UI. `snapshot_manifest.coverage_json` gains
 `audience` and `neighbors` breakdowns so the exporter's embedding-freshness
 gate (fails the export if more than 2% of public entries lack an embedding)
 has a published, honest coverage number rather than a silent gap.
+
+## v1.2 addendum (entry overviews)
+
+One new allowed entry field:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `overview` | text \| null | Short plain-language paraphrase generated offline by ACT's `scripts/generate_overviews.py` (default model `qwen3.6:35b`). Papers are summarized from title/authors/abstract; other types from title + extracted-text excerpt. Nullable when no usable source text exists or the backfill has not yet covered the row. |
+
+`overview` is intentionally **not** the verbatim `papers.abstract`. Abstracts remain in `FORBIDDEN_FIELDS` and must never appear in HTML, JSON view models, snippets, logs, JSON-LD, sitemaps, or `LIKE` fallback payloads. The overview is a machine-generated paraphrase written against ACT's private copy of the source text, then exported as ordinary public metadata (cleared by default; not gated via `resource_field_rights`). Entry pages that render it must disclose that it is AI-generated and not a substitute for reading the source.

@@ -9,6 +9,8 @@ export type SitemapUrl = {
 export const STATIC_SITEMAP_PATHS: readonly string[] = [
   "/",
   "/psychotherapy/search",
+  "/psychotherapy/topics",
+  "/psychotherapy/hexaflex",
   "/standard",
   "/disclaimer",
 ];

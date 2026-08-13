@@ -47,6 +47,7 @@ function baseEntry(overrides: Partial<PublicEntry>): PublicEntry {
     updated_at: "2026-07-01T12:00:00Z",
     audience: "client",
     authors: null,
+    overview: null,
     tags: [],
     verifications: [],
     ...overrides,

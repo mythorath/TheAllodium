@@ -1,6 +1,6 @@
-/** Publication contract v1.1 — allowlist and denylist for public D1 rows. */
+/** Publication contract v1.2 — allowlist and denylist for public D1 rows. */
 
-export const CONTRACT_VERSION = "1.1" as const;
+export const CONTRACT_VERSION = "1.2" as const;
 export const SCHEMA_VERSION = "1" as const;
 export const COLLECTION = "psychotherapy" as const;
 
@@ -25,6 +25,7 @@ export const ALLOWED_ENTRY_FIELDS = [
   "updated_at",
   "audience",
   "authors_json",
+  "overview",
 ] as const;
 
 export type AllowedEntryField = (typeof ALLOWED_ENTRY_FIELDS)[number];
@@ -90,6 +91,8 @@ export type PublicEntry = {
   updated_at: string | null;
   audience: AudienceValue;
   authors: AuthorRecord[] | null;
+  /** Machine-generated paraphrase (contract v1.2); never a verbatim abstract. */
+  overview: string | null;
   tags: Array<{ name: string; category: string }>;
   verifications: Array<{
     check_kind: CheckKind;
@@ -135,6 +138,10 @@ export type SearchHit = {
   therapy_modality: string;
   source_org: string | null;
   link_status: LinkStatus;
+  published_date: string | null;
+  citation_count: number | null;
+  audience: AudienceValue;
+  credibility_tier: number;
   score: number | null;
 };
 

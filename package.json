@@ -22,6 +22,7 @@
     "db:load:staging-sample": "tsx scripts/load-staging-sample.ts",
     "db:smoke:staging-sample": "tsx scripts/smoke-staging-sample.ts",
     "db:create:production": "tsx scripts/create-production-d1.ts",
+    "diff:links": "tsx scripts/diff-snapshot-links.ts",
     "db:promote:staging": "tsx scripts/promote-snapshot.ts --env staging",
     "db:promote:production": "tsx scripts/promote-snapshot.ts --env production --yes",
     "db:rollback:staging": "tsx scripts/rollback-snapshot.ts --env staging --yes",
@@ -32,6 +33,7 @@
     "promote:og-cards": "tsx scripts/upload-og-cards.ts",
     "smoke:live": "tsx scripts/smoke-live.ts",
     "smoke:og-cards": "tsx scripts/smoke-og-cards.ts",
+    "audit:links": "tsx scripts/audit-link-integrity.ts",
     "gate:1a": "tsx scripts/close-1a-gate.ts",
     "gate:1c": "tsx scripts/close-1c-gate.ts",
     "gate:1d": "tsx scripts/close-1d-gate.ts",
@@ -42,6 +44,10 @@
     "gate:2c": "tsx scripts/close-2c-gate.ts",
     "gate:2d": "tsx scripts/close-2d-gate.ts",
     "gate:2e": "tsx scripts/close-2e-gate.ts",
+    "gate:25a": "tsx scripts/close-25a-gate.ts",
+    "gate:25b": "tsx scripts/close-25b-gate.ts",
+    "gate:25c": "tsx scripts/close-25c-gate.ts",
+    "gate:25d": "tsx scripts/close-25d-gate.ts",
     "secrets:scan": "tsx scripts/secrets-scan.ts"
   },
   "dependencies": {

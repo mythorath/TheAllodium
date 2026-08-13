@@ -15,13 +15,17 @@ import {
   getRelatedEntries,
   parseShortlistIds,
   resolveCanonicalId,
+  getTagCounts,
 } from "../src/db/repository";
-import { EMPTY_FACET_FILTERS, buildFacetWhere, parseFacetFilters } from "../src/db/facets";
+import { EMPTY_FACET_FILTERS, buildFacetWhere, hasActiveFilters, parseFacetFilters } from "../src/db/facets";
 import type { FacetFilters } from "../src/db/facets";
+import { DEFAULT_SORT, parseSortOption, sortOrderBy } from "../src/db/sort";
+import type { SortOption } from "../src/db/sort";
 import fixtureSql from "../fixtures/spike_fixture.sql?raw";
 import ftsSql from "../migrations/0002_fts.sql?raw";
 import { execStatements } from "./sql-test-utils";
 import { SITE_URL } from "../src/site-config";
+import { STATIC_SITEMAP_PATHS } from "../src/sitemap";
 
 async function loadFixture() {
   await execStatements(env.DB, fixtureSql);
@@ -82,6 +86,7 @@ describe("facet filter parsing and WHERE building", () => {
       }),
     );
     expect(filters).toEqual({
+      ...EMPTY_FACET_FILTERS,
       modality: ["cbt", "act"],
       audience: ["client"],
       access: ["free"],
@@ -148,6 +153,122 @@ describe("facet filter parsing and WHERE building", () => {
     );
     const storage = buildFacetWhere({ ...EMPTY_FACET_FILTERS, storage: ["link_only"] });
     expect(storage.sql).toBe("(e.is_link_only = 1)");
+  });
+
+  it("parses exclusive kind and maps it to resource_type (Phase 2.5A)", () => {
+    expect(parseFacetFilters(getAllFrom({ kind: ["literature"] })).kind).toBe("literature");
+    expect(parseFacetFilters(getAllFrom({ kind: ["materials"] })).kind).toBe("materials");
+    expect(parseFacetFilters(getAllFrom({ kind: [""] })).kind).toBeNull();
+    expect(parseFacetFilters(getAllFrom({ kind: ["bogus"] })).kind).toBeNull();
+    expect(parseFacetFilters(getAllFrom({ kind: ["materials", "literature"] })).kind).toBe(
+      "materials",
+    );
+
+    expect(buildFacetWhere({ ...EMPTY_FACET_FILTERS, kind: "literature" })).toEqual({
+      sql: "e.resource_type = 'paper'",
+      binds: [],
+    });
+    expect(buildFacetWhere({ ...EMPTY_FACET_FILTERS, kind: "materials" })).toEqual({
+      sql: "e.resource_type != 'paper'",
+      binds: [],
+    });
+    expect(hasActiveFilters({ ...EMPTY_FACET_FILTERS, kind: "literature" })).toBe(true);
+    expect(hasActiveFilters(EMPTY_FACET_FILTERS)).toBe(false);
+
+    const both = buildFacetWhere({
+      ...EMPTY_FACET_FILTERS,
+      kind: "literature",
+      audience: ["clinician"],
+    });
+    expect(both.sql).toBe("e.resource_type = 'paper' AND e.audience IN (?)");
+    expect(buildFacetWhere({ ...EMPTY_FACET_FILTERS, kind: "literature" }, "kind")).toEqual({
+      sql: "",
+      binds: [],
+    });
+  });
+
+  it("parses topic/hexaflex/type/decade and maps them to SQL (Phase 2.5B)", () => {
+    const parsed = parseFacetFilters(
+      getAllFrom({
+        topic: ["depression", "anxiety"],
+        hexaflex: ["values"],
+        type: ["handout"],
+        decade: ["2010s", "bogus", "2020s"],
+      }),
+    );
+    expect(parsed.topic).toEqual(["depression", "anxiety"]);
+    expect(parsed.hexaflex).toEqual(["values"]);
+    expect(parsed.type).toEqual(["handout"]);
+    expect(parsed.decade).toEqual(["2010s", "2020s"]);
+    expect(parseFacetFilters(getAllFrom({ decade: ["not-a-decade"] })).decade).toEqual([]);
+
+    const topic = buildFacetWhere({ ...EMPTY_FACET_FILTERS, topic: ["depression"] });
+    expect(topic.sql).toBe(
+      "EXISTS (SELECT 1 FROM entry_tags et JOIN tags t ON t.id = et.tag_id WHERE et.entry_id = e.id AND t.category = ? AND t.name IN (?))",
+    );
+    expect(topic.binds).toEqual(["topic", "depression"]);
+
+    const hexaflex = buildFacetWhere({ ...EMPTY_FACET_FILTERS, hexaflex: ["values", "defusion"] });
+    expect(hexaflex.sql).toContain("t.category = ? AND t.name IN (?, ?)");
+    expect(hexaflex.binds).toEqual(["hexaflex", "values", "defusion"]);
+
+    const type = buildFacetWhere({ ...EMPTY_FACET_FILTERS, type: ["handout", "worksheet"] });
+    expect(type).toEqual({
+      sql: "e.resource_type IN (?, ?)",
+      binds: ["handout", "worksheet"],
+    });
+
+    const decade = buildFacetWhere({ ...EMPTY_FACET_FILTERS, decade: ["2010s"] });
+    expect(decade.sql).toBe("((e.published_date >= '2010' AND e.published_date < '2020'))");
+    expect(decade.binds).toEqual([]);
+
+    const twoDecades = buildFacetWhere({ ...EMPTY_FACET_FILTERS, decade: ["2020s", "pre-2000"] });
+    expect(twoDecades.sql).toContain("e.published_date >= '2020'");
+    expect(twoDecades.sql).toContain("e.published_date < '2000'");
+
+    expect(hasActiveFilters({ ...EMPTY_FACET_FILTERS, topic: ["depression"] })).toBe(true);
+    expect(buildFacetWhere({ ...EMPTY_FACET_FILTERS, topic: ["depression"] }, "topic")).toEqual({
+      sql: "",
+      binds: [],
+    });
+  });
+});
+
+describe("sort option parsing and ORDER BY fragments", () => {
+  it("defaults unknown/absent values to relevance", () => {
+    expect(parseSortOption(undefined)).toBe(DEFAULT_SORT);
+    expect(parseSortOption(null)).toBe("relevance");
+    expect(parseSortOption("")).toBe("relevance");
+    expect(parseSortOption("not-a-sort")).toBe("relevance");
+  });
+
+  it("accepts every allowlisted sort value case-insensitively", () => {
+    const expected: SortOption[] = [
+      "relevance",
+      "date_desc",
+      "date_asc",
+      "title_asc",
+      "citations_desc",
+    ];
+    for (const opt of expected) {
+      expect(parseSortOption(opt)).toBe(opt);
+      expect(parseSortOption(opt.toUpperCase())).toBe(opt);
+    }
+  });
+
+  it("puts NULLs last for date/citation sorts, falls back to title without a score, and always ends in a unique e.id tiebreaker", () => {
+    expect(sortOrderBy("relevance", true)).toBe("score ASC, e.title ASC, e.id ASC");
+    expect(sortOrderBy("relevance", false)).toBe("e.title ASC, e.id ASC");
+    expect(sortOrderBy("date_desc", false)).toBe(
+      "e.published_date IS NULL, e.published_date DESC, e.title ASC, e.id ASC",
+    );
+    expect(sortOrderBy("date_asc", false)).toBe(
+      "e.published_date IS NULL, e.published_date ASC, e.title ASC, e.id ASC",
+    );
+    expect(sortOrderBy("title_asc", true)).toBe("e.title ASC, e.id ASC");
+    expect(sortOrderBy("citations_desc", false)).toBe(
+      "e.citation_count IS NULL, e.citation_count DESC, e.title ASC, e.id ASC",
+    );
   });
 });
 
@@ -233,6 +354,23 @@ describe("local D1 repository + routes", () => {
     const worksheet = await getEntry(env.DB, "aaaaaaaa00000001");
     expect(worksheet?.audience).toBe("client");
     expect(worksheet?.authors).toBeNull();
+  });
+
+  it("exposes overview when present and null otherwise (contract v1.2)", async () => {
+    const withOverview = await getEntry(env.DB, "aaaaaaaa00000001");
+    expect(withOverview?.overview).toMatch(/personal values/);
+
+    const withoutOverview = await getEntry(env.DB, "aaaaaaaa00000002");
+    expect(withoutOverview?.overview).toBeNull();
+
+    const ctx = createExecutionContext();
+    const response = await app.request("/psychotherapy/entries/aaaaaaaa00000001", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    const html = await response.text();
+    expect(html).toContain("Overview");
+    expect(html).toContain("AI-generated summary");
+    expect(html).toContain("personal values");
+    expect(html).not.toMatch(/SYNTHETIC ABSTRACT/);
   });
 
   it("degrades to null authors rather than throwing on malformed authors_json", async () => {
@@ -376,6 +514,60 @@ describe("local D1 repository + routes", () => {
       expect(paywalled.total).toBe(1); // closed (eeeeeeee9)
     });
 
+    it("sorts browse results by title, date, and citations (NULLs last)", async () => {
+      const cbt = filters({ modality: ["cbt"] });
+
+      const byTitle = await searchEntries(env.DB, "", 1, cbt, { sort: "title_asc" });
+      expect(byTitle.sort).toBe("title_asc");
+      expect(byTitle.hits.map((h) => h.id)).toEqual([
+        "eeeeeeee00000009", // "Closed Access…"
+        "bbbbbbbb00000004", // "Cognitive Restructuring…"
+      ]);
+
+      const newest = await searchEntries(env.DB, "", 1, cbt, { sort: "date_desc" });
+      expect(newest.hits.map((h) => h.id)).toEqual([
+        "eeeeeeee00000009", // 2023
+        "bbbbbbbb00000004", // NULL published_date → last
+      ]);
+
+      const oldest = await searchEntries(env.DB, "", 1, cbt, { sort: "date_asc" });
+      expect(oldest.hits.map((h) => h.id)).toEqual([
+        "eeeeeeee00000009",
+        "bbbbbbbb00000004",
+      ]);
+
+      const cited = await searchEntries(env.DB, "", 1, cbt, { sort: "citations_desc" });
+      expect(cited.hits.map((h) => h.id)).toEqual([
+        "eeeeeeee00000009", // citation_count 5
+        "bbbbbbbb00000004", // NULL citation_count → last
+      ]);
+    });
+
+    it("lets an explicit sort override FTS relevance ranking", async () => {
+      const relevance = await searchEntries(env.DB, "depression", 1, EMPTY_FACET_FILTERS, {
+        sort: "relevance",
+      });
+      expect(relevance.mode).toBe("fts");
+      expect(relevance.sort).toBe("relevance");
+
+      const byCitations = await searchEntries(env.DB, "depression", 1, EMPTY_FACET_FILTERS, {
+        sort: "citations_desc",
+      });
+      expect(byCitations.mode).toBe("fts");
+      expect(byCitations.hits.map((h) => h.id)).toEqual([
+        "bbbbbbbb00000003", // 42 citations
+        "cccccccc00000006", // 18 citations
+      ]);
+
+      const newest = await searchEntries(env.DB, "depression", 1, EMPTY_FACET_FILTERS, {
+        sort: "date_desc",
+      });
+      expect(newest.hits.map((h) => h.id)).toEqual([
+        "bbbbbbbb00000003", // 2021
+        "cccccccc00000006", // 2017
+      ]);
+    });
+
     it("computes cross-filtered facet counts that exclude a dimension's own filter", async () => {
       const result = await searchEntries(env.DB, "", 1, filters({ audience: ["clinician"] }));
 
@@ -414,6 +606,9 @@ describe("local D1 repository + routes", () => {
         result.facets.linkStatus.map((o) => [o.value, o.count]),
       );
       expect(linkStatus).toEqual({ ok: 9, blocked: 2, unchecked: 1 });
+
+      const kind = Object.fromEntries(result.facets.kind.map((o) => [o.value, o.count]));
+      expect(kind).toEqual({ literature: 3, materials: 9 });
     });
 
     it("ignores unknown/invalid facet values rather than erroring", async () => {
@@ -432,6 +627,218 @@ describe("local D1 repository + routes", () => {
     });
   });
 
+  describe("Phase 2.5A corpus split", () => {
+    function filters(overrides: Partial<FacetFilters>): FacetFilters {
+      return { ...EMPTY_FACET_FILTERS, ...overrides };
+    }
+
+    it("browses literature as papers and materials as everything else, with no query", async () => {
+      const literature = await searchEntries(env.DB, "", 1, filters({ kind: "literature" }));
+      expect(literature.mode).toBe("browse");
+      expect(literature.hits.map((h) => h.id)).toEqual([
+        "bbbbbbbb00000003",
+        "cccccccc00000006",
+        "eeeeeeee00000009",
+      ]);
+      expect(literature.hits.every((h) => h.resource_type === "paper")).toBe(true);
+      expect(literature.hits.every((h) => h.audience !== undefined)).toBe(true);
+
+      const materials = await searchEntries(env.DB, "", 1, filters({ kind: "materials" }));
+      expect(materials.mode).toBe("browse");
+      expect(materials.total).toBe(9);
+      expect(materials.hits.some((h) => h.resource_type === "paper")).toBe(false);
+    });
+
+    it("keeps a keyword search with kind=literature inside papers", async () => {
+      const result = await searchEntries(env.DB, "depression", 1, filters({ kind: "literature" }));
+      expect(result.mode).toBe("fts");
+      expect(result.hits.map((h) => h.id).sort()).toEqual([
+        "bbbbbbbb00000003",
+        "cccccccc00000006",
+      ]);
+    });
+
+    it("still returns the empty landing when nothing is selected", async () => {
+      const result = await searchEntries(env.DB, "", 1, EMPTY_FACET_FILTERS);
+      expect(result.mode).toBe("empty");
+      expect(result.total).toBe(0);
+    });
+  });
+
+  describe("Phase 2.5B unused dimensions as facets", () => {
+    function filters(overrides: Partial<FacetFilters>): FacetFilters {
+      return { ...EMPTY_FACET_FILTERS, ...overrides };
+    }
+
+    it("browses topic=depression with no query as the two tagged papers", async () => {
+      const result = await searchEntries(env.DB, "", 1, filters({ topic: ["depression"] }));
+      expect(result.mode).toBe("browse");
+      expect(result.hits.map((h) => h.id).sort()).toEqual([
+        "bbbbbbbb00000003",
+        "cccccccc00000006",
+      ]);
+    });
+
+    it("browses hexaflex=values as the values worksheet", async () => {
+      const result = await searchEntries(env.DB, "", 1, filters({ hexaflex: ["values"] }));
+      expect(result.mode).toBe("browse");
+      expect(result.hits.map((h) => h.id)).toEqual(["aaaaaaaa00000001"]);
+    });
+
+    it("filters literature by decade buckets over published_date", async () => {
+      const teens = await searchEntries(
+        env.DB,
+        "",
+        1,
+        filters({ kind: "literature", decade: ["2010s"] }),
+      );
+      expect(teens.hits.map((h) => h.id)).toEqual(["cccccccc00000006"]);
+
+      const twenties = await searchEntries(
+        env.DB,
+        "",
+        1,
+        filters({ kind: "literature", decade: ["2020s"] }),
+      );
+      expect(twenties.hits.map((h) => h.id).sort()).toEqual([
+        "bbbbbbbb00000003",
+        "eeeeeeee00000009",
+      ]);
+    });
+
+    it("filters materials by resource type and never returns papers", async () => {
+      const result = await searchEntries(
+        env.DB,
+        "",
+        1,
+        filters({ kind: "materials", type: ["handout"] }),
+      );
+      expect(result.mode).toBe("browse");
+      expect(result.hits.length).toBeGreaterThan(0);
+      expect(result.hits.every((h) => h.resource_type === "handout")).toBe(true);
+      expect(result.hits.some((h) => h.resource_type === "paper")).toBe(false);
+    });
+  });
+
+  describe("Phase 2.5C directory landings", () => {
+    it("returns unfiltered topic and hexaflex counts from getTagCounts", async () => {
+      expect(await getTagCounts(env.DB, "topic")).toEqual([
+        { name: "anxiety", count: 1 },
+        { name: "depression", count: 2 },
+        { name: "trauma", count: 1 },
+      ]);
+      expect(await getTagCounts(env.DB, "hexaflex")).toEqual([
+        { name: "defusion", count: 1 },
+        { name: "values", count: 1 },
+      ]);
+    });
+
+    it("serves /psychotherapy/topics with search URLs and live counts", async () => {
+      const ctx = createExecutionContext();
+      const res = await app.request("/psychotherapy/topics", {}, env, ctx);
+      await waitOnExecutionContext(ctx);
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('href="/psychotherapy/search?topic=depression"');
+      expect(html).toMatch(/topic=depression[\s\S]*?stat-count">2</);
+      expect(html).not.toMatch(/href="\/psychotherapy\/search\?[^"]*kind=/);
+      expect(html).toContain('href="/psychotherapy/topics"');
+    });
+
+    it("serves /psychotherapy/hexaflex with materials-biased search URLs", async () => {
+      const ctx = createExecutionContext();
+      const res = await app.request("/psychotherapy/hexaflex", {}, env, ctx);
+      await waitOnExecutionContext(ctx);
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain(
+        'href="/psychotherapy/search?kind=materials&amp;hexaflex=values"',
+      );
+      expect(html).toContain("client materials first");
+    });
+  });
+
+  describe("Phase 2.5D neighbors search", () => {
+    function filters(overrides: Partial<FacetFilters>): FacetFilters {
+      return { ...EMPTY_FACET_FILTERS, ...overrides };
+    }
+
+    it("returns rank-ordered neighbors for like= with no query", async () => {
+      const first = await searchEntries(env.DB, "", 1, EMPTY_FACET_FILTERS, {
+        likeId: "aaaaaaaa00000001",
+      });
+      expect(first.mode).toBe("neighbors");
+      expect(first.likeId).toBe("aaaaaaaa00000001");
+      expect(first.hits.map((h) => h.id)).toEqual([
+        "aaaaaaaa00000002",
+        "bbbbbbbb00000003",
+      ]);
+
+      const second = await searchEntries(env.DB, "", 1, EMPTY_FACET_FILTERS, {
+        likeId: "aaaaaaaa00000001",
+      });
+      expect(second.hits.map((h) => h.id)).toEqual(first.hits.map((h) => h.id));
+    });
+
+    it("intersects neighbors with kind=materials", async () => {
+      const result = await searchEntries(env.DB, "", 1, filters({ kind: "materials" }), {
+        likeId: "aaaaaaaa00000001",
+      });
+      expect(result.mode).toBe("neighbors");
+      expect(result.hits.map((h) => h.id)).toEqual(["aaaaaaaa00000002"]);
+      expect(result.hits.some((h) => h.resource_type === "paper")).toBe(false);
+    });
+
+    it("lets a keyword query win over like=", async () => {
+      const result = await searchEntries(env.DB, "depression", 1, EMPTY_FACET_FILTERS, {
+        likeId: "aaaaaaaa00000001",
+      });
+      expect(result.mode).not.toBe("neighbors");
+      expect(result.likeId).toBeNull();
+      expect(result.hits.map((h) => h.id).sort()).toEqual([
+        "bbbbbbbb00000003",
+        "cccccccc00000006",
+      ]);
+    });
+
+    it("returns neighbors mode with zero hits for an unknown id", async () => {
+      const result = await searchEntries(env.DB, "", 1, EMPTY_FACET_FILTERS, {
+        likeId: "doesnotexist0000",
+      });
+      expect(result.mode).toBe("neighbors");
+      expect(result.total).toBe(0);
+      expect(result.hits).toEqual([]);
+    });
+
+    it("renders similar-to copy and a hidden like field on the search page", async () => {
+      const ctx = createExecutionContext();
+      const res = await app.request(
+        "/psychotherapy/search?like=aaaaaaaa00000001",
+        {},
+        env,
+        ctx,
+      );
+      await waitOnExecutionContext(ctx);
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain('name="like"');
+      expect(html).toContain('value="aaaaaaaa00000001"');
+      expect(html).toContain("similar to");
+      expect(html).toContain("Defusion Techniques for Anxiety");
+      expect(html).not.toContain("No similar entries for this item.");
+
+      const emptyCtx = createExecutionContext();
+      const emptyRes = await app.request(
+        "/psychotherapy/search?like=doesnotexist0000",
+        {},
+        env,
+        emptyCtx,
+      );
+      await waitOnExecutionContext(emptyCtx);
+      expect(await emptyRes.text()).toContain("No similar entries for this item.");
+    });
+  });
+
   it("serves entry HTML and alias redirect", async () => {
     const ctx = createExecutionContext();
     const res = await app.request(
@@ -445,6 +852,10 @@ describe("local D1 repository + routes", () => {
     const html = await res.text();
     expect(html).toContain("Values Clarification Worksheet");
     expect(html).toContain("Automated checks only");
+    expect(html).toContain('<span class="badge">client</span>');
+    expect(html).toContain('href="/psychotherapy/search?hexaflex=values"');
+    expect(html).toContain('href="/psychotherapy/search?like=aaaaaaaa00000001"');
+    expect(html).toContain("More like this");
     expect(html).not.toMatch(/SYNTHETIC ABSTRACT/i);
     expect(html).not.toMatch(/file_path/i);
 
@@ -474,7 +885,14 @@ describe("local D1 repository + routes", () => {
     const html = await res.text();
 
     expect(html).toContain("Related entries");
+    expect(html).toContain("More like this");
+    expect(html).toContain('href="/psychotherapy/search?like=bbbbbbbb00000003"');
     expect(html).toContain("Behavioral Activation for Depression");
+    expect(html).toContain('<span class="badge">clinician</span>');
+    expect(html).toContain("C. Researcher, D. Colleague");
+    expect(html).toContain('href="/psychotherapy/search?topic=depression"');
+    expect(html).toContain(">depression</a>");
+    expect(html).not.toMatch(/href="\/psychotherapy\/search\?[^"]*modality=act"/);
 
     expect(html).toContain("Cite this entry");
     expect(html).toContain("@article{allodium:bbbbbbbb00000003,");
@@ -495,6 +913,7 @@ describe("local D1 repository + routes", () => {
     await waitOnExecutionContext(ctx);
     const html = await res.text();
     expect(html).toContain("No related entries in this snapshot");
+    expect(html).not.toContain("More like this");
   });
 
   it('renders an "Add to shortlist" button on entry and search pages (Phase 2D)', async () => {
@@ -606,6 +1025,8 @@ describe("local D1 repository + routes", () => {
     const html = await res.text();
     expect(html).toContain("Trauma-Focused CBT Overview");
     expect(html).toContain("link inconclusive");
+    expect(html).toMatch(/type="checkbox"[^>]*data-auto-submit/);
+    expect(html).not.toMatch(/type="radio"[^>]*data-auto-submit/);
   });
 
   it("shows an explicit empty state for a query with zero hits", async () => {
@@ -630,6 +1051,15 @@ describe("local D1 repository + routes", () => {
     const html = await res.text();
     expect(html).toContain("12 entries");
     expect(html).toContain("/standard");
+    expect(html).toContain("/psychotherapy/search?kind=literature");
+    expect(html).toContain("/psychotherapy/search?kind=materials");
+    expect(html).toContain("3 papers");
+    expect(html).toContain("9 resources");
+    expect(html).toContain("Search everything");
+    expect(html).toContain('href="/psychotherapy/topics"');
+    expect(html).toContain('href="/psychotherapy/hexaflex"');
+    expect(html).toContain(">Topics</a>");
+    expect(html).toContain(">Hexaflex</a>");
   });
 
   it("serves /standard with coverage numbers and no forbidden fields", async () => {
@@ -728,6 +1158,8 @@ describe("local D1 repository + routes", () => {
       ["/standard", "/standard"],
       ["/disclaimer", "/disclaimer"],
       ["/psychotherapy/search", "/psychotherapy/search"],
+      ["/psychotherapy/topics", "/psychotherapy/topics"],
+      ["/psychotherapy/hexaflex", "/psychotherapy/hexaflex"],
       [
         "/psychotherapy/entries/aaaaaaaa00000001",
         "/psychotherapy/entries/aaaaaaaa00000001",
@@ -796,11 +1228,13 @@ describe("local D1 repository + routes", () => {
     const xml = await res.text();
     expect(xml).toContain(`<loc>${SITE_URL}/</loc>`);
     expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy/search</loc>`);
+    expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy/topics</loc>`);
+    expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy/hexaflex</loc>`);
     expect(xml).toContain(
       `<loc>${SITE_URL}/psychotherapy/entries/aaaaaaaa00000001</loc>`,
     );
     const urlCount = (xml.match(/<url>/g) ?? []).length;
-    expect(urlCount).toBe(12 + 4);
+    expect(urlCount).toBe(12 + STATIC_SITEMAP_PATHS.length);
   });
 
   it("sets the shared security header set on HTML and JSON responses alike", async () => {

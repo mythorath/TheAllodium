@@ -13,6 +13,10 @@ republish full text, abstracts, or copyrighted files.
 
 - [Search](https://theallodium.org/psychotherapy/search): keyword search
   over the full psychotherapy collection.
+- [Topics](https://theallodium.org/psychotherapy/topics): directory of
+  topic tags, each linking into search.
+- [Hexaflex](https://theallodium.org/psychotherapy/hexaflex): the six ACT
+  processes, linking into client materials first.
 - [The Standard](https://theallodium.org/standard): the verification
   methodology — identity checks, legitimacy triage, link-health gates — and
   live coverage numbers for the current published snapshot.

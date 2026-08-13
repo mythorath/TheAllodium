@@ -134,6 +134,17 @@
     }
   });
 
+  // Progressive enhancement for sort / similar controls: changing a
+  // `[data-auto-submit]` control submits its enclosing form. Without JS the
+  // form still works via the regular Search submit button.
+  document.addEventListener("change", function (event) {
+    var target = event.target;
+    if (!target || !target.getAttribute) return;
+    if (!target.hasAttribute("data-auto-submit")) return;
+    var form = target.form || (target.closest ? target.closest("form") : null);
+    if (form) form.submit();
+  });
+
   // This script is loaded with `defer`, so the DOM is already fully parsed
   // by the time it runs — the nav link and any shortlist buttons on the
   // current page are ready to read/update immediately, no load-event wait

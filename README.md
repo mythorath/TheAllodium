@@ -110,6 +110,21 @@ npm run smoke:live -- --url https://theallodium.org
 npm run gate:1f
 ```
 
+### Continuous link-integrity monitoring
+
+`scripts/cron-audit-links.sh` runs `npm run audit:links -- --url https://theallodium.org --env production`
+on a schedule (installed via this machine's crontab: `0 8 * * *`, i.e. daily
+at 08:00) and appends every run's pass/fail result to
+`evidence/cron-audit-links.log`, so link-order drift or a self-consistency
+regression in production is caught continuously going forward rather than
+only when someone happens to run the audit by hand. Re-install after moving
+the checkout or upgrading node (`NODE_BIN_DIR` in the script is a fixed
+path):
+
+```bash
+(crontab -l 2>/dev/null; echo "0 8 * * * /tank/TheAllodium/scripts/cron-audit-links.sh") | crontab -
+```
+
 `deploy:production` and `configure:com-redirect` need a `CLOUDFLARE_API_TOKEN`
 with Zone-level permissions in addition to the Account-level ones used by
 earlier phases — Cloudflare API tokens scope Account and Zone permissions
@@ -178,4 +193,6 @@ until Phase 1F.
 | `npm run deploy:staging` / `deploy:production` | Pre-flight checks, refuse to deploy against an empty D1, `wrangler deploy`, log the Version ID to `deployments/log.json` |
 | `npm run configure:com-redirect` | Idempotently PUT the `theallodium.com` → `theallodium.org` zone-level redirect rule |
 | `npm run smoke:live -- --url <base>` | Real HTTP-level checks against a deployed Worker (headers, sitemap/manifest parity, 404s, no cookies, and the `.com` redirect when `--url` is the production domain) |
+| `npm run audit:links -- --url <base> [--env staging\|production]` | Real HTTP-level link-integrity audit: double-fetches a sample of live entry pages (plus every duplicate-titled "tie-risk" entry when `--env` gives D1 access) to prove id/title/canonical_url stay self-consistent, and checks that every sort's search/browse pagination has no duplicate/missing ids and a stable order across repeated requests. Run against staging and production after every deploy, alongside `smoke:live` |
+| `npm run diff:links -- --env staging\|production [--snapshot <name>] [--acknowledge]` | Cross-snapshot stability check: diffs the new `fixtures/<name>.sql` about to be promoted against the currently-live entries in `--env`, and fails if any id's `title`/`canonical_url` would silently change. Runs automatically as part of `db:promote:*` (pass `--acknowledge-link-changes` to that command once a flagged change is confirmed intentional) |
 | `npm run gate:1f` | Close Phase 1F: secrets scan, typecheck, test, e2e suite, verify a production deploy + passing live smoke evidence exist, write `docs/phase-1f-decision-record.md` |

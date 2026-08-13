@@ -2,10 +2,13 @@ import { Hono } from "hono";
 import {
   getEntriesByIds,
   getEntry,
+  getKindCounts,
   getManifest,
+  getTagCounts,
   getRelatedEntries,
   listEntriesForSitemap,
   parseShortlistIds,
+  parseSortOption,
   resolveCanonicalId,
   searchEntries,
 } from "./db/repository";
@@ -15,11 +18,13 @@ import {
   DisclaimerPage,
   EntryPage,
   ErrorPage,
+  HexaflexPage,
   HomePage,
   ListPage,
   NotFoundPage,
   SearchPage,
   StandardPage,
+  TopicsPage,
 } from "./views/pages";
 
 export type AppBindings = {
@@ -64,8 +69,11 @@ app.use("*", async (c, next) => {
 });
 
 app.get("/", async (c) => {
-  const manifest = await getManifest(c.env.DB);
-  return c.html(<HomePage manifest={manifest} />);
+  const [manifest, kindCounts] = await Promise.all([
+    getManifest(c.env.DB),
+    getKindCounts(c.env.DB),
+  ]);
+  return c.html(<HomePage manifest={manifest} kindCounts={kindCounts} />);
 });
 
 app.get("/standard", async (c) => {
@@ -139,12 +147,29 @@ app.get("/psychotherapy/entries/:id", async (c) => {
   return c.html(<EntryPage entry={entry} related={related} />);
 });
 
+app.get("/psychotherapy/topics", async (c) => {
+  const tags = await getTagCounts(c.env.DB, "topic");
+  return c.html(<TopicsPage tags={tags} />);
+});
+
+app.get("/psychotherapy/hexaflex", async (c) => {
+  const tags = await getTagCounts(c.env.DB, "hexaflex");
+  return c.html(<HexaflexPage tags={tags} />);
+});
+
 app.get("/psychotherapy/search", async (c) => {
   const q = c.req.query("q") ?? "";
   const pageRaw = Number(c.req.query("page") ?? "1");
   const forceLike = c.req.query("fallback") === "1";
   const filters = parseFacetFilters((name) => c.req.queries(name));
-  const result = await searchEntries(c.env.DB, q, pageRaw, filters, { forceLike });
+  const sort = parseSortOption(c.req.query("sort"));
+  const likeRaw = c.req.query("like") ?? "";
+  const likeId = likeRaw.trim() ? likeRaw.trim() : null;
+  const result = await searchEntries(c.env.DB, q, pageRaw, filters, { forceLike, sort, likeId });
+  const likeTitle =
+    result.mode === "neighbors" && result.likeId
+      ? ((await getEntry(c.env.DB, result.likeId))?.title ?? null)
+      : null;
   return c.html(
     <SearchPage
       query={result.query}
@@ -155,6 +180,9 @@ app.get("/psychotherapy/search", async (c) => {
       mode={result.mode}
       filters={result.filters}
       facets={result.facets}
+      sort={result.sort}
+      likeId={result.likeId}
+      likeTitle={likeTitle}
     />,
   );
 });

@@ -5,6 +5,7 @@ import { config } from "./load-env";
 import { parseFlags, requireEnv, run } from "./cli";
 import { runSmokeChecks } from "./smoke-checks";
 import { appendDeploymentsLog, databaseNameFor, gitCommit, timeTravelBookmark } from "./deployments-log";
+import { diffSnapshotLinks } from "./diff-snapshot-links";
 
 config();
 
@@ -18,9 +19,10 @@ interface SnapshotManifest {
 
 function usage(): never {
   throw new Error(
-    "Usage: promote-snapshot.ts --env staging|production [--snapshot <fixture-name>] [--yes]\n" +
+    "Usage: promote-snapshot.ts --env staging|production [--snapshot <fixture-name>] [--yes] [--acknowledge-link-changes]\n" +
       "  --snapshot defaults to 'full_snapshot' (fixtures/full_snapshot.sql/.manifest.json/.checksum.txt)\n" +
-      "  --yes is required when --env production (this replaces all live content)",
+      "  --yes is required when --env production (this replaces all live content)\n" +
+      "  --acknowledge-link-changes is required if any live id's title/canonical_url would silently change",
   );
 }
 
@@ -62,6 +64,9 @@ function main() {
     `Promoting ${manifest.entry_count} entries / ${manifest.tag_link_count} tag links / ` +
       `${manifest.alias_count} aliases (source: ${manifest.source_generated_at}) to env=${env}`,
   );
+
+  console.log(`Diffing new snapshot links against currently-live entries in env=${env}…`);
+  diffSnapshotLinks(env, snapshotName, { acknowledge: booleans.has("acknowledge-link-changes") });
 
   console.log(`Applying tracked migrations to env=${env} (idempotent; only unapplied files run)…`);
   run("npx", ["wrangler", "d1", "migrations", "apply", "DB", "--env", env, "--remote"]);
