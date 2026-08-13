@@ -974,6 +974,17 @@ dl.entry-fields dd,
   color: var(--ink);
 }
 
+.crisis-banner {
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+}
+
+.assist-notice {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
 @media (max-width: 30rem) {
   main,
   header .site-nav,

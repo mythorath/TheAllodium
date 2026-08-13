@@ -1069,6 +1069,10 @@ describe("local D1 repository + routes", () => {
     expect(res.status).toBe(200);
     const html = await res.text();
     expect(html).toContain("The Standard");
+    expect(html).toContain("Optional AI-assisted search");
+    expect(html).toContain("qwen2.5:7b-instruct-q6_k");
+    expect(html).toContain("988");
+    expect(html).not.toContain("gpu-runbook");
     expect(html).not.toMatch(/SYNTHETIC ABSTRACT/i);
     expect(html).not.toMatch(/file_path/i);
   });

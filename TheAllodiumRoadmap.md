@@ -40,7 +40,7 @@ todos:
     status: completed
   - id: gpu-tunnel-layer
     content: Expose an optional GPU service at gpu.theallodium.org over Cloudflare Tunnel from Selis; Worker calls it with a short timeout and falls back to D1 FTS5
-    status: pending
+    status: completed
   - id: nl-query-rag
     content: Natural-language query to facet translation and grounded answers with citations, using the GPU layer when awake, with refusal rules and crisis routing
     status: pending

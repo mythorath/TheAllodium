@@ -4,4 +4,6 @@ interface CloudflareBindings {
   ASSETS: Fetcher;
   ABSTRACT_SEARCH_ENABLED?: string;
   OG_CARDS: R2Bucket;
+  GPU_ORIGIN?: string;
+  GPU_SHARED_SECRET?: string;
 }

@@ -188,6 +188,44 @@ export async function getTagCounts(
   return rows.map((row) => ({ name: row.name, count: row.c }));
 }
 
+export type NlAllowlists = {
+  modality: Set<string>;
+  type: Set<string>;
+  topic: Set<string>;
+  hexaflex: Set<string>;
+};
+
+/** Canonical facet tokens actually present in this snapshot — used to
+ * re-validate GPU NL output. Case of the stored value is the canonical form. */
+export async function loadNlAllowlists(db: D1Database): Promise<NlAllowlists> {
+  const [modality, type, topic, hexaflex] = await Promise.all([
+    db
+      .prepare(
+        `SELECT DISTINCT therapy_modality AS v FROM entries
+         WHERE therapy_modality IS NOT NULL AND therapy_modality != ''`,
+      )
+      .all<{ v: string }>(),
+    db
+      .prepare(
+        `SELECT DISTINCT resource_type AS v FROM entries
+         WHERE resource_type IS NOT NULL AND resource_type != ''`,
+      )
+      .all<{ v: string }>(),
+    db
+      .prepare(`SELECT DISTINCT name AS v FROM tags WHERE category = 'topic'`)
+      .all<{ v: string }>(),
+    db
+      .prepare(`SELECT DISTINCT name AS v FROM tags WHERE category = 'hexaflex'`)
+      .all<{ v: string }>(),
+  ]);
+  return {
+    modality: new Set(modality.results.map((row) => row.v)),
+    type: new Set(type.results.map((row) => row.v)),
+    topic: new Set(topic.results.map((row) => row.v)),
+    hexaflex: new Set(hexaflex.results.map((row) => row.v)),
+  };
+}
+
 export async function resolveCanonicalId(
   db: D1Database,
   id: string,

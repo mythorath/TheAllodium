@@ -7,12 +7,17 @@ import {
   getTagCounts,
   getRelatedEntries,
   listEntriesForSitemap,
+  loadNlAllowlists,
   parseShortlistIds,
   parseSortOption,
   resolveCanonicalId,
   searchEntries,
 } from "./db/repository";
-import { parseFacetFilters } from "./db/facets";
+import { EMPTY_FACET_FILTERS, hasActiveFilters, parseFacetFilters } from "./db/facets";
+import { isCrisisIntent } from "./crisis";
+import { askGpu } from "./gpu";
+import { ASK_MAX_CHARS, normalizeNlFacets } from "./nl-query";
+import { buildSearchHref, withSearchFlag } from "./search-url";
 import { buildSitemapXml, STATIC_SITEMAP_PATHS } from "./sitemap";
 import {
   DisclaimerPage,
@@ -32,6 +37,8 @@ export type AppBindings = {
   ASSETS?: Fetcher;
   ABSTRACT_SEARCH_ENABLED?: string;
   OG_CARDS: R2Bucket;
+  GPU_ORIGIN?: string;
+  GPU_SHARED_SECRET?: string;
 };
 
 /**
@@ -158,6 +165,27 @@ app.get("/psychotherapy/hexaflex", async (c) => {
 });
 
 app.get("/psychotherapy/search", async (c) => {
+  const askRaw = (c.req.query("ask") ?? "").trim().slice(0, ASK_MAX_CHARS);
+  if (askRaw) {
+    if (isCrisisIntent(askRaw)) {
+      return c.redirect(
+        withSearchFlag(buildSearchHref(askRaw, EMPTY_FACET_FILTERS), "crisis", "1"),
+        302,
+      );
+    }
+    const suggestion = await askGpu(c.env, askRaw);
+    const allowlists = suggestion ? await loadNlAllowlists(c.env.DB) : null;
+    const normalized =
+      suggestion && allowlists ? normalizeNlFacets(suggestion, allowlists) : null;
+    if (!normalized || (!normalized.q && !hasActiveFilters(normalized.filters))) {
+      return c.redirect(
+        withSearchFlag(buildSearchHref(askRaw, EMPTY_FACET_FILTERS), "assist", "offline"),
+        302,
+      );
+    }
+    return c.redirect(buildSearchHref(normalized.q, normalized.filters), 302);
+  }
+
   const q = c.req.query("q") ?? "";
   const pageRaw = Number(c.req.query("page") ?? "1");
   const forceLike = c.req.query("fallback") === "1";
@@ -165,6 +193,8 @@ app.get("/psychotherapy/search", async (c) => {
   const sort = parseSortOption(c.req.query("sort"));
   const likeRaw = c.req.query("like") ?? "";
   const likeId = likeRaw.trim() ? likeRaw.trim() : null;
+  const crisis = c.req.query("crisis") === "1";
+  const assistOffline = c.req.query("assist") === "offline";
   const result = await searchEntries(c.env.DB, q, pageRaw, filters, { forceLike, sort, likeId });
   const likeTitle =
     result.mode === "neighbors" && result.likeId
@@ -183,6 +213,8 @@ app.get("/psychotherapy/search", async (c) => {
       sort={result.sort}
       likeId={result.likeId}
       likeTitle={likeTitle}
+      crisis={crisis}
+      assistOffline={assistOffline}
     />,
   );
 });

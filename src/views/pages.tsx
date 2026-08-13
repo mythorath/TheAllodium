@@ -4,8 +4,9 @@ import { SITE_URL } from "../site-config";
 import type { AccessValue, FacetCounts, FacetFilters, KindValue, StorageValue } from "../db/facets";
 import { EMPTY_FACET_FILTERS, KIND_LABELS, KIND_VALUES } from "../db/facets";
 import type { SortOption } from "../db/sort";
-import { DEFAULT_SORT, SORT_LABELS, SORT_OPTIONS } from "../db/sort";
+import { SORT_LABELS, SORT_OPTIONS } from "../db/sort";
 import { buildApa, buildBibtexList, buildCitations, buildRisList, citationUrl } from "../citations";
+import { FACET_PARAM_NAMES, buildSearchHref, filterEntries } from "../search-url";
 
 export const Layout: FC<{
   title: string;
@@ -411,6 +412,34 @@ export const StandardPage: FC<{ manifest: SnapshotManifest | null }> = ({
       </section>
 
       <section class="standard-section">
+        <h2>Optional AI-assisted search</h2>
+        <p>
+          Search has an optional plain-language field. Keyword and facet
+          search always work without it.
+        </p>
+        <ul>
+          <li>
+            The model is <code>qwen2.5:7b-instruct-q6_k</code>, running on
+            Selis. The Worker sends only the visitor's ask text (capped),
+            never PDFs, abstracts, or other unpublished fields.
+          </li>
+          <li>
+            Suggested filters are re-validated against the public index;
+            unknown tokens are dropped.
+          </li>
+          <li>
+            If the GPU is offline, times out, or otherwise fails for a
+            reason other than abuse rate-limiting, results fall back to
+            plain keyword search.
+          </li>
+          <li>
+            This is not therapy or clinical advice. Phrases that look like
+            crisis intent skip the model and show the existing 988 copy.
+          </li>
+        </ul>
+      </section>
+
+      <section class="standard-section">
         <h2>Update cadence</h2>
         <p>
           The public snapshot is regenerated from the source catalog and
@@ -422,6 +451,21 @@ export const StandardPage: FC<{ manifest: SnapshotManifest | null }> = ({
     </Layout>
   );
 };
+
+export const CrisisResources: FC<{ banner?: boolean }> = (props) => (
+  <div class={props.banner ? "crisis-block crisis-banner" : "crisis-block"}>
+    <h2>If you need help now</h2>
+    <p>
+      In the US, call or text <strong>988</strong> (Suicide &amp; Crisis
+      Lifeline), or text <strong>HOME to 741741</strong> (Crisis Text
+      Line). Outside the US,{" "}
+      <a href="https://findahelpline.com" target="_blank" rel="noopener noreferrer">
+        findahelpline.com
+      </a>{" "}
+      lists local lines.
+    </p>
+  </div>
+);
 
 export const DisclaimerPage: FC = () => (
   <Layout
@@ -447,18 +491,7 @@ export const DisclaimerPage: FC = () => (
         This site links out to sources and does not host or republish
         copyrighted files.
       </p>
-      <div class="crisis-block">
-        <h2>If you need help now</h2>
-        <p>
-          In the US, call or text <strong>988</strong> (Suicide &amp; Crisis
-          Lifeline), or text <strong>HOME to 741741</strong> (Crisis Text
-          Line). Outside the US,{" "}
-          <a href="https://findahelpline.com" target="_blank" rel="noopener noreferrer">
-            findahelpline.com
-          </a>{" "}
-          lists local lines.
-        </p>
-      </div>
+      <CrisisResources />
     </div>
   </Layout>
 );
@@ -802,19 +835,6 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
   );
 };
 
-const FACET_PARAM_NAMES = {
-  kind: "kind",
-  modality: "modality",
-  audience: "audience",
-  access: "access",
-  storage: "storage",
-  linkStatus: "link_status",
-  topic: "topic",
-  hexaflex: "hexaflex",
-  type: "type",
-  decade: "decade",
-} as const;
-
 const ACCESS_LABELS: Record<AccessValue, string> = {
   free: "Free to read",
   paywalled: "Paywalled",
@@ -824,25 +844,6 @@ const STORAGE_LABELS: Record<StorageValue, string> = {
   stored: "Available here",
   link_only: "External link only",
 };
-
-/** Every active filter, as `[paramName, value][]` — the single source both
- * the checkbox `checked` state and the URL-building helpers below draw from,
- * so pager/clear-filter links can never drift out of sync with what's
- * actually selected. */
-function filterEntries(filters: FacetFilters): Array<[string, string]> {
-  return [
-    ...(filters.kind ? [[FACET_PARAM_NAMES.kind, filters.kind] as [string, string]] : []),
-    ...filters.modality.map((v): [string, string] => [FACET_PARAM_NAMES.modality, v]),
-    ...filters.audience.map((v): [string, string] => [FACET_PARAM_NAMES.audience, v]),
-    ...filters.access.map((v): [string, string] => [FACET_PARAM_NAMES.access, v]),
-    ...filters.storage.map((v): [string, string] => [FACET_PARAM_NAMES.storage, v]),
-    ...filters.linkStatus.map((v): [string, string] => [FACET_PARAM_NAMES.linkStatus, v]),
-    ...filters.topic.map((v): [string, string] => [FACET_PARAM_NAMES.topic, v]),
-    ...filters.hexaflex.map((v): [string, string] => [FACET_PARAM_NAMES.hexaflex, v]),
-    ...filters.type.map((v): [string, string] => [FACET_PARAM_NAMES.type, v]),
-    ...filters.decade.map((v): [string, string] => [FACET_PARAM_NAMES.decade, v]),
-  ];
-}
 
 /** Topic and hexaflex tags start a fresh search; other categories stay text. */
 function tagSearchHref(tag: { name: string; category: string }): string | null {
@@ -869,24 +870,6 @@ function clearableFilters(filters: FacetFilters): FacetFilters {
 function buildListHref(ids: string[]): string {
   if (ids.length === 0) return "/psychotherapy/list";
   return `/psychotherapy/list?ids=${ids.map(encodeURIComponent).join(",")}`;
-}
-
-function buildSearchHref(
-  query: string,
-  filters: FacetFilters,
-  page?: number,
-  sort: SortOption = DEFAULT_SORT,
-  likeId?: string | null,
-): string {
-  const parts: string[] = [];
-  if (query) parts.push(`q=${encodeURIComponent(query)}`);
-  else if (likeId) parts.push(`like=${encodeURIComponent(likeId)}`);
-  for (const [name, value] of filterEntries(filters)) {
-    parts.push(`${name}=${encodeURIComponent(value)}`);
-  }
-  if (sort !== DEFAULT_SORT) parts.push(`sort=${encodeURIComponent(sort)}`);
-  if (page && page > 1) parts.push(`page=${page}`);
-  return `/psychotherapy/search${parts.length > 0 ? `?${parts.join("&")}` : ""}`;
 }
 
 function FacetGroup(props: {
@@ -928,6 +911,8 @@ export const SearchPage: FC<{
   sort: SortOption;
   likeId: string | null;
   likeTitle: string | null;
+  crisis?: boolean;
+  assistOffline?: boolean;
 }> = (props) => {
   const totalPages = Math.max(1, Math.ceil(props.total / props.pageSize));
   const hasFilters = filterEntries(props.filters).length > 0;
@@ -984,6 +969,16 @@ export const SearchPage: FC<{
             name="q"
             value={props.query}
             placeholder="Keyword search"
+          />
+          <label class="visually-hidden" for="search-ask">
+            Ask in plain language
+          </label>
+          <input
+            id="search-ask"
+            type="search"
+            name="ask"
+            value=""
+            placeholder="Or ask in plain language"
           />
           <button type="submit">Search</button>
         </div>
@@ -1102,6 +1097,12 @@ export const SearchPage: FC<{
           </div>
         ) : null}
       </form>
+      {props.crisis ? <CrisisResources banner /> : null}
+      {props.assistOffline ? (
+        <p class="assist-notice" role="status">
+          AI search assist is offline — showing keyword results.
+        </p>
+      ) : null}
       {props.mode === "empty" ? (
         <p class="status-prompt">
           Browse{" "}

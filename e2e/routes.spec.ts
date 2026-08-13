@@ -156,6 +156,31 @@ test.describe("search", () => {
     await expect(page).toHaveURL(/q=values/);
   });
 
+  test("plain-language ask degrades to keyword results when the GPU is unset (Phase 3B)", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy/search");
+    await page.getByLabel("Ask in plain language").fill("worksheets about values");
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(/assist=offline/);
+    await expect(page).toHaveURL(/q=worksheets/);
+    await expect(
+      page.getByText("AI search assist is offline — showing keyword results."),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("crisis intent shows 988 copy and still searches (Phase 3B)", async ({ page }) => {
+    await page.goto(
+      "/psychotherapy/search?ask=" + encodeURIComponent("I want to kill myself"),
+    );
+    await expect(page).toHaveURL(/crisis=1/);
+    await expect(page).not.toHaveURL(/ask=/);
+    await expect(page.getByRole("heading", { name: "If you need help now" })).toBeVisible();
+    await expect(page.getByText("988")).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
   test("sort control is available and citations sort ranks the most-cited hit first", async ({
     page,
   }) => {
@@ -659,6 +684,13 @@ test.describe("standard and disclaimer", () => {
     await expect(
       page.getByText("Link health", { exact: true }).first(),
     ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Optional AI-assisted search" }),
+    ).toBeVisible();
+    await expect(page.getByText("qwen2.5:7b-instruct-q6_k")).toBeVisible();
+    await expect(page.getByText("not therapy or clinical advice")).toBeVisible();
+    await expect(page.getByText("988")).toBeVisible();
+    await expect(page.getByRole("link", { name: /gpu-runbook/i })).toHaveCount(0);
     await expectNoSeriousA11yViolations(page);
   });
 

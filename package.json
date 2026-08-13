@@ -30,8 +30,11 @@
     "deploy:staging": "tsx scripts/deploy-worker.ts --env staging",
     "deploy:production": "tsx scripts/deploy-worker.ts --env production --yes",
     "configure:com-redirect": "tsx scripts/configure-com-redirect.ts --yes",
+    "configure:gpu-tunnel": "tsx scripts/configure-gpu-tunnel-route.ts --yes",
+    "configure:ask-ratelimit": "tsx scripts/configure-ask-ratelimit.ts --yes",
     "promote:og-cards": "tsx scripts/upload-og-cards.ts",
     "smoke:live": "tsx scripts/smoke-live.ts",
+    "smoke:gpu": "tsx scripts/smoke-gpu.ts",
     "smoke:og-cards": "tsx scripts/smoke-og-cards.ts",
     "audit:links": "tsx scripts/audit-link-integrity.ts",
     "gate:1a": "tsx scripts/close-1a-gate.ts",
@@ -48,6 +51,9 @@
     "gate:25b": "tsx scripts/close-25b-gate.ts",
     "gate:25c": "tsx scripts/close-25c-gate.ts",
     "gate:25d": "tsx scripts/close-25d-gate.ts",
+    "gate:3a": "tsx scripts/close-3a-gate.ts",
+    "gate:3b": "tsx scripts/close-3b-gate.ts",
+    "gate:3c": "tsx scripts/close-3c-gate.ts",
     "secrets:scan": "tsx scripts/secrets-scan.ts"
   },
   "dependencies": {

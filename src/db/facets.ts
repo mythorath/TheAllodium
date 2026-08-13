@@ -64,12 +64,12 @@ export function hasActiveFilters(filters: FacetFilters): boolean {
 const MAX_VALUES_PER_DIMENSION = 25;
 const MAX_MODALITY_LENGTH = 100;
 
-const AUDIENCE_SET = new Set<string>(AUDIENCE_VALUES);
+export const AUDIENCE_SET = new Set<string>(AUDIENCE_VALUES);
 const LINK_STATUS_SET = new Set<string>(LINK_STATUSES);
 const ACCESS_SET = new Set<string>(["free", "paywalled"]);
 const STORAGE_SET = new Set<string>(["stored", "link_only"]);
 const KIND_SET = new Set<string>(KIND_VALUES);
-const DECADE_SET = new Set<string>(DECADE_VALUES);
+export const DECADE_SET = new Set<string>(DECADE_VALUES);
 
 /** Dedupes, trims, drops empties, enforces an allowlist (when given) and a
  * count cap so a crafted URL with thousands of repeated params can't blow up
@@ -96,7 +96,7 @@ function sanitizeValues<T extends string>(
 
 /** Exclusive corpus selector: first allowlisted `?kind=` value wins;
  * unknown/empty values are dropped so `kind=` (the "All" radio) is null. */
-function parseKind(raw: string[] | undefined): KindValue | null {
+export function parseKind(raw: string[] | undefined): KindValue | null {
   if (!raw) return null;
   for (const v of raw) {
     const trimmed = v.trim().toLowerCase();

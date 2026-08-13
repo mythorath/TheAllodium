@@ -10,6 +10,8 @@ const secretValues = [
   process.env.CLOUDFLARE_API_TOKEN,
   process.env.SECRET_ACCESS_KEY,
   process.env.ACCESS_KEY_ID,
+  process.env.ALLODIUM_GPU_TOKEN,
+  process.env.GPU_SHARED_SECRET,
 ].filter((v): v is string => Boolean(v && v.length >= 8));
 
 const SKIP_DIRS = new Set([
