@@ -15,6 +15,7 @@ import type { SortOption } from "../db/sort";
 import { SORT_LABELS, SORT_OPTIONS } from "../db/sort";
 import { buildApa, buildBibtexList, buildCitations, buildRisList, citationUrl } from "../citations";
 import { FACET_PARAM_NAMES, buildSearchHref, filterEntries } from "../search-url";
+import { SUPPORT_ADDRESSES, SUPPORT_LINKS, hasSupportOptions } from "../support";
 
 export const Layout: FC<{
   title: string;
@@ -110,6 +111,7 @@ export const Layout: FC<{
               </div>
             ) : null}
             <div class="site-nav-site">
+              <a href="/about">About</a>
               <a href="/standard">The Standard</a>
               {props.collection?.shortlistHref ? (
                 /* Phase 2D: a real link so it works with JS off (the empty
@@ -126,6 +128,8 @@ export const Layout: FC<{
         <main id="main">{props.children}</main>
         <footer class="site-footer">
           <p class="meta">
+            <a href="/about">About</a>
+            {" · "}
             <a href="/standard">The Standard</a>
             {props.collection?.advisoryPath ? (
               <>
@@ -748,6 +752,84 @@ export const CrisisResources: FC<{ banner?: boolean }> = (props) => (
       lists local lines.
     </p>
   </div>
+);
+
+export const AboutPage: FC = () => (
+  <Layout
+    title="About"
+    canonicalPath="/about"
+    ogDescription="Why The Allodium exists: a deep desire to find knowledge and hand it on, freely — no ads, no accounts, no paywalls on the index."
+  >
+    <h1>Why The Allodium exists</h1>
+    <div class="prose">
+      <p>
+        I have a deep desire to find things out and hand them on. Not to
+        gatekeep them, not to meter them out — to put good information where
+        anyone can reach it. That urge is the whole reason this site exists.
+      </p>
+      <p>
+        An <em>allodium</em> is land held outright — owned freely, owing rent
+        to no lord. That is what I want knowledge to be: held by everyone,
+        owing nothing to anyone. So The Allodium collects published research
+        and resources, runs every entry through the identity, legitimacy, and
+        link-health checks described in <a href="/standard">The Standard</a>,
+        and links you straight to the source.
+      </p>
+      <p>
+        It starts with psychotherapy because that is where I began digging.
+        It will not end there — physics, cosmology, and more fields are on
+        the way. The shape stays the same wherever it goes: verified,
+        readable, and free.
+      </p>
+      <h2>What you can count on</h2>
+      <ul>
+        <li>No ads, no accounts, no cookies, no tracking. Ever.</li>
+        <li>
+          Every entry is checked before it is listed, and the checks
+          themselves are published — see{" "}
+          <a href="/standard">The Standard</a>.
+        </li>
+        <li>
+          The Allodium is an index. It links out to original sources rather
+          than hosting or republishing anyone's work.
+        </li>
+      </ul>
+      {hasSupportOptions() ? (
+        <section class="support-section" aria-labelledby="support-heading">
+          <h2 id="support-heading">If you'd like to leave a tip</h2>
+          <p class="meta">
+            Everything here is free and always will be — nothing is ever
+            behind a tip. But if The Allodium has been useful and you feel
+            like keeping the lights on, it's appreciated.
+          </p>
+          {SUPPORT_LINKS.length > 0 ? (
+            <ul class="support-links">
+              {SUPPORT_LINKS.map((link) => (
+                <li key={link.href}>
+                  <a href={link.href} rel="noopener noreferrer" target="_blank">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {SUPPORT_ADDRESSES.map((wallet, i) => (
+            <div class="support-address" key={wallet.label}>
+              <h3>{wallet.label}</h3>
+              <pre id={`support-address-${i}`}>{wallet.address}</pre>
+              <button
+                type="button"
+                class="copy-button"
+                data-copy-target={`support-address-${i}`}
+              >
+                Copy address
+              </button>
+            </div>
+          ))}
+        </section>
+      ) : null}
+    </div>
+  </Layout>
 );
 
 export const DisclaimerPage: FC = () => (

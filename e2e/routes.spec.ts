@@ -754,6 +754,48 @@ test.describe("standard and disclaimer", () => {
   });
 });
 
+test.describe("about", () => {
+  test("/about is reachable from the primary nav and carries the mission copy", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page
+      .getByRole("navigation", { name: "Primary" })
+      .getByRole("link", { name: "About" })
+      .click();
+    await expect(page).toHaveURL(/\/about$/);
+    await expect(
+      page.getByRole("heading", { name: "Why The Allodium exists" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "What you can count on" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "The Standard" }).first(),
+    ).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("/about lists tip options with copyable wallet addresses", async ({
+    page,
+  }) => {
+    await page.goto("/about");
+    await expect(
+      page.getByRole("heading", { name: "If you'd like to leave a tip" }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Ko-fi" })).toHaveAttribute(
+      "href",
+      "https://ko-fi.com/mythorath",
+    );
+    await expect(page.locator("#support-address-0")).toContainText(
+      "bc1qwlncslagx4cdacjgmvneqa9swnth5k9erjnsjn",
+    );
+    await expect(
+      page.getByRole("button", { name: "Copy address" }),
+    ).toHaveCount(3);
+  });
+});
+
 test.describe("OpenGraph cards (Phase 2E)", () => {
   async function ogImageContent(page: import("@playwright/test").Page): Promise<string> {
     const content = await page

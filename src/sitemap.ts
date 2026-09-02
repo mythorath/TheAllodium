@@ -14,6 +14,7 @@ export const STATIC_SITEMAP_PATHS: readonly string[] = [
   "/psychotherapy/hexaflex",
   "/psychotherapy/disclaimer",
   "/standard",
+  "/about",
 ];
 
 function xmlEscape(value: string): string {

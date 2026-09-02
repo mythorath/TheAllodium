@@ -1155,6 +1155,49 @@ dl.entry-fields dd,
   font-weight: 500;
 }
 
+/* /about support section: hosted tip links plus copyable wallet
+ * addresses, reusing the citation-block visual language. */
+.support-links {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+
+.support-address {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.support-address h3 {
+  margin: 0 0 0.55rem;
+  font-size: 0.9rem;
+  border: none;
+  padding: 0;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.support-address pre {
+  font-family: var(--font-mono);
+  background: var(--paper);
+  border-radius: 0.25rem;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  margin: 0 0 0.6rem;
+  border: 1px solid transparent;
+}
+
 .shortlist-button {
   padding: 0.3rem 0.65rem;
   font-size: 0.8rem;

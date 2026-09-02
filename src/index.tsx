@@ -20,6 +20,7 @@ import { ASK_MAX_CHARS, normalizeNlFacets } from "./nl-query";
 import { buildSearchHref, withSearchFlag } from "./search-url";
 import { buildSitemapXml, STATIC_SITEMAP_PATHS } from "./sitemap";
 import {
+  AboutPage,
   DisclaimerPage,
   EntryPage,
   ErrorPage,
@@ -90,6 +91,8 @@ app.get("/psychotherapy", async (c) => {
 });
 
 app.get("/standard", (c) => c.html(<StandardPage />));
+
+app.get("/about", (c) => c.html(<AboutPage />));
 
 app.get("/psychotherapy/disclaimer", (c) => c.html(<DisclaimerPage />));
 app.get("/disclaimer", (c) => c.redirect("/psychotherapy/disclaimer", 301));

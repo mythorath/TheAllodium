@@ -153,7 +153,7 @@ describe("OpenGraph / Twitter meta tags (Phase 2E)", () => {
   });
 
   it("falls back to the default card image on pages with no per-entry card", async () => {
-    for (const path of ["/", "/psychotherapy", "/psychotherapy/search", "/standard", "/psychotherapy/disclaimer"]) {
+    for (const path of ["/", "/psychotherapy", "/psychotherapy/search", "/standard", "/about", "/psychotherapy/disclaimer"]) {
       const ctx = createExecutionContext();
       const res = await app.request(path, {}, env, ctx);
       await waitOnExecutionContext(ctx);

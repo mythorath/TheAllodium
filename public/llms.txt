@@ -23,6 +23,8 @@ republish full text, abstracts, or copyrighted files.
   topic tags, each linking into search.
 - [Hexaflex](https://theallodium.org/psychotherapy/hexaflex): the six ACT
   processes, linking into client materials first.
+- [About](https://theallodium.org/about): why The Allodium exists — a
+  mission to find knowledge and hand it on, freely.
 - [The Standard](https://theallodium.org/standard): the verification
   methodology — identity checks, legitimacy triage, link-health gates.
 - [Disclaimer](https://theallodium.org/psychotherapy/disclaimer):

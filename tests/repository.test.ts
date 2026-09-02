@@ -27,6 +27,7 @@ import { execStatements } from "./sql-test-utils";
 import { SITE_URL } from "../src/site-config";
 import { STATIC_SITEMAP_PATHS } from "../src/sitemap";
 import { collectionForPath } from "../src/collections";
+import { hasSupportOptions } from "../src/support";
 
 async function loadFixture() {
   await execStatements(env.DB, fixtureSql);
@@ -1116,6 +1117,25 @@ describe("local D1 repository + routes", () => {
     expect(html).not.toMatch(/file_path/i);
   });
 
+  it("serves /about with the mission copy and no half-configured tip links", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request("/about", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("Why The Allodium exists");
+    expect(html).toContain("What you can count on");
+    expect(html).toContain('href="/standard"');
+    // The support section renders only once real tip links/addresses are
+    // configured in src/support.ts — never an empty shell.
+    if (!hasSupportOptions()) {
+      expect(html).not.toContain("support-section");
+      expect(html).not.toContain("leave a tip");
+    } else {
+      expect(html).toContain("support-section");
+    }
+  });
+
   it("redirects /disclaimer to /psychotherapy/disclaimer", async () => {
     const ctx = createExecutionContext();
     const res = await app.request("/disclaimer", {}, env, ctx);
@@ -1138,6 +1158,7 @@ describe("local D1 repository + routes", () => {
     const routes = [
       "/",
       "/standard",
+      "/about",
       "/disclaimer",
       "/psychotherapy",
       "/psychotherapy/disclaimer",
@@ -1209,6 +1230,7 @@ describe("local D1 repository + routes", () => {
     const cases: Array<[string, string]> = [
       ["/", "/"],
       ["/standard", "/standard"],
+      ["/about", "/about"],
       ["/psychotherapy", "/psychotherapy"],
       ["/psychotherapy/disclaimer", "/psychotherapy/disclaimer"],
       ["/psychotherapy/search", "/psychotherapy/search"],
