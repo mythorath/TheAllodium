@@ -142,9 +142,9 @@ export async function getManifest(db: D1Database): Promise<SnapshotManifest | nu
 
 export type KindCounts = { literature: number; materials: number };
 
-/** Live literature/materials door counts for the home page. Derived from
- * `resource_type` at request time rather than stored in coverage_json, so
- * this milestone needs no ACT export change. */
+/** Live literature/materials door counts for the psychotherapy collection
+ * landing. Derived from `resource_type` at request time rather than stored
+ * in coverage_json, so this milestone needs no ACT export change. */
 export async function getKindCounts(db: D1Database): Promise<KindCounts> {
   const rows = (
     await db

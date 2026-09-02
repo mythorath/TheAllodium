@@ -27,6 +27,7 @@ import {
   HomePage,
   ListPage,
   NotFoundPage,
+  PsychotherapyHomePage,
   SearchPage,
   StandardPage,
   TopicsPage,
@@ -76,19 +77,22 @@ app.use("*", async (c, next) => {
 });
 
 app.get("/", async (c) => {
+  const manifest = await getManifest(c.env.DB);
+  return c.html(<HomePage entryCount={manifest?.entry_count ?? null} />);
+});
+
+app.get("/psychotherapy", async (c) => {
   const [manifest, kindCounts] = await Promise.all([
     getManifest(c.env.DB),
     getKindCounts(c.env.DB),
   ]);
-  return c.html(<HomePage manifest={manifest} kindCounts={kindCounts} />);
+  return c.html(<PsychotherapyHomePage manifest={manifest} kindCounts={kindCounts} />);
 });
 
-app.get("/standard", async (c) => {
-  const manifest = await getManifest(c.env.DB);
-  return c.html(<StandardPage manifest={manifest} />);
-});
+app.get("/standard", (c) => c.html(<StandardPage />));
 
-app.get("/disclaimer", (c) => c.html(<DisclaimerPage />));
+app.get("/psychotherapy/disclaimer", (c) => c.html(<DisclaimerPage />));
+app.get("/disclaimer", (c) => c.redirect("/psychotherapy/disclaimer", 301));
 
 // Browsers request this path unconditionally regardless of <link rel="icon">;
 // redirect to the real static asset instead of serving 404 noise.

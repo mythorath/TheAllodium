@@ -1,4 +1,12 @@
 import type { FC, Child } from "hono/jsx";
+import {
+  COLLECTIONS,
+  PSYCHOTHERAPY,
+  liveCollections,
+  type Collection,
+  type CollectionIcon,
+  type CollectionStatus,
+} from "../collections";
 import type { PublicEntry, RelatedEntry, SearchHit, SnapshotManifest } from "../contract";
 import { SITE_URL } from "../site-config";
 import type { AccessValue, FacetCounts, FacetFilters, KindValue, StorageValue } from "../db/facets";
@@ -33,6 +41,9 @@ export const Layout: FC<{
   /** Phase 2E: og:type, e.g. "article" for an entry page. Defaults to
    * "website". */
   ogType?: string;
+  /** When set, the header/footer show this collection's nav, shortlist,
+   * and (if `advisoryPath` is set) crisis advisory. Site-wide pages omit it. */
+  collection?: Collection;
   children?: Child;
 }> = (props) => {
   const ogImage = props.ogImage ?? `${SITE_URL}/og-default.png`;
@@ -86,31 +97,52 @@ export const Layout: FC<{
               />
               The Allodium
             </a>
-            <a href="/psychotherapy/search">Search</a>
-            <a href="/psychotherapy/topics">Topics</a>
-            <a href="/psychotherapy/hexaflex">Hexaflex</a>
-            <a href="/standard">The Standard</a>
-            {/* Phase 2D: a real link so it works with JS off (the empty
-             * shortlist state is a harmless, honest destination); `app.js`
-             * rewrites the href to include the reader's saved ids and
-             * appends a count once localStorage is available. */}
-            <a href="/psychotherapy/list" id="shortlist-nav-link">
-              Shortlist
-            </a>
+            {props.collection ? (
+              <div class="site-nav-collection">
+                <a class="collection-chip" href={`/${props.collection.slug}`}>
+                  {props.collection.label}
+                </a>
+                {props.collection.nav.map((link) => (
+                  <a href={link.href} key={link.href}>
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+            <div class="site-nav-site">
+              <a href="/standard">The Standard</a>
+              {props.collection?.shortlistHref ? (
+                /* Phase 2D: a real link so it works with JS off (the empty
+                 * shortlist state is a harmless, honest destination); `app.js`
+                 * rewrites the href to include the reader's saved ids and
+                 * appends a count once localStorage is available. */
+                <a href={props.collection.shortlistHref} id="shortlist-nav-link">
+                  Shortlist
+                </a>
+              ) : null}
+            </div>
           </nav>
         </header>
         <main id="main">{props.children}</main>
         <footer class="site-footer">
           <p class="meta">
             <a href="/standard">The Standard</a>
-            {" · "}
-            <a href="/disclaimer">Disclaimer &amp; crisis resources</a>
+            {props.collection?.advisoryPath ? (
+              <>
+                {" · "}
+                <a href={props.collection.advisoryPath}>
+                  Disclaimer &amp; crisis resources
+                </a>
+              </>
+            ) : null}
           </p>
-          <p class="meta">
-            Automated checks only, not clinical endorsement or advice. If you
-            are in crisis, help is available now — see{" "}
-            <a href="/disclaimer">the disclaimer page</a>.
-          </p>
+          {props.collection?.advisoryPath ? (
+            <p class="meta">
+              Automated checks only, not clinical endorsement or advice. If you
+              are in crisis, help is available now — see{" "}
+              <a href={props.collection.advisoryPath}>the disclaimer page</a>.
+            </p>
+          ) : null}
         </footer>
         {/* Phase 2D: loaded site-wide now that both copy-to-clipboard
          * (entry pages) and shortlist add/remove (entry + search/browse +
@@ -123,59 +155,358 @@ export const Layout: FC<{
   );
 };
 
+function CheckIcon() {
+  return (
+    <svg
+      class="icon-check"
+      viewBox="0 0 16 16"
+      width="12"
+      height="12"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        fill="currentColor"
+        d="M6.17 12.17 2.5 8.5l1.17-1.17 2.5 2.5 6.16-6.17L13.5 4.83z"
+      />
+    </svg>
+  );
+}
+
+function IndexIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="5" y="3.5" width="14" height="17" rx="1.6" />
+      <path d="M8.5 8h7M8.5 12h7M8.5 16h4.5" />
+    </svg>
+  );
+}
+
+function AtomIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      <ellipse cx="12" cy="12" rx="9" ry="3.6" />
+      <ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(60 12 12)" />
+      <ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(-60 12 12)" />
+    </svg>
+  );
+}
+
+function OrbitIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.6"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="12" cy="12" r="3.2" />
+      <ellipse cx="12" cy="12" rx="9.5" ry="4.2" transform="rotate(-20 12 12)" />
+      <circle cx="20.2" cy="9.2" r="1.15" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function CollectionIconMark(props: { icon: CollectionIcon }) {
+  switch (props.icon) {
+    case "index":
+      return <IndexIcon />;
+    case "atom":
+      return <AtomIcon />;
+    case "orbit":
+      return <OrbitIcon />;
+    default: {
+      const _never: never = props.icon;
+      return _never;
+    }
+  }
+}
+
+function CollectionCardInner(props: { collection: Collection }) {
+  return (
+    <>
+      <div class="collection-card-icon">
+        <CollectionIconMark icon={props.collection.icon} />
+      </div>
+      <h3>{props.collection.label}</h3>
+      <p class="collection-card-lede">{props.collection.lede}</p>
+    </>
+  );
+}
+
+function CollectionCard(props: { collection: Collection }) {
+  const { collection } = props;
+  const status: CollectionStatus = collection.status;
+  switch (status) {
+    case "live":
+      return (
+        <a class="collection-card" href={`/${collection.slug}`}>
+          <CollectionCardInner collection={collection} />
+        </a>
+      );
+    case "planned":
+      return (
+        <div class="collection-card collection-card-planned">
+          <CollectionCardInner collection={collection} />
+          <p class="collection-status">In progress</p>
+        </div>
+      );
+    default: {
+      const _never: never = status;
+      return _never;
+    }
+  }
+}
+
+function coverageShare(
+  counts: Record<string, number> | undefined,
+  key: string,
+): number | null {
+  if (!counts) return null;
+  const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+  if (total === 0) return null;
+  return (counts[key] ?? 0) / total;
+}
+
+function formatShare(share: number): string {
+  const pct = share * 100;
+  if (pct >= 99.95) return "100%";
+  const rounded = Math.round(pct * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+}
+
 export const HomePage: FC<{
+  entryCount: number | null;
+}> = ({ entryCount }) => {
+  const liveCount = liveCollections().length;
+  return (
+    <Layout
+      title="Home"
+      canonicalPath="/"
+      ogDescription="A public, ad-free place of free knowledge — a verified index of published research and resources, starting with psychotherapy."
+    >
+      <section class="home-hero">
+        <h1>A place of free knowledge</h1>
+        <p class="home-lede">
+          Welcome. The Allodium is a public, ad-free index of published
+          research and resources — verified for identity, legitimacy, and
+          link health before they're listed. Explore what's here today, and
+          come back as more fields open.
+        </p>
+        <div class="stat-strip" aria-label="Index stats">
+          {entryCount !== null ? (
+            <div class="stat-item">
+              <span class="stat-value">{entryCount.toLocaleString()}</span>
+              <span class="stat-label">entries</span>
+            </div>
+          ) : null}
+          <div class="stat-item">
+            <span class="stat-value">{liveCount.toLocaleString()}</span>
+            <span class="stat-label">
+              {liveCount === 1 ? "live collection" : "live collections"}
+            </span>
+          </div>
+        </div>
+        <p class="meta">No accounts, no cookies, no tracking.</p>
+      </section>
+
+      <section class="collections" aria-labelledby="collections-heading">
+        <h2 id="collections-heading">Collections</h2>
+        <div class="collection-grid">
+          {COLLECTIONS.map((collection) => (
+            <CollectionCard collection={collection} />
+          ))}
+        </div>
+      </section>
+
+      <p class="home-cta">
+        <a class="button-secondary" href="/standard">
+          How verification works
+        </a>
+      </p>
+    </Layout>
+  );
+};
+
+export const PsychotherapyHomePage: FC<{
   manifest: SnapshotManifest | null;
   kindCounts: { literature: number; materials: number };
 }> = ({ manifest, kindCounts }) => {
   const modalityCount = manifest
     ? Object.keys(manifest.coverage_json.modalities ?? {}).length
     : 0;
+  const identityShare = coverageShare(
+    manifest?.coverage_json.verifications?.identity,
+    "ok",
+  );
+  const linkShare = coverageShare(manifest?.coverage_json.link_status, "ok");
+  const exclusions: Record<string, number> = manifest
+    ? JSON.parse(manifest.exclusion_counts_json)
+    : {};
   return (
     <Layout
-      title="Home"
-      canonicalPath="/"
-      ogDescription="A free, ad-free index of published psychotherapy research and client resources, verified for identity, legitimacy, and link health."
+      title="Psychotherapy"
+      canonicalPath="/psychotherapy"
+      collection={PSYCHOTHERAPY}
+      ogDescription="A free, ad-free index of published psychotherapy research and resources, verified for identity, legitimacy, and link health."
     >
       <section class="home-hero">
-        <h1>The Allodium</h1>
+        <h1>A verified index of evidence</h1>
         <p class="home-lede">
-          A verified index of psychotherapy research and client resources —
-          identity, legitimacy, and link health published with every entry.
+          Direct links to research, papers, and resources — checked for
+          identity, legitimacy, and link health.
         </p>
         {manifest ? (
-          <p class="meta">
-            {manifest.entry_count.toLocaleString()} entries across{" "}
-            {modalityCount} modalities · no accounts, no cookies, no tracking.
-          </p>
+          <div class="stat-strip" aria-label="Index stats">
+            <div class="stat-item">
+              <span class="stat-value">{manifest.entry_count.toLocaleString()}</span>
+              <span class="stat-label">entries</span>
+            </div>
+            {modalityCount > 0 ? (
+              <div class="stat-item">
+                <span class="stat-value">{modalityCount.toLocaleString()}</span>
+                <span class="stat-label">modalities</span>
+              </div>
+            ) : null}
+            {identityShare !== null ? (
+              <div class="stat-item stat-item-verified">
+                <CheckIcon />
+                <span class="stat-value">{formatShare(identityShare)}</span>
+                <span class="stat-label">identity verified</span>
+              </div>
+            ) : null}
+            {linkShare !== null ? (
+              <div class="stat-item stat-item-verified">
+                <CheckIcon />
+                <span class="stat-value">{formatShare(linkShare)}</span>
+                <span class="stat-label">link health</span>
+              </div>
+            ) : null}
+          </div>
         ) : null}
-        <div class="home-doors">
-          <a class="button-primary" href="/psychotherapy/search?kind=literature">
-            Literature
-            <span class="home-door-count">
-              {kindCounts.literature.toLocaleString()} papers
-            </span>
-          </a>
-          <a class="button-primary" href="/psychotherapy/search?kind=materials">
-            Materials
-            <span class="home-door-count">
-              {kindCounts.materials.toLocaleString()} resources
-            </span>
-          </a>
-        </div>
-        <nav class="home-directory" aria-label="Catalog">
-          <a href="/psychotherapy/topics">Topics</a>
-          <a href="/psychotherapy/hexaflex">Hexaflex</a>
-          <a href="/psychotherapy/search">Search</a>
-        </nav>
-        <p class="home-cta">
-          <a class="button-secondary" href="/psychotherapy/search">
-            Search everything
-          </a>
-          <a class="button-secondary" href="/standard">
-            How verification works
-          </a>
-        </p>
+        <p class="meta">No accounts, no cookies, no tracking.</p>
       </section>
+
+      <section class="collections" aria-labelledby="explore-heading">
+        <h2 id="explore-heading">Explore</h2>
+        <div class="collection-grid">
+          <article class="collection-card">
+            <div class="collection-card-icon">
+              <IndexIcon />
+            </div>
+            <h3>Psychotherapy catalog</h3>
+            <p class="collection-card-lede">
+              Research papers and client resources across therapeutic
+              approaches.
+            </p>
+            <div class="collection-pills">
+              <a class="collection-pill" href="/psychotherapy/search?kind=literature">
+                Literature
+                <span class="home-door-count">
+                  {kindCounts.literature.toLocaleString()} papers
+                </span>
+              </a>
+              <a class="collection-pill" href="/psychotherapy/search?kind=materials">
+                Materials
+                <span class="home-door-count">
+                  {kindCounts.materials.toLocaleString()} resources
+                </span>
+              </a>
+            </div>
+            <nav class="home-directory" aria-label="Catalog">
+              <a href="/psychotherapy/topics">Topics</a>
+              <a href="/psychotherapy/hexaflex">Hexaflex</a>
+              <a href="/psychotherapy/search">Search everything</a>
+            </nav>
+          </article>
+        </div>
+      </section>
+
+      <section class="standard-section">
+        <h2>Coverage</h2>
+        {manifest ? (
+          <>
+            <p class="meta">
+              {manifest.entry_count.toLocaleString()} entries · snapshot
+              generated {manifest.source_generated_at} · contract v
+              {manifest.contract_version} / schema v{manifest.schema_version}
+            </p>
+            <h3>Identity checks</h3>
+            <CountList
+              counts={manifest.coverage_json.verifications?.identity ?? {}}
+              label="identity check"
+            />
+            <h3>Legitimacy triage</h3>
+            <CountList
+              counts={manifest.coverage_json.verifications?.legitimacy ?? {}}
+              label="legitimacy triage"
+            />
+            <h3>Link health</h3>
+            <CountList
+              counts={manifest.coverage_json.link_status ?? {}}
+              label="link status"
+            />
+            <h3>Identifiers present</h3>
+            <CountList
+              counts={manifest.coverage_json.identifiers ?? {}}
+              label="identifier"
+            />
+            <h3>Modalities covered</h3>
+            <CountList
+              counts={manifest.coverage_json.modalities ?? {}}
+              label="modality"
+            />
+          </>
+        ) : (
+          <p class="meta">Coverage data is not available right now.</p>
+        )}
+      </section>
+
+      <section class="standard-section">
+        <h2>What's excluded, and why</h2>
+        <p class="meta">
+          Publishing the index, never the contents — and never a row that
+          failed a check.
+        </p>
+        <CountList
+          counts={Object.fromEntries(
+            Object.entries(exclusions).map(([key, count]) => [
+              EXCLUSION_LABELS[key] ?? key,
+              count,
+            ]),
+          )}
+          label="exclusion"
+        />
+      </section>
+
+      <p class="home-cta">
+        <a class="button-secondary" href="/standard">
+          How verification works
+        </a>
+      </p>
     </Layout>
   );
 };
@@ -187,6 +518,7 @@ export const TopicsPage: FC<{ tags: Array<{ name: string; count: number }> }> = 
     <Layout
       title="Topics"
       canonicalPath="/psychotherapy/topics"
+      collection={PSYCHOTHERAPY}
       ogDescription="Browse The Allodium's psychotherapy catalog by topic — depression, anxiety, trauma, and more."
     >
       <h1>Topics</h1>
@@ -210,6 +542,7 @@ export const HexaflexPage: FC<{ tags: Array<{ name: string; count: number }> }> 
     <Layout
       title="Hexaflex"
       canonicalPath="/psychotherapy/hexaflex"
+      collection={PSYCHOTHERAPY}
       ogDescription="Browse ACT hexaflex processes in The Allodium — acceptance, defusion, values, and the rest."
     >
       <h1>Hexaflex</h1>
@@ -281,12 +614,7 @@ const EXCLUSION_LABELS: Record<string, string> = {
   duplicate_rows_merged: "Duplicate rows merged",
 };
 
-export const StandardPage: FC<{ manifest: SnapshotManifest | null }> = ({
-  manifest,
-}) => {
-  const exclusions: Record<string, number> = manifest
-    ? JSON.parse(manifest.exclusion_counts_json)
-    : {};
+export const StandardPage: FC = () => {
   return (
     <Layout
       title="The Standard"
@@ -330,65 +658,20 @@ export const StandardPage: FC<{ manifest: SnapshotManifest | null }> = ({
         <p class="meta">
           Every check above is a normalized, timestamped record — see the
           "Verification" section on any entry page. Automated checks are not
-          clinical endorsement or advice.
+          endorsement or advice.
         </p>
       </section>
 
       <section class="standard-section">
         <h2>Coverage</h2>
-        {manifest ? (
-          <>
-            <p class="meta">
-              {manifest.entry_count.toLocaleString()} entries · snapshot
-              generated {manifest.source_generated_at} · contract v
-              {manifest.contract_version} / schema v{manifest.schema_version}
-            </p>
-            <h3>Identity checks</h3>
-            <CountList
-              counts={manifest.coverage_json.verifications?.identity ?? {}}
-              label="identity check"
-            />
-            <h3>Legitimacy triage</h3>
-            <CountList
-              counts={manifest.coverage_json.verifications?.legitimacy ?? {}}
-              label="legitimacy triage"
-            />
-            <h3>Link health</h3>
-            <CountList
-              counts={manifest.coverage_json.link_status ?? {}}
-              label="link status"
-            />
-            <h3>Identifiers present</h3>
-            <CountList
-              counts={manifest.coverage_json.identifiers ?? {}}
-              label="identifier"
-            />
-            <h3>Modalities covered</h3>
-            <CountList
-              counts={manifest.coverage_json.modalities ?? {}}
-              label="modality"
-            />
-          </>
-        ) : (
-          <p class="meta">Coverage data is not available right now.</p>
-        )}
-      </section>
-
-      <section class="standard-section">
-        <h2>What's excluded, and why</h2>
-        <p class="meta">
-          Publishing the index, never the contents — and never a row that
-          failed a check.
+        <p>
+          Live coverage numbers — identity checks, legitimacy triage, link
+          health, identifiers, modalities, and exclusions — live on each
+          collection's landing, because they describe that collection's
+          snapshot. See{" "}
+          <a href="/psychotherapy">Psychotherapy</a> for the current
+          published set.
         </p>
-        <CountList
-          counts={Object.fromEntries(
-            Object.entries(exclusions).map(([key, count]) => [
-              EXCLUSION_LABELS[key] ?? key,
-              count,
-            ]),
-          )}
-          label="exclusion"
-        />
       </section>
 
       <section class="standard-section">
@@ -397,7 +680,7 @@ export const StandardPage: FC<{ manifest: SnapshotManifest | null }> = ({
           <li>
             Checks are automated and deterministic where possible; they are
             not a substitute for reading the source or for professional
-            clinical judgment.
+            judgment.
           </li>
           <li>
             A <code>blocked</code> link means the automated check was
@@ -442,10 +725,10 @@ export const StandardPage: FC<{ manifest: SnapshotManifest | null }> = ({
       <section class="standard-section">
         <h2>Update cadence</h2>
         <p>
-          The public snapshot is regenerated from the source catalog and
-          redeployed as a whole — coverage numbers on this page always
-          describe exactly the entries currently live, not a newer or older
-          dataset.
+          Each public snapshot is regenerated from its source catalog and
+          redeployed as a whole — coverage numbers on a collection landing
+          always describe exactly the entries currently live, not a newer or
+          older dataset.
         </p>
       </section>
     </Layout>
@@ -470,7 +753,8 @@ export const CrisisResources: FC<{ banner?: boolean }> = (props) => (
 export const DisclaimerPage: FC = () => (
   <Layout
     title="Disclaimer"
-    canonicalPath="/disclaimer"
+    canonicalPath="/psychotherapy/disclaimer"
+    collection={PSYCHOTHERAPY}
     ogDescription="The Allodium is a verified index of psychotherapy resources, not therapy or a clinical service. Crisis resources included."
   >
     <h1>Disclaimer</h1>
@@ -571,7 +855,12 @@ function LinkBadge(props: { status: PublicEntry["link_status"] }) {
   if (props.status === "unchecked") {
     return <span class="badge badge-unchecked">link unchecked</span>;
   }
-  return <span class="badge badge-ok">link ok</span>;
+  return (
+    <span class="badge badge-ok">
+      <CheckIcon />
+      link ok
+    </span>
+  );
 }
 
 function formatEntryAuthors(entry: PublicEntry): string {
@@ -694,6 +983,7 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
     <Layout
       title={entry.title}
       canonicalPath={`/psychotherapy/entries/${entry.id}`}
+      collection={PSYCHOTHERAPY}
       headExtra={<EntryJsonLd entry={entry} />}
       ogType="article"
       ogImage={`${SITE_URL}/og/${entry.id}.png`}
@@ -745,17 +1035,17 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
         <dt>Author</dt>
         <dd>{formatEntryAuthors(entry)}</dd>
         <dt>Published</dt>
-        <dd>{entry.published_date ?? "—"}</dd>
+        <dd class="mono">{entry.published_date ?? "—"}</dd>
         <dt>OA status</dt>
         <dd>{entry.oa_status ?? "—"}</dd>
         <dt>DOI</dt>
-        <dd>{entry.doi ?? "—"}</dd>
+        <dd class="mono">{entry.doi ?? "—"}</dd>
         <dt>PMID</dt>
-        <dd>{entry.pmid ?? "—"}</dd>
+        <dd class="mono">{entry.pmid ?? "—"}</dd>
         <dt>PMCID</dt>
-        <dd>{entry.pmcid ?? "—"}</dd>
+        <dd class="mono">{entry.pmcid ?? "—"}</dd>
         <dt>Citations</dt>
-        <dd>{entry.citation_count ?? "—"}</dd>
+        <dd class="mono">{entry.citation_count ?? "—"}</dd>
       </dl>
 
       <h2>Tags</h2>
@@ -785,7 +1075,10 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
         <ul class="verification-list">
           {entry.verifications.map((v, i) => (
             <li key={`${v.check_kind}-${i}`}>
-              <span class="verification-kind">{v.check_kind}</span>
+              <span class="verification-kind">
+                {v.result === "ok" ? <CheckIcon /> : null}
+                {v.check_kind}
+              </span>
               <span class="verification-detail">
                 {v.result} via {v.method}
                 {v.method_version ? ` (${v.method_version})` : ""}
@@ -955,6 +1248,7 @@ export const SearchPage: FC<{
     <Layout
       title="Search"
       canonicalPath="/psychotherapy/search"
+      collection={PSYCHOTHERAPY}
       ogDescription="Keyword search and faceted browsing over The Allodium's verified psychotherapy research index."
     >
       <h1>Psychotherapy search</h1>
@@ -1208,7 +1502,7 @@ export const ListPage: FC<{
   const apaItems = entries.map((e) => ({ id: e.id, text: buildApa(e), url: citationUrl(e) }));
 
   return (
-    <Layout title="Shortlist" canonicalPath="/psychotherapy/list">
+    <Layout title="Shortlist" canonicalPath="/psychotherapy/list" collection={PSYCHOTHERAPY}>
       <h1>Shortlist</h1>
       {requestedCount === 0 ? (
         <div class="list-empty status-prompt">

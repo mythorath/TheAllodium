@@ -8,11 +8,12 @@ export type SitemapUrl = {
 /** Static routes with no per-row D1 source of truth for their own existence. */
 export const STATIC_SITEMAP_PATHS: readonly string[] = [
   "/",
+  "/psychotherapy",
   "/psychotherapy/search",
   "/psychotherapy/topics",
   "/psychotherapy/hexaflex",
+  "/psychotherapy/disclaimer",
   "/standard",
-  "/disclaimer",
 ];
 
 function xmlEscape(value: string): string {

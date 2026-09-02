@@ -26,6 +26,7 @@ import ftsSql from "../migrations/0002_fts.sql?raw";
 import { execStatements } from "./sql-test-utils";
 import { SITE_URL } from "../src/site-config";
 import { STATIC_SITEMAP_PATHS } from "../src/sitemap";
+import { collectionForPath } from "../src/collections";
 
 async function loadFixture() {
   await execStatements(env.DB, fixtureSql);
@@ -940,9 +941,9 @@ describe("local D1 repository + routes", () => {
     expect(searchHtml).toContain('data-shortlist-id="cccccccc00000005"');
   });
 
-  it("renders a persistent Shortlist nav link on every page (Phase 2D)", async () => {
+  it("renders a persistent Shortlist nav link on psychotherapy pages (Phase 2D)", async () => {
     const ctx = createExecutionContext();
-    const res = await app.request("/", {}, env, ctx);
+    const res = await app.request("/psychotherapy", {}, env, ctx);
     await waitOnExecutionContext(ctx);
     const html = await res.text();
     expect(html).toContain('href="/psychotherapy/list" id="shortlist-nav-link"');
@@ -1043,14 +1044,35 @@ describe("local D1 repository + routes", () => {
     expect(html).toContain("No results for");
   });
 
-  it("serves the home page with live manifest stats", async () => {
+  it("serves the home page as a collection directory", async () => {
     const ctx = createExecutionContext();
     const res = await app.request("/", {}, env, ctx);
     await waitOnExecutionContext(ctx);
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain("12 entries");
+    expect(html).toContain("A place of free knowledge");
+    expect(html).toContain('<span class="stat-value">12</span>');
+    expect(html).toContain('<span class="stat-label">entries</span>');
+    expect(html).toContain("live collection");
     expect(html).toContain("/standard");
+    expect(html).toContain("Collections");
+    expect(html).toContain('href="/psychotherapy"');
+    expect(html).toContain("Physics");
+    expect(html).toContain("Cosmology");
+    expect(html).toContain("In progress");
+    expect(html).toContain("collection-card-planned");
+    expect(html).not.toContain("/psychotherapy/search?kind=literature");
+    expect(html).not.toContain('id="shortlist-nav-link"');
+    expect(html).not.toContain("Disclaimer &amp; crisis resources");
+  });
+
+  it("serves /psychotherapy with doors, coverage, and collection chrome", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request("/psychotherapy", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("A verified index of evidence");
     expect(html).toContain("/psychotherapy/search?kind=literature");
     expect(html).toContain("/psychotherapy/search?kind=materials");
     expect(html).toContain("3 papers");
@@ -1060,9 +1082,24 @@ describe("local D1 repository + routes", () => {
     expect(html).toContain('href="/psychotherapy/hexaflex"');
     expect(html).toContain(">Topics</a>");
     expect(html).toContain(">Hexaflex</a>");
+    expect(html).toContain("Identity checks");
+    expect(html).toContain("What&#39;s excluded, and why");
+    expect(html).toContain('id="shortlist-nav-link"');
+    expect(html).toContain("/psychotherapy/disclaimer");
   });
 
-  it("serves /standard with coverage numbers and no forbidden fields", async () => {
+  it("maps collectionForPath onto live psychotherapy routes only", () => {
+    expect(collectionForPath("/psychotherapy")?.slug).toBe("psychotherapy");
+    expect(collectionForPath("/psychotherapy/search")?.slug).toBe("psychotherapy");
+    expect(collectionForPath("/psychotherapy/disclaimer")?.slug).toBe(
+      "psychotherapy",
+    );
+    expect(collectionForPath("/")).toBeNull();
+    expect(collectionForPath("/standard")).toBeNull();
+    expect(collectionForPath("/physics")).toBeNull();
+  });
+
+  it("serves /standard as cross-collection methodology without snapshot tables", async () => {
     const ctx = createExecutionContext();
     const res = await app.request("/standard", {}, env, ctx);
     await waitOnExecutionContext(ctx);
@@ -1072,14 +1109,24 @@ describe("local D1 repository + routes", () => {
     expect(html).toContain("Optional AI-assisted search");
     expect(html).toContain("qwen2.5:7b-instruct-q6_k");
     expect(html).toContain("988");
+    expect(html).toContain('href="/psychotherapy"');
+    expect(html).not.toContain("What's excluded, and why");
     expect(html).not.toContain("gpu-runbook");
     expect(html).not.toMatch(/SYNTHETIC ABSTRACT/i);
     expect(html).not.toMatch(/file_path/i);
   });
 
-  it("serves /disclaimer with crisis routing", async () => {
+  it("redirects /disclaimer to /psychotherapy/disclaimer", async () => {
     const ctx = createExecutionContext();
     const res = await app.request("/disclaimer", {}, env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(res.status).toBe(301);
+    expect(res.headers.get("Location")).toBe("/psychotherapy/disclaimer");
+  });
+
+  it("serves /psychotherapy/disclaimer with crisis routing", async () => {
+    const ctx = createExecutionContext();
+    const res = await app.request("/psychotherapy/disclaimer", {}, env, ctx);
     await waitOnExecutionContext(ctx);
     expect(res.status).toBe(200);
     const html = await res.text();
@@ -1092,6 +1139,8 @@ describe("local D1 repository + routes", () => {
       "/",
       "/standard",
       "/disclaimer",
+      "/psychotherapy",
+      "/psychotherapy/disclaimer",
       "/psychotherapy/search?q=trauma",
       "/psychotherapy/entries/aaaaaaaa00000001",
       "/does-not-exist",
@@ -1160,7 +1209,8 @@ describe("local D1 repository + routes", () => {
     const cases: Array<[string, string]> = [
       ["/", "/"],
       ["/standard", "/standard"],
-      ["/disclaimer", "/disclaimer"],
+      ["/psychotherapy", "/psychotherapy"],
+      ["/psychotherapy/disclaimer", "/psychotherapy/disclaimer"],
       ["/psychotherapy/search", "/psychotherapy/search"],
       ["/psychotherapy/topics", "/psychotherapy/topics"],
       ["/psychotherapy/hexaflex", "/psychotherapy/hexaflex"],
@@ -1231,9 +1281,12 @@ describe("local D1 repository + routes", () => {
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
     const xml = await res.text();
     expect(xml).toContain(`<loc>${SITE_URL}/</loc>`);
+    expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy</loc>`);
     expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy/search</loc>`);
     expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy/topics</loc>`);
     expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy/hexaflex</loc>`);
+    expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy/disclaimer</loc>`);
+    expect(xml).not.toContain(`<loc>${SITE_URL}/disclaimer</loc>`);
     expect(xml).toContain(
       `<loc>${SITE_URL}/psychotherapy/entries/aaaaaaaa00000001</loc>`,
     );

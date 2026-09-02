@@ -73,12 +73,20 @@ async function main() {
     `entry_count=${health.entry_count}`,
   );
 
-  await checkPage("/", "The Allodium");
+  await checkPage("/", "A place of free knowledge");
+  await checkPage("/psychotherapy", "A verified index of evidence");
   await checkPage("/psychotherapy/search", "Psychotherapy search");
   await checkPage("/psychotherapy/topics", "Topics");
   await checkPage("/psychotherapy/hexaflex", "Hexaflex");
   await checkPage("/standard", "The Standard");
-  await checkPage("/disclaimer", "988");
+  await checkPage("/psychotherapy/disclaimer", "988");
+
+  const disclaimerRedirect = await fetch(`${base}/disclaimer`, { redirect: "manual" });
+  record(
+    "GET /disclaimer -> 301",
+    disclaimerRedirect.status === 301,
+    `status=${disclaimerRedirect.status} location=${disclaimerRedirect.headers.get("location")}`,
+  );
 
   const sitemapRes = await fetch(`${base}/sitemap.xml`);
   record("GET /sitemap.xml -> 200", sitemapRes.status === 200, `status=${sitemapRes.status}`);

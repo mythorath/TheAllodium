@@ -387,10 +387,10 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     expect(materials.hits.some((h) => h.resource_type === "paper")).toBe(false);
   });
 
-  it("renders literature and materials doors with live counts on the home page (Phase 2.5A)", async () => {
+  it("renders literature and materials doors with live counts on the psychotherapy landing (Phase 2.5A)", async () => {
     const counts = await getKindCounts(env.DB);
     const ctx = createExecutionContext();
-    const res = await app.request("/", {}, env, ctx);
+    const res = await app.request("/psychotherapy", {}, env, ctx);
     await waitOnExecutionContext(ctx);
     const html = await res.text();
     expect(html).toContain("/psychotherapy/search?kind=literature");
@@ -398,6 +398,7 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     expect(html).toContain(`${counts.literature.toLocaleString()} papers`);
     expect(html).toContain(`${counts.materials.toLocaleString()} resources`);
     expect(html).toContain("Search everything");
+    expect(html).toContain("A verified index of evidence");
   });
 
   it("exposes topic/hexaflex/type/decade facets within each corpus (Phase 2.5B)", async () => {

@@ -28,15 +28,56 @@ async function expectNoSeriousA11yViolations(page: import("@playwright/test").Pa
 }
 
 test.describe("home", () => {
-  test("loads with live manifest stats and no serious a11y violations", async ({
+  test("welcomes visitors with a collection directory and no serious a11y violations", async ({
     page,
   }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/The Allodium/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-      "The Allodium",
+      "A place of free knowledge",
     );
-    await expect(page.getByText(/entries across/)).toBeVisible();
+    await expect(page.locator(".stat-strip")).toBeVisible();
+    await expect(page.getByText("entries", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Collections" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Psychotherapy" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Psychotherapy/ })).toHaveAttribute(
+      "href",
+      "/psychotherapy",
+    );
+    await expect(page.getByRole("heading", { name: "Physics" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Cosmology" })).toBeVisible();
+    await expect(page.locator(".collection-card-planned")).toHaveCount(2);
+    await expect(page.locator(".collection-card-planned a")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /Literature/ })).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: "How verification works" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Topics" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: "Disclaimer & crisis resources" }),
+    ).toHaveCount(0);
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("skip link targets the main landmark", async ({ page }) => {
+    await page.goto("/");
+    const skipLink = page.getByRole("link", { name: "Skip to content" });
+    await expect(skipLink).toHaveAttribute("href", "#main");
+    await expect(page.locator("main#main")).toBeVisible();
+  });
+});
+
+test.describe("psychotherapy landing", () => {
+  test("loads with live catalog doors, coverage, and collection chrome", async ({
+    page,
+  }) => {
+    await page.goto("/psychotherapy");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "A verified index of evidence",
+    );
+    await expect(page.locator(".stat-strip")).toBeVisible();
     await expect(page.getByRole("link", { name: /Literature/ })).toHaveAttribute(
       "href",
       "/psychotherapy/search?kind=literature",
@@ -51,6 +92,10 @@ test.describe("home", () => {
     await expect(
       page.getByRole("link", { name: "How verification works" }),
     ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Coverage" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "What's excluded, and why" }),
+    ).toBeVisible();
     await expect(
       page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Topics" }),
     ).toHaveAttribute("href", "/psychotherapy/topics");
@@ -64,13 +109,6 @@ test.describe("home", () => {
       page.getByRole("navigation", { name: "Catalog" }).getByRole("link", { name: "Search" }),
     ).toHaveAttribute("href", "/psychotherapy/search");
     await expectNoSeriousA11yViolations(page);
-  });
-
-  test("skip link targets the main landmark", async ({ page }) => {
-    await page.goto("/");
-    const skipLink = page.getByRole("link", { name: "Skip to content" });
-    await expect(skipLink).toHaveAttribute("href", "#main");
-    await expect(page.locator("main#main")).toBeVisible();
   });
 });
 
@@ -694,17 +732,25 @@ test.describe("standard and disclaimer", () => {
     await expectNoSeriousA11yViolations(page);
   });
 
-  test("/disclaimer carries crisis routing and links from every page footer", async ({
+  test("/psychotherapy/disclaimer carries crisis routing and links from collection footers", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/psychotherapy");
     await page
       .getByRole("link", { name: "Disclaimer & crisis resources" })
       .click();
-    await expect(page).toHaveURL(/\/disclaimer$/);
+    await expect(page).toHaveURL(/\/psychotherapy\/disclaimer$/);
     await expect(page.getByText("988")).toBeVisible();
     await expect(page.getByText("findahelpline.com")).toBeVisible();
     await expectNoSeriousA11yViolations(page);
+  });
+
+  test("/disclaimer permanently redirects to /psychotherapy/disclaimer", async ({
+    page,
+  }) => {
+    await page.goto("/disclaimer");
+    await expect(page).toHaveURL(/\/psychotherapy\/disclaimer$/);
+    await expect(page.getByRole("heading", { name: "Disclaimer" })).toBeVisible();
   });
 });
 
