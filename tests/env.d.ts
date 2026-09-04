@@ -6,6 +6,8 @@ declare module "cloudflare:test" {
     OG_CARDS: R2Bucket;
     GPU_ORIGIN?: string;
     GPU_SHARED_SECRET?: string;
+    AUTHORITY?: D1Database;
     TEST_MIGRATIONS?: D1Migration[];
+    TEST_AUTHORITY_MIGRATIONS?: D1Migration[];
   }
 }

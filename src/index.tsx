@@ -1,5 +1,37 @@
 import { Hono } from "hono";
-import { listTaxonomyHierarchy } from "./authority/repository";
+import {
+  findVenuesByName,
+  getDomainWithFields,
+  getDomains,
+  getFieldWithSubfields,
+  getInstitutionByRor,
+  getPublisher,
+  getRetractionNotice,
+  getSubfieldWithTopics,
+  getTopic,
+  getVenue,
+  getVenueByIssn,
+  hasDoajSubject,
+  listCountryPeers,
+  listDoajSubjects,
+  listIssnResolutions,
+  listKeywords,
+  listNoticesByReason,
+  listNoticesForJournal,
+  listOrganizationCountries,
+  listOrganizations,
+  listOrganizationsByCountry,
+  listPublisherChildren,
+  listPublishers,
+  listRetractionNotices,
+  listRetractionReasons,
+  listTopicsForKeyword,
+  listVenueSubjects,
+  listVenueTypes,
+  listVenues,
+  listVenuesForPublisher,
+  listVenuesForSubject,
+} from "./authority/repository";
 import {
   getEntriesByIds,
   getEntry,
@@ -7,7 +39,6 @@ import {
   getManifest,
   getTagCounts,
   getRelatedEntries,
-  listEntriesForSitemap,
   loadNlAllowlists,
   parseShortlistIds,
   parseSortOption,
@@ -20,9 +51,11 @@ import { askGpu } from "./gpu";
 import { ASK_MAX_CHARS, normalizeNlFacets } from "./nl-query";
 import { buildSearchHref, withSearchFlag } from "./search-url";
 import {
+  buildSitemapChild,
+  buildSitemapIndexXml,
   buildSitemapXml,
-  STATIC_SITEMAP_PATHS,
-  taxonomySitemapPaths,
+  isSitemapKind,
+  listSitemapIndexPaths,
 } from "./sitemap";
 import {
   resolveFederatedWork,
@@ -52,9 +85,26 @@ import {
   FederatedWorkPage,
   FieldPage,
   FieldsPage,
+  KeywordPage,
+  KeywordsPage,
   OpenIndexHomePage,
+  OrganizationPage,
+  OrganizationsPage,
+  PublisherPage,
+  PublishersPage,
+  RetractionNoticePage,
+  RetractionReasonPage,
+  RetractionReasonsPage,
+  RetractionsPage,
+  SubjectPage,
+  SubjectsPage,
   SubfieldPage,
+  TopicPage,
+  VenuePage,
+  VenuesPage,
+  WorksPartial,
 } from "./views/open-index-pages";
+import { venuePath } from "./open-index/paths";
 
 export type AppBindings = {
   DB: D1Database;
@@ -161,42 +211,302 @@ app.all("/mcp", (c) =>
 
 app.get("/coverage", (c) => c.html(<CoveragePage />));
 
-async function taxonomyFor(db: D1Database | undefined) {
-  if (!db) return [];
+const DIRECTORY_CACHE = { "Cache-Control": "public, max-age=3600" };
+
+async function withAuthority<T>(
+  db: D1Database | undefined,
+  fallback: T,
+  read: (authority: D1Database) => Promise<T>,
+): Promise<T> {
+  if (!db) return fallback;
   try {
-    return await listTaxonomyHierarchy(db);
+    return await read(db);
   } catch {
-    return [];
+    return fallback;
   }
 }
 
+function afterQuery(value: string | undefined): string | null {
+  const trimmed = (value ?? "").trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 app.get("/fields", async (c) => {
-  const domains = await taxonomyFor(c.env.AUTHORITY);
-  return c.html(<FieldsPage domains={domains} />);
+  const domains = await withAuthority(c.env.AUTHORITY, [], getDomains);
+  return c.html(<FieldsPage domains={domains} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/fields/:domain/:field/:subfield/:topic", async (c) => {
+  const path = await withAuthority(c.env.AUTHORITY, null, (db) =>
+    getTopic(
+      db,
+      c.req.param("domain"),
+      c.req.param("field"),
+      c.req.param("subfield"),
+      c.req.param("topic"),
+    ),
+  );
+  if (!path) return c.html(<NotFoundPage />, 404);
+  return c.html(
+    <TopicPage
+      domain={path.domain}
+      field={path.field}
+      subfield={path.subfield}
+      topic={path.topic}
+      siblings={path.siblings}
+    />,
+    200,
+    DIRECTORY_CACHE,
+  );
 });
 
 app.get("/fields/:domain/:field/:subfield", async (c) => {
-  const domains = await taxonomyFor(c.env.AUTHORITY);
-  const domain = domains.find((item) => item.id === c.req.param("domain"));
-  const field = domain?.fields.find((item) => item.id === c.req.param("field"));
-  const subfield = field?.subfields.find((item) => item.id === c.req.param("subfield"));
-  if (!domain || !field || !subfield) return c.html(<NotFoundPage />, 404);
-  return c.html(<SubfieldPage domain={domain} field={field} subfield={subfield} />);
+  const path = await withAuthority(c.env.AUTHORITY, null, (db) =>
+    getSubfieldWithTopics(db, c.req.param("domain"), c.req.param("field"), c.req.param("subfield")),
+  );
+  if (!path) return c.html(<NotFoundPage />, 404);
+  return c.html(
+    <SubfieldPage domain={path.domain} field={path.field} subfield={path.subfield} />,
+    200,
+    DIRECTORY_CACHE,
+  );
 });
 
 app.get("/fields/:domain/:field", async (c) => {
-  const domains = await taxonomyFor(c.env.AUTHORITY);
-  const domain = domains.find((item) => item.id === c.req.param("domain"));
-  const field = domain?.fields.find((item) => item.id === c.req.param("field"));
-  if (!domain || !field) return c.html(<NotFoundPage />, 404);
-  return c.html(<FieldPage domain={domain} field={field} />);
+  const path = await withAuthority(c.env.AUTHORITY, null, (db) =>
+    getFieldWithSubfields(db, c.req.param("domain"), c.req.param("field")),
+  );
+  if (!path) return c.html(<NotFoundPage />, 404);
+  return c.html(<FieldPage domain={path.domain} field={path.field} />, 200, DIRECTORY_CACHE);
 });
 
 app.get("/fields/:domain", async (c) => {
-  const domains = await taxonomyFor(c.env.AUTHORITY);
-  const domain = domains.find((item) => item.id === c.req.param("domain"));
+  const domain = await withAuthority(c.env.AUTHORITY, null, (db) =>
+    getDomainWithFields(db, c.req.param("domain")),
+  );
   if (!domain) return c.html(<NotFoundPage />, 404);
-  return c.html(<DomainPage domain={domain} />);
+  return c.html(<DomainPage domain={domain} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/keywords", async (c) => {
+  const after = afterQuery(c.req.query("after"));
+  const page = await withAuthority(c.env.AUTHORITY, { items: [], nextAfter: null }, (db) =>
+    listKeywords(db, after),
+  );
+  return c.html(<KeywordsPage page={page} after={after} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/keywords/:keyword", async (c) => {
+  const keyword = c.req.param("keyword");
+  const topics = await withAuthority(c.env.AUTHORITY, [], (db) => listTopicsForKeyword(db, keyword));
+  if (topics.length === 0) return c.html(<NotFoundPage />, 404);
+  return c.html(<KeywordPage keyword={keyword} topics={topics} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/venues/type/:type", async (c) => {
+  const type = c.req.param("type");
+  const after = afterQuery(c.req.query("after"));
+  const [page, types] = await withAuthority(
+    c.env.AUTHORITY,
+    [{ items: [], nextAfter: null }, [] as Awaited<ReturnType<typeof listVenueTypes>>] as const,
+    async (db) => [await listVenues(db, { after, type }), await listVenueTypes(db)] as const,
+  );
+  return c.html(<VenuesPage page={page} types={types} type={type} after={after} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/venues", async (c) => {
+  const after = afterQuery(c.req.query("after"));
+  const [page, types] = await withAuthority(
+    c.env.AUTHORITY,
+    [{ items: [], nextAfter: null }, [] as Awaited<ReturnType<typeof listVenueTypes>>] as const,
+    async (db) => [await listVenues(db, { after }), await listVenueTypes(db)] as const,
+  );
+  return c.html(<VenuesPage page={page} types={types} after={after} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/venues/:id", async (c) => {
+  const id = c.req.param("id");
+  const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
+    const venue = await getVenue(db, id);
+    if (!venue) return null;
+    const [publisher, issns, subjects, notices] = await Promise.all([
+      venue.publisherId ? getPublisher(db, venue.publisherId) : Promise.resolve(null),
+      listIssnResolutions(db, venue.id),
+      listVenueSubjects(db, venue.id),
+      listNoticesForJournal(db, venue.displayName),
+    ]);
+    return { venue, publisher, issns, subjects, notices };
+  });
+  if (!payload) return c.html(<NotFoundPage />, 404);
+  return c.html(
+    <VenuePage
+      venue={payload.venue}
+      publisher={payload.publisher}
+      issns={payload.issns}
+      subjects={payload.subjects}
+      notices={payload.notices}
+    />,
+    200,
+    DIRECTORY_CACHE,
+  );
+});
+
+app.get("/issn/:issn", async (c) => {
+  const venue = await withAuthority(c.env.AUTHORITY, null, (db) =>
+    getVenueByIssn(db, c.req.param("issn")),
+  );
+  if (!venue) return c.html(<NotFoundPage />, 404);
+  return c.redirect(venuePath(venue.id), 301);
+});
+
+app.get("/publishers", async (c) => {
+  const after = afterQuery(c.req.query("after"));
+  const page = await withAuthority(c.env.AUTHORITY, { items: [], nextAfter: null }, (db) =>
+    listPublishers(db, after),
+  );
+  return c.html(<PublishersPage page={page} after={after} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/publishers/:id", async (c) => {
+  const after = afterQuery(c.req.query("after"));
+  const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
+    const publisher = await getPublisher(db, c.req.param("id"));
+    if (!publisher) return null;
+    const [parent, children, venues] = await Promise.all([
+      publisher.parentPublisherId ? getPublisher(db, publisher.parentPublisherId) : Promise.resolve(null),
+      listPublisherChildren(db, publisher.id),
+      listVenuesForPublisher(db, publisher.id, after),
+    ]);
+    return { publisher, parent, children, venues };
+  });
+  if (!payload) return c.html(<NotFoundPage />, 404);
+  return c.html(
+    <PublisherPage
+      publisher={payload.publisher}
+      parent={payload.parent}
+      childPublishers={payload.children}
+      venues={payload.venues}
+      after={after}
+    />,
+    200,
+    DIRECTORY_CACHE,
+  );
+});
+
+app.get("/organizations/country/:code", async (c) => {
+  const country = c.req.param("code").toUpperCase();
+  const after = afterQuery(c.req.query("after"));
+  const [page, countries] = await withAuthority(
+    c.env.AUTHORITY,
+    [{ items: [], nextAfter: null }, [] as Awaited<ReturnType<typeof listOrganizationCountries>>] as const,
+    async (db) =>
+      [await listOrganizationsByCountry(db, country, after), await listOrganizationCountries(db)] as const,
+  );
+  return c.html(
+    <OrganizationsPage page={page} countries={countries} country={country} after={after} />,
+    200,
+    DIRECTORY_CACHE,
+  );
+});
+
+app.get("/organizations", async (c) => {
+  const after = afterQuery(c.req.query("after"));
+  const [page, countries] = await withAuthority(
+    c.env.AUTHORITY,
+    [{ items: [], nextAfter: null }, [] as Awaited<ReturnType<typeof listOrganizationCountries>>] as const,
+    async (db) => [await listOrganizations(db, after), await listOrganizationCountries(db)] as const,
+  );
+  return c.html(<OrganizationsPage page={page} countries={countries} after={after} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/organizations/:ror", async (c) => {
+  const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
+    const organization = await getInstitutionByRor(db, c.req.param("ror"));
+    if (!organization) return null;
+    const peers = organization.countryCode
+      ? await listCountryPeers(db, organization.countryCode, organization.rorId ?? c.req.param("ror"))
+      : [];
+    return { organization, peers };
+  });
+  if (!payload) return c.html(<NotFoundPage />, 404);
+  return c.html(
+    <OrganizationPage organization={payload.organization} peers={payload.peers} />,
+    200,
+    DIRECTORY_CACHE,
+  );
+});
+
+app.get("/subjects", async (c) => {
+  const after = afterQuery(c.req.query("after"));
+  const page = await withAuthority(c.env.AUTHORITY, { items: [], nextAfter: null }, (db) =>
+    listDoajSubjects(db, after),
+  );
+  return c.html(<SubjectsPage page={page} after={after} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/subjects/:subject", async (c) => {
+  const subject = c.req.param("subject");
+  const after = afterQuery(c.req.query("after"));
+  const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
+    if (!(await hasDoajSubject(db, subject))) return null;
+    return listVenuesForSubject(db, subject, after);
+  });
+  if (!payload) return c.html(<NotFoundPage />, 404);
+  return c.html(<SubjectPage subject={subject} venues={payload} after={after} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/retractions/reasons/:reason", async (c) => {
+  const reason = c.req.param("reason");
+  const after = afterQuery(c.req.query("after"));
+  const page = await withAuthority(c.env.AUTHORITY, { items: [], nextAfter: null }, (db) =>
+    listNoticesByReason(db, reason, after),
+  );
+  if (page.items.length === 0 && !after) return c.html(<NotFoundPage />, 404);
+  return c.html(<RetractionReasonPage reason={reason} page={page} after={after} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/retractions/reasons", async (c) => {
+  const reasons = await withAuthority(c.env.AUTHORITY, [], listRetractionReasons);
+  return c.html(<RetractionReasonsPage reasons={reasons} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/retractions", async (c) => {
+  const after = afterQuery(c.req.query("after"));
+  const page = await withAuthority(c.env.AUTHORITY, { items: [], nextAfter: null }, (db) =>
+    listRetractionNotices(db, after),
+  );
+  return c.html(<RetractionsPage page={page} after={after} />, 200, DIRECTORY_CACHE);
+});
+
+app.get("/retractions/:id", async (c) => {
+  const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
+    const notice = await getRetractionNotice(db, c.req.param("id"));
+    if (!notice) return null;
+    const venues = notice.journal ? await findVenuesByName(db, notice.journal) : [];
+    return { notice, venues };
+  });
+  if (!payload) return c.html(<NotFoundPage />, 404);
+  return c.html(
+    <RetractionNoticePage notice={payload.notice} venues={payload.venues} />,
+    200,
+    DIRECTORY_CACHE,
+  );
+});
+
+app.get("/partials/works", async (c) => {
+  const query = (c.req.query("q") ?? "").trim().slice(0, 500);
+  if (query.length < 2) {
+    return c.text("q must contain at least two characters", 400);
+  }
+  const result = await searchFederation(
+    c.env satisfies FederationBindings,
+    { text: query, pageSize: 10 },
+    c.executionCtx,
+  );
+  return c.html(<WorksPartial result={result} />, 200, {
+    "Cache-Control": "public, max-age=300",
+    "X-Robots-Tag": "noindex",
+  });
 });
 
 app.get("/works/*", async (c) => {
@@ -358,22 +668,33 @@ app.get("/psychotherapy/list", async (c) => {
 });
 
 app.get("/sitemap.xml", async (c) => {
-  const [rows, taxonomy] = await Promise.all([
-    listEntriesForSitemap(c.env.DB),
-    taxonomyFor(c.env.AUTHORITY),
-  ]);
-  const urls = [
-    ...STATIC_SITEMAP_PATHS.map((path) => ({ path })),
-    ...taxonomySitemapPaths(taxonomy).map((path) => ({ path })),
-    ...rows.map((row) => ({
-      path: `/psychotherapy/entries/${row.id}`,
-      lastmod: row.updated_at,
-    })),
-  ];
-  return c.text(buildSitemapXml(urls), 200, {
+  const paths = await listSitemapIndexPaths(c.env.DB, c.env.AUTHORITY);
+  return c.text(buildSitemapIndexXml(paths), 200, {
     "Content-Type": "application/xml; charset=UTF-8",
     "Cache-Control": "public, max-age=3600",
   });
+});
+
+app.get("/sitemaps/:kind/:file", async (c) => {
+  const kindParam = c.req.param("kind");
+  const file = c.req.param("file");
+  const pageMatch = /^(\d+)\.xml$/.exec(file);
+  if (!isSitemapKind(kindParam) || !pageMatch) {
+    return c.text("Not found", 404, { "Content-Type": "text/plain; charset=UTF-8" });
+  }
+  const page = Number(pageMatch[1]);
+  try {
+    const urls = await buildSitemapChild(kindParam, page, c.env.DB, c.env.AUTHORITY);
+    if (!urls) {
+      return c.text("Not found", 404, { "Content-Type": "text/plain; charset=UTF-8" });
+    }
+    return c.text(buildSitemapXml(urls), 200, {
+      "Content-Type": "application/xml; charset=UTF-8",
+      "Cache-Control": "public, max-age=3600",
+    });
+  } catch {
+    return c.text("Not found", 404, { "Content-Type": "text/plain; charset=UTF-8" });
+  }
 });
 
 app.get("/health", async (c) => {

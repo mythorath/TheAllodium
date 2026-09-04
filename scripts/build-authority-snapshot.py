@@ -123,7 +123,8 @@ TABLES = {
     ),
 }
 DELETE_ORDER = (
-    "oa_source_issns", "oa_topics", "oa_subfields", "oa_fields", "oa_domains",
+    "oa_topic_keywords", "doaj_journal_subjects", "oa_source_issns",
+    "oa_topics", "oa_subfields", "oa_fields", "oa_domains",
     "oa_sources", "oa_institutions", "oa_publishers",
     "ror_organizations", "retraction_watch_notices", "doaj_journals",
     "nlm_journals", "authority_manifest",
@@ -325,6 +326,24 @@ def write_data_rows(
                     stream.write(
                         "INSERT INTO oa_source_issns (source_id, issn) VALUES "
                         f"({sql_value(current_key)}, {sql_value(issn)});\n"
+                    )
+            if filename == "openalex_topics.jsonl":
+                keywords = normalized_value(record, "keywords_json", defaults)
+                if not isinstance(keywords, list):
+                    raise ValueError(f"{filename}:{line_number}: keywords_json must be an array")
+                for keyword in sorted({str(item).strip() for item in keywords if str(item).strip()}):
+                    stream.write(
+                        "INSERT INTO oa_topic_keywords (keyword, topic_id) VALUES "
+                        f"({sql_value(keyword)}, {sql_value(current_key)});\n"
+                    )
+            if filename == "doaj_journals.jsonl":
+                subjects = normalized_value(record, "subjects_json", defaults)
+                if not isinstance(subjects, list):
+                    raise ValueError(f"{filename}:{line_number}: subjects_json must be an array")
+                for subject in sorted({str(item).strip() for item in subjects if str(item).strip()}):
+                    stream.write(
+                        "INSERT INTO doaj_journal_subjects (subject, doaj_id) VALUES "
+                        f"({sql_value(subject)}, {sql_value(current_key)});\n"
                     )
             row_counts[family] += 1
 

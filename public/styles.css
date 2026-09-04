@@ -1006,6 +1006,38 @@ input[type="text"]:focus {
   color: var(--accent-ink);
 }
 
+.browse-rails {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 1.25rem;
+}
+
+@media (min-width: 720px) {
+  .browse-rails {
+    grid-template-columns: minmax(0, 2fr) minmax(12rem, 1fr);
+    align-items: start;
+  }
+}
+
+.related-rail h2,
+.related-rail h3 {
+  font-size: 1.05rem;
+}
+
+.honesty-note {
+  color: var(--muted);
+  border-left: 3px solid var(--line);
+  padding: 0.15rem 0 0.15rem 0.85rem;
+}
+
+.works-loader {
+  margin: 1rem 0 1.25rem;
+}
+
+.browse-pagination {
+  margin-top: 0.75rem;
+}
+
 /* Entry record */
 .entry-actions {
   display: flex;

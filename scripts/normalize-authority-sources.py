@@ -432,13 +432,16 @@ def smoke_records() -> dict[str, list[dict[str, Any]]]:
         "domains": [{"id": "D1", "display_name": "Health"}],
         "fields": [{"id": "FL1", "display_name": "Psychology", "domain": {"id": "D1"}}],
         "subfields": [{"id": "SF1", "display_name": "Clinical", "field": {"id": "FL1"}}],
-        "topics": [{"id": "T1", "display_name": "Therapy", "subfield": {"id": "SF1"}}],
+        "topics": [{
+            "id": "T1", "display_name": "Therapy", "subfield": {"id": "SF1"},
+            "keywords": ["therapy", "clinical"],
+        }],
         "ror": [{"id": "01abcde12", "name": "Institute", "types": ["Education"]}],
         "retraction_watch": [{
             "Record ID": "RW1", "Title": "Notice", "OriginalPaperDOI": "10.1/example",
             "RetractionNature": "Retraction", "Reason": "Error",
         }],
-        "doaj": [{"id": "J1", "title": "Journal", "issn": "1234-567X"}],
+        "doaj": [{"id": "J1", "title": "Journal", "issn": "1234-567X", "subjects": ["Medicine"]}],
         "nlm": [{
             "nlm_id": "N1", "title": "Journal", "issn_print": "1234-567X",
             "language_json": ["eng"],

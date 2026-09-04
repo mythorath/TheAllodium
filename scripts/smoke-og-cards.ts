@@ -82,8 +82,8 @@ async function main() {
 
   await checkCard("/og-default.png", "default card");
 
-  console.log("\nDiscovering real entry ids from /sitemap.xml…");
-  const sitemapRes = await fetch(`${base}/sitemap.xml`);
+  console.log("\nDiscovering real entry ids from /sitemaps/entries/0.xml…");
+  const sitemapRes = await fetch(`${base}/sitemaps/entries/0.xml`);
   const sitemapXml = await sitemapRes.text();
   const entryIds = Array.from(
     sitemapXml.matchAll(/\/psychotherapy\/entries\/([a-zA-Z0-9]+)/g),
@@ -93,10 +93,10 @@ async function main() {
     .slice(0, 3);
 
   if (entryIds.length === 0) {
-    record("sitemap.xml contains at least one entry id to sample", false);
+    record("entries sitemap contains at least one entry id to sample", false);
   } else {
     record(
-      "sitemap.xml contains at least one entry id to sample",
+      "entries sitemap contains at least one entry id to sample",
       true,
       `sampled: ${entryIds.join(", ")}`,
     );

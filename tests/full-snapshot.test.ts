@@ -233,17 +233,30 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     expect(page3Html).toContain(">Last<");
   });
 
-  it("serves a full sitemap.xml under the 50,000-URL single-sitemap limit (Phase 1F)", async () => {
+  it("serves a sitemap index with paginated children under the 50,000-URL limit", async () => {
     const ctx = createExecutionContext();
     const res = await app.request("/sitemap.xml", {}, env, ctx);
     await waitOnExecutionContext(ctx);
     expect(res.status).toBe(200);
     const xml = await res.text();
-    const urlCount = (xml.match(/<url>/g) ?? []).length;
-    expect(urlCount).toBe(STATIC_SITEMAP_PATHS.length + fullSnapshotManifest.entry_count);
-    expect(urlCount).toBeLessThan(50_000);
-    expect(xml).toContain("/psychotherapy/topics");
-    expect(xml).toContain("/psychotherapy/hexaflex");
+    expect(xml).toContain("<sitemapindex");
+    expect(xml).toContain("/sitemaps/entries/0.xml");
+    expect(xml).toContain("/sitemaps/static/0.xml");
+
+    const entriesCtx = createExecutionContext();
+    const entriesRes = await app.request("/sitemaps/entries/0.xml", {}, env, entriesCtx);
+    await waitOnExecutionContext(entriesCtx);
+    const entriesXml = await entriesRes.text();
+    expect((entriesXml.match(/<url>/g) ?? []).length).toBe(fullSnapshotManifest.entry_count);
+    expect((entriesXml.match(/<url>/g) ?? []).length).toBeLessThan(50_000);
+
+    const staticCtx = createExecutionContext();
+    const staticRes = await app.request("/sitemaps/static/0.xml", {}, env, staticCtx);
+    await waitOnExecutionContext(staticCtx);
+    const staticXml = await staticRes.text();
+    expect(staticXml).toContain("/psychotherapy/topics");
+    expect(staticXml).toContain("/psychotherapy/hexaflex");
+    expect((staticXml.match(/<url>/g) ?? []).length).toBe(STATIC_SITEMAP_PATHS.length);
   });
 
   it("returns getRelatedEntries() results matching a raw entry_neighbors query, in rank order (Phase 2C)", async () => {

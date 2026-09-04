@@ -7,6 +7,9 @@ import {
 export default defineWorkersConfig(async () => {
   const migrationsPath = path.join(__dirname, "migrations");
   const migrations = await readD1Migrations(migrationsPath);
+  const authorityMigrations = await readD1Migrations(
+    path.join(__dirname, "authority-migrations"),
+  );
 
   return {
     test: {
@@ -36,6 +39,7 @@ export default defineWorkersConfig(async () => {
             bindings: {
               ABSTRACT_SEARCH_ENABLED: "0",
               TEST_MIGRATIONS: migrations,
+              TEST_AUTHORITY_MIGRATIONS: authorityMigrations,
             },
           },
         },

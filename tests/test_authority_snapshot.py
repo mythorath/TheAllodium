@@ -110,6 +110,20 @@ class AuthoritySnapshotTest(unittest.TestCase):
             self.assertEqual(counts["retraction_watch"], 1)
             self.assertEqual(counts["doaj"], 1)
             self.assertEqual(counts["nlm"], 1)
+            self.assertEqual(
+                connection.execute("SELECT COUNT(*) FROM oa_topic_keywords").fetchone()[0],
+                2,
+            )
+            self.assertEqual(
+                connection.execute("SELECT COUNT(*) FROM doaj_journal_subjects").fetchone()[0],
+                1,
+            )
+            self.assertEqual(
+                connection.execute(
+                    "SELECT keyword FROM oa_topic_keywords ORDER BY keyword"
+                ).fetchall(),
+                [("clinical",), ("therapy",)],
+            )
 
 
 if __name__ == "__main__":

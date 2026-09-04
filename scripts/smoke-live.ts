@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 import { config } from "./load-env";
 import { parseFlags } from "./cli";
 import { SITE_URL } from "../src/site-config";
-import { STATIC_SITEMAP_PATHS } from "../src/sitemap";
 
 config();
 
@@ -92,15 +91,31 @@ async function main() {
   const sitemapRes = await fetch(`${base}/sitemap.xml`);
   record("GET /sitemap.xml -> 200", sitemapRes.status === 200, `status=${sitemapRes.status}`);
   const sitemapXml = await sitemapRes.text();
-  const urlCount = (sitemapXml.match(/<url>/g) ?? []).length;
-  const expectedCount = (health.entry_count ?? 0) + STATIC_SITEMAP_PATHS.length;
   record(
-    "sitemap.xml url count matches /health entry_count plus static routes",
-    urlCount === expectedCount,
-    `sitemap=${urlCount}, expected=${expectedCount}`,
+    "sitemap.xml is a sitemap index",
+    sitemapXml.includes("<sitemapindex"),
+    sitemapXml.includes("<sitemapindex") ? undefined : "missing <sitemapindex>",
+  );
+  record(
+    "sitemap index lists the entries child",
+    sitemapXml.includes("/sitemaps/entries/0.xml"),
   );
 
-  const entryMatch = sitemapXml.match(/\/psychotherapy\/entries\/([a-zA-Z0-9]+)/);
+  const entriesSitemapRes = await fetch(`${base}/sitemaps/entries/0.xml`);
+  record(
+    "GET /sitemaps/entries/0.xml -> 200",
+    entriesSitemapRes.status === 200,
+    `status=${entriesSitemapRes.status}`,
+  );
+  const entriesXml = await entriesSitemapRes.text();
+  const urlCount = (entriesXml.match(/<url>/g) ?? []).length;
+  record(
+    "entries sitemap url count matches /health entry_count",
+    urlCount === (health.entry_count ?? 0),
+    `sitemap=${urlCount}, expected=${health.entry_count ?? 0}`,
+  );
+
+  const entryMatch = entriesXml.match(/\/psychotherapy\/entries\/([a-zA-Z0-9]+)/);
   if (entryMatch) {
     await checkPage(`/psychotherapy/entries/${entryMatch[1]}`, "Verification");
   } else {

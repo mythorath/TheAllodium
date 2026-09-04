@@ -862,6 +862,69 @@ test.describe("OpenGraph cards (Phase 2E)", () => {
   });
 });
 
+test.describe("Open Index browse web", () => {
+  test("walks a topic, keyword, venue, publisher, organization, subject, and retraction", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const sitemap = await page.request.get("/sitemap.xml");
+    expect(sitemap.status()).toBe(200);
+    expect(await sitemap.text()).toContain("<sitemapindex");
+
+    await page.goto("/fields");
+    await expect(page.getByRole("heading", { name: "Field map" })).toBeVisible();
+    await page.getByRole("link", { name: /Health Sciences/ }).click();
+    await page.getByRole("link", { name: /Psychology/ }).click();
+    await page.getByRole("link", { name: /Clinical Psychology/ }).click();
+    await page.getByRole("link", { name: /Cognitive Behavioral Therapy/ }).click();
+    await expect(
+      page.getByRole("heading", { name: "Cognitive Behavioral Therapy" }),
+    ).toBeVisible();
+    await expect(page.getByText(/no authoritative topic-to-venue link/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "Search papers" })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+
+    await page.goto("/keywords/therapy");
+    await expect(page.getByRole("link", { name: /Cognitive Behavioral Therapy/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Behavioral Economics/ })).toBeVisible();
+
+    await page.goto("/venues/S1");
+    await expect(page.getByRole("heading", { name: "Example Journal" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Example Press" })).toBeVisible();
+
+    await page.goto("/issn/1234-5678");
+    await expect(page).toHaveURL(/\/venues\/S1$/);
+
+    await page.goto("/publishers/P1");
+    await expect(page.getByRole("link", { name: /Example Press Journals/ })).toBeVisible();
+
+    await page.goto("/organizations/01abcde12");
+    await expect(page.getByRole("heading", { name: "Institute of Example" })).toBeVisible();
+
+    await page.goto("/subjects/Medicine");
+    await expect(page.getByRole("link", { name: "Example Journal" })).toBeVisible();
+
+    await page.goto("/retractions/RW1");
+    await expect(page.getByRole("heading", { name: "Notice of retraction" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "10.1000/example" })).toBeVisible();
+  });
+
+  test.describe("with JavaScript disabled", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("topic page still offers a plain search link and keeps the loader hidden", async ({
+      page,
+    }) => {
+      await page.goto("/fields/D1/FL1/SF1/T1");
+      await expect(page.getByRole("link", { name: "Search papers" })).toHaveAttribute(
+        "href",
+        "/search?q=Cognitive%20Behavioral%20Therapy",
+      );
+      await expect(page.getByRole("button", { name: "Load papers here" })).toBeHidden();
+    });
+  });
+});
+
 test.describe("generic 404", () => {
   test("unknown routes render the not-found page", async ({ page }) => {
     const response = await page.goto("/this-route-does-not-exist");

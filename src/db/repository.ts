@@ -479,6 +479,38 @@ export async function listEntriesForSitemap(
   ).results;
 }
 
+export async function countEntries(db: D1Database): Promise<number> {
+  const row = await db.prepare(`SELECT COUNT(*) AS n FROM entries`).first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
+export async function listEntriesForSitemapPage(
+  db: D1Database,
+  page: number,
+  pageSize: number,
+): Promise<Array<{ id: string; updated_at: string | null }> | null> {
+  if (page < 0) return null;
+  if (page === 0) {
+    return (
+      await db
+        .prepare(`SELECT id, updated_at FROM entries ORDER BY id LIMIT ?`)
+        .bind(pageSize)
+        .all<{ id: string; updated_at: string | null }>()
+    ).results;
+  }
+  const start = await db
+    .prepare(`SELECT id FROM entries ORDER BY id LIMIT 1 OFFSET ?`)
+    .bind(page * pageSize)
+    .first<{ id: string }>();
+  if (!start) return null;
+  return (
+    await db
+      .prepare(`SELECT id, updated_at FROM entries WHERE id >= ? ORDER BY id LIMIT ?`)
+      .bind(start.id, pageSize)
+      .all<{ id: string; updated_at: string | null }>()
+  ).results;
+}
+
 /** Escape user query for FTS5 MATCH. Returns null if nothing searchable remains. */
 export function sanitizeFtsQuery(raw: string): string | null {
   const tokens = raw

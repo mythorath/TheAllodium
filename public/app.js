@@ -14,6 +14,11 @@
 // server round-trip. The array only ever feeds a plain
 // "/psychotherapy/list?ids=..." URL, the same shape a reader could type or
 // share by hand, so building a list is JS-only but *reading* one never is.
+//
+// Federated papers on browse hubs: any `[data-load-works]` button fetches
+// `/partials/works` and injects the server-rendered fragment. Buttons start
+// `hidden` and are revealed here; without this file the plain Search papers
+// link remains the working path, so crawlers never trigger federation.
 (function () {
   "use strict";
 
@@ -118,6 +123,49 @@
     renderShortlistNav();
   }
 
+  function revealWorksButtons() {
+    var buttons = document.querySelectorAll("[data-load-works]");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].hidden = false;
+    }
+  }
+
+  function loadWorks(button) {
+    var url = button.getAttribute("data-load-works");
+    if (!url) return;
+    var root = button.closest(".works-loader") || button.parentNode;
+    var target = root && root.querySelector ? root.querySelector("[data-works-target]") : null;
+    if (!target) return;
+    if (button.getAttribute("data-loading") === "1") return;
+    button.setAttribute("data-loading", "1");
+    button.disabled = true;
+    target.replaceChildren();
+    var pending = document.createElement("p");
+    pending.className = "meta";
+    pending.textContent = "Loading papers…";
+    target.appendChild(pending);
+
+    fetch(url, { headers: { Accept: "text/html" } })
+      .then(function (response) {
+        if (!response.ok) throw new Error("partial failed");
+        return response.text();
+      })
+      .then(function (html) {
+        target.innerHTML = html;
+      })
+      .catch(function () {
+        target.replaceChildren();
+        var fail = document.createElement("p");
+        fail.className = "status-prompt";
+        fail.textContent = "Could not load papers here. Use Search papers instead.";
+        target.appendChild(fail);
+      })
+      .then(function () {
+        button.removeAttribute("data-loading");
+        button.disabled = false;
+      });
+  }
+
   document.addEventListener("click", function (event) {
     var target = event.target && event.target.closest ? event.target : null;
     if (!target) return;
@@ -125,6 +173,12 @@
     var copyButton = target.closest("[data-copy-target]");
     if (copyButton) {
       copyFromTarget(copyButton);
+      return;
+    }
+
+    var worksButton = target.closest("[data-load-works]");
+    if (worksButton) {
+      loadWorks(worksButton);
       return;
     }
 
@@ -151,4 +205,5 @@
   // needed.
   renderShortlistNav();
   refreshShortlistButtons();
+  revealWorksButtons();
 })();

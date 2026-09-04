@@ -108,3 +108,93 @@ export type TaxonomyDomain = {
   citedByCount: number | null;
   fields: TaxonomyField[];
 };
+
+export type BrowseCursor = {
+  name: string;
+  id: string;
+};
+
+export type BrowsePage<T> = {
+  items: T[];
+  nextAfter: string | null;
+};
+
+export type NamedCount = {
+  name: string;
+  count: number;
+};
+
+export type VenueSummary = {
+  id: string;
+  displayName: string;
+  sourceType: string | null;
+  worksCount: number | null;
+};
+
+export type PublisherSummary = {
+  id: string;
+  displayName: string;
+  worksCount: number | null;
+  parentPublisherId: string | null;
+};
+
+export type OrganizationSummary = {
+  rorId: string;
+  displayName: string;
+  countryCode: string | null;
+  organizationTypes: string[];
+};
+
+export type KeywordTopic = {
+  id: string;
+  displayName: string;
+  domainId: string;
+  domainName: string;
+  fieldId: string;
+  fieldName: string;
+  subfieldId: string;
+  subfieldName: string;
+  worksCount: number | null;
+};
+
+export type SubjectSummary = {
+  subject: string;
+  journalCount: number;
+};
+
+export type IssnResolution = {
+  issn: string;
+  doajId: string | null;
+  doajTitle: string | null;
+  nlmId: string | null;
+  nlmTitle: string | null;
+};
+
+export type DoajSubjectLink = {
+  subject: string;
+};
+
+export type FieldPath = {
+  domain: TaxonomyDomain;
+  field: TaxonomyField;
+};
+
+export type SubfieldPath = FieldPath & {
+  subfield: TaxonomySubfield;
+};
+
+export type TopicPath = SubfieldPath & {
+  topic: TaxonomyTopic;
+  siblings: TaxonomyTopic[];
+};
+
+export type SitemapKind =
+  | "static"
+  | "fields"
+  | "keywords"
+  | "venues"
+  | "publishers"
+  | "organizations"
+  | "subjects"
+  | "retractions"
+  | "entries";

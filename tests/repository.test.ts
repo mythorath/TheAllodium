@@ -1293,7 +1293,7 @@ describe("local D1 repository + routes", () => {
     expect(html).not.toContain("application/ld+json");
   });
 
-  it("serves /sitemap.xml with static routes and every entry, cached for an hour", async () => {
+  it("serves /sitemap.xml as an index over paginated children, cached for an hour", async () => {
     const ctx = createExecutionContext();
     const res = await app.request("/sitemap.xml", {}, env, ctx);
     await waitOnExecutionContext(ctx);
@@ -1301,18 +1301,28 @@ describe("local D1 repository + routes", () => {
     expect(res.headers.get("Content-Type")).toContain("application/xml");
     expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
     const xml = await res.text();
-    expect(xml).toContain(`<loc>${SITE_URL}/</loc>`);
-    expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy</loc>`);
-    expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy/search</loc>`);
-    expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy/topics</loc>`);
-    expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy/hexaflex</loc>`);
-    expect(xml).toContain(`<loc>${SITE_URL}/psychotherapy/disclaimer</loc>`);
+    expect(xml).toContain("<sitemapindex");
+    expect(xml).toContain(`<loc>${SITE_URL}/sitemaps/static/0.xml</loc>`);
+    expect(xml).toContain(`<loc>${SITE_URL}/sitemaps/entries/0.xml</loc>`);
     expect(xml).not.toContain(`<loc>${SITE_URL}/disclaimer</loc>`);
-    expect(xml).toContain(
+
+    const entriesCtx = createExecutionContext();
+    const entriesRes = await app.request("/sitemaps/entries/0.xml", {}, env, entriesCtx);
+    await waitOnExecutionContext(entriesCtx);
+    const entriesXml = await entriesRes.text();
+    expect(entriesXml).toContain(
       `<loc>${SITE_URL}/psychotherapy/entries/aaaaaaaa00000001</loc>`,
     );
-    const urlCount = (xml.match(/<url>/g) ?? []).length;
-    expect(urlCount).toBe(12 + STATIC_SITEMAP_PATHS.length);
+    expect((entriesXml.match(/<url>/g) ?? []).length).toBe(12);
+
+    const staticCtx = createExecutionContext();
+    const staticRes = await app.request("/sitemaps/static/0.xml", {}, env, staticCtx);
+    await waitOnExecutionContext(staticCtx);
+    const staticXml = await staticRes.text();
+    expect(staticXml).toContain(`<loc>${SITE_URL}/</loc>`);
+    expect(staticXml).toContain(`<loc>${SITE_URL}/psychotherapy</loc>`);
+    expect(staticXml).toContain(`<loc>${SITE_URL}/keywords</loc>`);
+    expect((staticXml.match(/<url>/g) ?? []).length).toBe(STATIC_SITEMAP_PATHS.length);
   });
 
   it("sets the shared security header set on HTML and JSON responses alike", async () => {

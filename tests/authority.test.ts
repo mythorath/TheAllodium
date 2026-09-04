@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { env } from "cloudflare:test";
 import {
+  decodeBrowseCursor,
+  encodeBrowseCursor,
   getAuthorityHealth,
+  getDomains,
   getRetractionsByDoi,
+  getTopic,
   hasAuthorityFamily,
+  listTopicsForKeyword,
+  listVenues,
   normalizeDoi,
   normalizeIssn,
 } from "../src/authority/repository";
@@ -130,5 +137,41 @@ describe("authority repository", () => {
     expect(health.healthy).toBe(false);
     expect(health.missingFamilies).toEqual(["nlm"]);
     expect(health.staleFamilies).toEqual(["ror", "retraction_watch"]);
+  });
+});
+
+describe("authority browse queries", () => {
+  it("encodes and decodes composite browse cursors", () => {
+    const encoded = encodeBrowseCursor("Example Journal", "S1");
+    expect(decodeBrowseCursor(encoded)).toEqual({ name: "Example Journal", id: "S1" });
+    expect(decodeBrowseCursor("therapy")).toEqual({ name: "therapy", id: "therapy" });
+    expect(decodeBrowseCursor(null)).toBeNull();
+  });
+
+  it("loads scoped taxonomy without nested fields on the domain list", async () => {
+    expect(env.AUTHORITY).toBeDefined();
+    const db = env.AUTHORITY!;
+    const domains = await getDomains(db);
+    expect(domains.map((domain) => domain.displayName)).toEqual([
+      "Health Sciences",
+      "Social Sciences",
+    ]);
+    expect(domains[0]?.fields).toEqual([]);
+
+    const topic = await getTopic(db, "D1", "FL1", "SF1", "T1");
+    expect(topic?.topic.displayName).toBe("Cognitive Behavioral Therapy");
+    expect(topic?.siblings).toEqual([]);
+  });
+
+  it("pages venues by keyset and lists topics that share a keyword", async () => {
+    const db = env.AUTHORITY!;
+    const first = await listVenues(db, { pageSize: 1 });
+    expect(first.items).toHaveLength(1);
+    expect(first.nextAfter).toBeTruthy();
+    const second = await listVenues(db, { after: first.nextAfter, pageSize: 1 });
+    expect(second.items[0]?.id).not.toBe(first.items[0]?.id);
+
+    const topics = await listTopicsForKeyword(db, "therapy");
+    expect(topics.map((topic) => topic.id).sort()).toEqual(["T1", "T2"]);
   });
 });

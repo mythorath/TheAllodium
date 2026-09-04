@@ -133,9 +133,9 @@ async function main() {
 
   console.log(`Auditing link integrity for ${base}${env ? ` (env=${env})` : ""}…\n`);
 
-  console.log("Enumerating every entry id from the live sitemap…");
-  const sitemapRes = await fetch(`${base}/sitemap.xml`);
-  record("GET /sitemap.xml -> 200", sitemapRes.status === 200, `status=${sitemapRes.status}`);
+  console.log("Enumerating every entry id from the live entries sitemap…");
+  const sitemapRes = await fetch(`${base}/sitemaps/entries/0.xml`);
+  record("GET /sitemaps/entries/0.xml -> 200", sitemapRes.status === 200, `status=${sitemapRes.status}`);
   const sitemapXml = await sitemapRes.text();
   const allIds = Array.from(
     sitemapXml.matchAll(/\/psychotherapy\/entries\/([a-zA-Z0-9]+)/g),
