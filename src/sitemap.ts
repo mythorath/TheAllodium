@@ -1,4 +1,5 @@
 import { SITE_URL } from "./site-config";
+import type { TaxonomyDomain } from "./authority/types";
 
 export type SitemapUrl = {
   path: string;
@@ -15,7 +16,27 @@ export const STATIC_SITEMAP_PATHS: readonly string[] = [
   "/psychotherapy/disclaimer",
   "/standard",
   "/about",
+  "/open-index",
+  "/search",
+  "/coverage",
+  "/fields",
 ];
+
+export function taxonomySitemapPaths(domains: TaxonomyDomain[]): string[] {
+  const paths: string[] = [];
+  for (const domain of domains) {
+    const domainPath = `/fields/${encodeURIComponent(domain.id)}`;
+    paths.push(domainPath);
+    for (const field of domain.fields) {
+      const fieldPath = `${domainPath}/${encodeURIComponent(field.id)}`;
+      paths.push(fieldPath);
+      for (const subfield of field.subfields) {
+        paths.push(`${fieldPath}/${encodeURIComponent(subfield.id)}`);
+      }
+    }
+  }
+  return paths;
+}
 
 function xmlEscape(value: string): string {
   return value

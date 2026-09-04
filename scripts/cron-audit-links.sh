@@ -13,6 +13,7 @@ set -euo pipefail
 REPO_DIR="/tank/TheAllodium"
 LOG_FILE="$REPO_DIR/evidence/cron-audit-links.log"
 GPU_LOG_FILE="$REPO_DIR/evidence/cron-gpu-health.log"
+FEDERATION_LOG_FILE="$REPO_DIR/evidence/cron-federation-health.log"
 NODE_BIN_DIR="/home/selis/.nvm/versions/node/v24.4.1/bin"
 
 mkdir -p "$REPO_DIR/evidence"
@@ -39,5 +40,15 @@ audit_status=0
     echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) FAILED (non-fatal; Selis asleep is expected) ==="
   fi
 } >> "$GPU_LOG_FILE" 2>&1
+
+{
+  echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) starting audit:federation ==="
+  cd "$REPO_DIR"
+  if npm run audit:federation; then
+    echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) PASSED ==="
+  else
+    echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) FAILED (non-fatal; upstream outages are reported on /coverage) ==="
+  fi
+} >> "$FEDERATION_LOG_FILE" 2>&1
 
 exit "$audit_status"

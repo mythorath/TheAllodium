@@ -21,6 +21,18 @@ export type Collection = {
   advisoryPath?: string;
 };
 
+export type HomeDoor =
+  | { kind: "curated"; collection: Collection }
+  | {
+      kind: "federated";
+      slug: "open-index";
+      label: string;
+      lede: string;
+      status: "live";
+      icon: CollectionIcon;
+      href: string;
+    };
+
 export const PSYCHOTHERAPY: Collection = {
   slug: "psychotherapy",
   label: "Psychotherapy",
@@ -38,21 +50,21 @@ export const PSYCHOTHERAPY: Collection = {
 
 export const COLLECTIONS: readonly Collection[] = [
   PSYCHOTHERAPY,
+];
+
+export const HOME_DOORS: readonly HomeDoor[] = [
   {
-    slug: "physics",
-    label: "Physics",
-    lede: "Papers and resources across the physical sciences.",
-    status: "planned",
-    icon: "atom",
-    nav: [],
+    kind: "federated",
+    slug: "open-index",
+    label: "The Open Index",
+    lede: "Federated research search across every field, with transparent credibility signals.",
+    status: "live",
+    icon: "orbit",
+    href: "/open-index",
   },
   {
-    slug: "cosmology",
-    label: "Cosmology",
-    lede: "The origin, structure, and fate of the universe.",
-    status: "planned",
-    icon: "orbit",
-    nav: [],
+    kind: "curated",
+    collection: PSYCHOTHERAPY,
   },
 ];
 

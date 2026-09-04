@@ -35,19 +35,23 @@ export function databaseNameFor(env: "staging" | "production"): string {
     : "theallodium-psychotherapy-staging";
 }
 
+export function authorityDatabaseNameFor(env: "staging" | "production"): string {
+  return `theallodium-authority-${env}`;
+}
+
 /** Matches the `name` field under `env.staging` / `env.production` in
  * wrangler.jsonc — used to build the *.workers.dev URL for smoke tests. */
 export function workerNameFor(env: "staging" | "production"): string {
   return env === "production" ? "theallodium-production" : "theallodium-staging";
 }
 
-export function timeTravelBookmark(env: string): string {
+export function timeTravelBookmark(env: string, binding = "DB"): string {
   const result = run("npx", [
     "wrangler",
     "d1",
     "time-travel",
     "info",
-    "DB",
+    binding,
     "--env",
     env,
     "--json",

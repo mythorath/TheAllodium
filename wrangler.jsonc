@@ -17,6 +17,32 @@
       "database_name": "theallodium-psychotherapy-local",
       "database_id": "00000000-0000-0000-0000-000000000001",
       "migrations_dir": "migrations"
+    },
+    {
+      "binding": "AUTHORITY",
+      "database_name": "theallodium-authority-local",
+      "database_id": "00000000-0000-0000-0000-000000000002",
+      "migrations_dir": "authority-migrations"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "SEARCH_CACHE",
+      "id": "25fdf4524df941c6946e195b9bba3920"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "UPSTREAM_RATE_LIMITER",
+        "class_name": "UpstreamRateLimiter"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["UpstreamRateLimiter"]
     }
   ],
   // Phase 2E: OpenGraph card PNGs, content-addressed by
@@ -46,8 +72,28 @@
           // Replaced by create-staging-d1.ts after wrangler d1 create
           "database_id": "b3ded3ce-abf6-499f-acfd-ba35ea869313",
           "migrations_dir": "migrations"
+        },
+        {
+          "binding": "AUTHORITY",
+          "database_name": "theallodium-authority-staging",
+          "database_id": "cbb01c39-7900-40d9-969b-01bf977ceab8",
+          "migrations_dir": "authority-migrations"
         }
       ],
+      "kv_namespaces": [
+        {
+          "binding": "SEARCH_CACHE",
+          "id": "25fdf4524df941c6946e195b9bba3920"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "UPSTREAM_RATE_LIMITER",
+            "class_name": "UpstreamRateLimiter"
+          }
+        ]
+      },
       "r2_buckets": [
         {
           "binding": "OG_CARDS",
@@ -67,8 +113,28 @@
           // Written by create-production-d1.ts after wrangler d1 create
           "database_id": "f476d24a-c84d-4234-b080-fb22215a283e",
           "migrations_dir": "migrations"
+        },
+        {
+          "binding": "AUTHORITY",
+          "database_name": "theallodium-authority-production",
+          "database_id": "5c3d5d68-1dab-4ef3-89d2-0c57a5cd6261",
+          "migrations_dir": "authority-migrations"
         }
       ],
+      "kv_namespaces": [
+        {
+          "binding": "SEARCH_CACHE",
+          "id": "37bd47f22ca649e5aab52102751affeb"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "UPSTREAM_RATE_LIMITER",
+            "class_name": "UpstreamRateLimiter"
+          }
+        ]
+      },
       "r2_buckets": [
         {
           "binding": "OG_CARDS",

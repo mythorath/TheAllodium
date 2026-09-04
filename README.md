@@ -165,6 +165,40 @@ token scopes. This is **not** `CLOUDFLARE_API_TOKEN`:
   and `--env production` (same value). Local/tests leave it unset so `askGpu`
   fails closed without hitting the live GPU.
 
+## Phase 5 — The Open Index
+
+`/open-index` and `/search` add an all-fields federated research index without
+copying the complete scholarly graph into D1. Ten isolated adapters cover
+Crossref, Europe PMC, DataCite, PubMed, DOAJ, Zenodo, HAL, arXiv, DOAB, and
+DBLP; nine are enabled in public fan-out, while Zenodo is monitored but
+disabled after staging proved its origin blocks Cloudflare egress. Results are
+merged by normalized DOI and a fallback
+title/first-author/year identity, then shown with expandable, versioned
+credibility signals.
+
+The `AUTHORITY` D1 binding is separate from the curated psychotherapy
+database. It holds only redistributable venue, institution, field-taxonomy,
+and retraction authority snapshots. `SEARCH_CACHE` and
+`UPSTREAM_RATE_LIMITER` provide edge caching and globally coordinated
+upstream politeness. Any adapter or authority failure becomes explicit
+uncertainty or partial results, never a fabricated negative judgment.
+
+```bash
+npm run spike:federation -- --output evidence/federation-spike-local.json
+npm run audit:federation
+
+python3 scripts/fetch-authority-sources.py --help
+python3 scripts/build-authority-snapshot.py --help
+npm run authority:migrate:local
+
+npm run gate:5a   # through gate:5h
+```
+
+See [docs/federation-contract-v1.md](docs/federation-contract-v1.md),
+[docs/authority-data.md](docs/authority-data.md),
+[docs/credibility-standard-v1.md](docs/credibility-standard-v1.md), and
+[docs/open-index-coverage.md](docs/open-index-coverage.md).
+
 ## Setup
 
 ```bash
@@ -228,3 +262,9 @@ until Phase 1F.
 | `npm run audit:links -- --url <base> [--env staging\|production]` | Real HTTP-level link-integrity audit: double-fetches a sample of live entry pages (plus every duplicate-titled "tie-risk" entry when `--env` gives D1 access) to prove id/title/canonical_url stay self-consistent, and checks that every sort's search/browse pagination has no duplicate/missing ids and a stable order across repeated requests. Run against staging and production after every deploy, alongside `smoke:live` |
 | `npm run diff:links -- --env staging\|production [--snapshot <name>] [--acknowledge]` | Cross-snapshot stability check: diffs the new `fixtures/<name>.sql` about to be promoted against the currently-live entries in `--env`, and fails if any id's `title`/`canonical_url` would silently change. Runs automatically as part of `db:promote:*` (pass `--acknowledge-link-changes` to that command once a flagged change is confirmed intentional) |
 | `npm run gate:1f` | Close Phase 1F: secrets scan, typecheck, test, e2e suite, verify a production deploy + passing live smoke evidence exist, write `docs/phase-1f-decision-record.md` |
+| `npm run spike:federation` / `audit:federation` | Exercise all Open Index adapters and write timestamped latency/availability evidence |
+| `npm run authority:fetch` / `authority:build` | Fetch approved public authority sources and build deterministic `import.sql`, manifest, license, and checksum artifacts |
+| `npm run authority:promote:staging` / `authority:promote:production` | Checksum, migrate, Time-Travel bookmark, atomically import, smoke-check, and log an authority snapshot |
+| `npm run authority:rollback:staging` / `authority:rollback:production` | Restore the authority database to its pre-promotion Time Travel bookmark |
+| `npm run authority:publish:r2` / `authority:publish:zenodo` | Publish the licensed bulk bundle to R2 and its metadata/checksum record to Zenodo |
+| `npm run gate:5a` … `gate:5h` | Verify and close each independently shippable Open Index sub-phase |

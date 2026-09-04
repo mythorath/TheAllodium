@@ -364,5 +364,53 @@
     "databaseName": "theallodium-psychotherapy-production",
     "versionId": "a773a8ca-e2e3-463c-8617-2b7620e36173",
     "gitCommit": "c2ee029b10ec96e1f2fea61fa55263ebd64ec73d"
+  },
+  {
+    "type": "promote",
+    "scope": "authority",
+    "at": "2026-09-04T01:02:26.282Z",
+    "env": "staging",
+    "databaseName": "theallodium-authority-staging",
+    "snapshot": "2026-09-03",
+    "sourceGeneratedAt": "2026-09-04T00:30:40Z",
+    "rowCounts": {
+      "doaj": 23281,
+      "nlm": 150942,
+      "openalex": 426572,
+      "retraction_watch": 72083,
+      "ror": 135710
+    },
+    "checksum": "232afde2c797cca5504fe1241e023221280e0b0d406e8721bc77e9878a806df9",
+    "preBookmark": "00000008-00000000-000050dc-7543c95c026768817d7b736c58d81d11",
+    "postBookmark": "00000008-000162ac-000050dc-1f46f434bc31e62c6ecdf7d6063b6e1c",
+    "gitCommit": "9e89cfba4acbef11df9b8c3e4172d44942fc3db4"
+  },
+  {
+    "type": "promote",
+    "scope": "authority",
+    "at": "2026-09-04T01:15:31.492Z",
+    "env": "production",
+    "databaseName": "theallodium-authority-production",
+    "snapshot": "2026-09-03",
+    "sourceGeneratedAt": "2026-09-04T00:30:40Z",
+    "rowCounts": {
+      "doaj": 23281,
+      "nlm": 150942,
+      "openalex": 426572,
+      "retraction_watch": 72083,
+      "ror": 135710
+    },
+    "checksum": "232afde2c797cca5504fe1241e023221280e0b0d406e8721bc77e9878a806df9",
+    "preBookmark": "00000002-00000002-000050dc-12b40dd6a35e6b20d1290d6d6bb114cc",
+    "postBookmark": "00000002-00015fcc-000050dc-83aeda08a7408d0c49a48ac95671b225",
+    "gitCommit": "9e89cfba4acbef11df9b8c3e4172d44942fc3db4"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-09-04T01:17:27.434Z",
+    "env": "production",
+    "databaseName": "theallodium-psychotherapy-production",
+    "versionId": "f93837eb-378a-4656-acf2-9a59e23281eb",
+    "gitCommit": "9e89cfba4acbef11df9b8c3e4172d44942fc3db4"
   }
 ]

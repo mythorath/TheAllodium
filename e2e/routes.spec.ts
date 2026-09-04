@@ -44,10 +44,12 @@ test.describe("home", () => {
       "href",
       "/psychotherapy",
     );
-    await expect(page.getByRole("heading", { name: "Physics" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Cosmology" })).toBeVisible();
-    await expect(page.locator(".collection-card-planned")).toHaveCount(2);
-    await expect(page.locator(".collection-card-planned a")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "The Open Index" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /The Open Index/ })).toHaveAttribute(
+      "href",
+      "/open-index",
+    );
+    await expect(page.locator(".collection-card-planned")).toHaveCount(0);
     await expect(page.getByRole("link", { name: /Literature/ })).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: "How verification works" }),
@@ -58,6 +60,20 @@ test.describe("home", () => {
     await expect(
       page.getByRole("link", { name: "Disclaimer & crisis resources" }),
     ).toHaveCount(0);
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("open index doorway exposes search, fields, and coverage", async ({ page }) => {
+    await page.goto("/open-index");
+    await expect(page.getByRole("heading", { name: "Research across every field" })).toBeVisible();
+    await expect(page.getByRole("searchbox", { name: "Search all research" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Browse the field map" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Coverage and blind spots" })).toBeVisible();
+    await expectNoSeriousA11yViolations(page);
+
+    await page.goto("/coverage");
+    await expect(page.getByRole("heading", { name: "Coverage, including the gaps" })).toBeVisible();
+    await expect(page.getByText("CNKI and Wanfang", { exact: true })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
   });
 

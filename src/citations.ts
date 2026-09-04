@@ -1,4 +1,5 @@
 import type { PublicEntry } from "./contract";
+import type { NormalizedWork } from "./federation/types";
 
 /**
  * Phase 2C: pure, DB-free citation formatting for the entry page's BibTeX /
@@ -201,4 +202,58 @@ export function buildBibtexList(entries: PublicEntry[]): string {
  */
 export function buildRisList(entries: PublicEntry[]): string {
   return entries.map(buildRis).join("\n");
+}
+
+export function federatedCitationUrl(work: NormalizedWork): string | null {
+  return work.doi ? `https://doi.org/${work.doi}` : work.canonicalUrl;
+}
+
+/** Citation exports for transient federated records. These reuse the same
+ * escaping and name-formatting helpers as curated entries without pretending
+ * a federated work has psychotherapy-only contract fields. */
+export function buildFederatedCitations(work: NormalizedWork): EntryCitations {
+  const url = federatedCitationUrl(work) ?? "";
+  const year = work.publicationYear ? String(work.publicationYear) : "n.d.";
+  const keySeed = work.doi ?? work.evidence[0]?.sourceId ?? work.title;
+  const key = `allodium:${keySeed.replace(/[^a-z0-9:./_-]+/gi, "-")}`;
+  const bibtexFields: Array<[string, string]> = [
+    ["title", `{${escapeBibtex(work.title)}}`],
+  ];
+  if (work.authors.length > 0) {
+    bibtexFields.push([
+      "author",
+      `{${work.authors.map((author) => escapeBibtex(author.name)).join(" and ")}}`,
+    ]);
+  }
+  if (work.publicationYear) bibtexFields.push(["year", `{${work.publicationYear}}`]);
+  if (work.containerTitle) {
+    bibtexFields.push(["journal", `{${escapeBibtex(work.containerTitle)}}`]);
+  }
+  if (work.doi) bibtexFields.push(["doi", `{${work.doi}}`]);
+  if (url) bibtexFields.push(["url", `{${url}}`]);
+  const bibtex = `@article{${key},\n${bibtexFields
+    .map(([field, value]) => `  ${field} = ${value}`)
+    .join(",\n")}\n}`;
+
+  const ris = [
+    "TY  - JOUR",
+    `TI  - ${work.title}`,
+    ...work.authors.map((author) => `AU  - ${author.name}`),
+    ...(work.publicationYear ? [`PY  - ${work.publicationYear}`] : []),
+    ...(work.containerTitle ? [`JO  - ${work.containerTitle}`] : []),
+    ...(work.doi ? [`DO  - ${work.doi}`] : []),
+    ...(url ? [`UR  - ${url}`] : []),
+    "ER  - ",
+  ].join("\n");
+
+  const authors =
+    work.authors.length > 0
+      ? apaStructuredAuthorList(work.authors.map((author) => author.name))
+      : "";
+  const lead = authors
+    ? `${authors} (${year}). ${work.title}.`
+    : `${work.title}. (${year}).`;
+  const source = work.containerTitle ? ` ${work.containerTitle}.` : "";
+  const apa = `${lead}${source}${url ? ` ${url}` : ""}`;
+  return { bibtex, ris, apa };
 }

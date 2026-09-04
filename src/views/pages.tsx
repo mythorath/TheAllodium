@@ -1,11 +1,11 @@
 import type { FC, Child } from "hono/jsx";
 import {
-  COLLECTIONS,
+  HOME_DOORS,
   PSYCHOTHERAPY,
-  liveCollections,
   type Collection,
   type CollectionIcon,
   type CollectionStatus,
+  type HomeDoor,
 } from "../collections";
 import type { PublicEntry, RelatedEntry, SearchHit, SnapshotManifest } from "../contract";
 import { SITE_URL } from "../site-config";
@@ -285,6 +285,27 @@ function CollectionCard(props: { collection: Collection }) {
   }
 }
 
+function HomeDoorCard(props: { door: HomeDoor }) {
+  switch (props.door.kind) {
+    case "curated":
+      return <CollectionCard collection={props.door.collection} />;
+    case "federated":
+      return (
+        <a class="collection-card" href={props.door.href}>
+          <div class="collection-card-icon">
+            <CollectionIconMark icon={props.door.icon} />
+          </div>
+          <h3>{props.door.label}</h3>
+          <p class="collection-card-lede">{props.door.lede}</p>
+        </a>
+      );
+    default: {
+      const exhaustive: never = props.door;
+      return exhaustive;
+    }
+  }
+}
+
 function coverageShare(
   counts: Record<string, number> | undefined,
   key: string,
@@ -305,7 +326,7 @@ function formatShare(share: number): string {
 export const HomePage: FC<{
   entryCount: number | null;
 }> = ({ entryCount }) => {
-  const liveCount = liveCollections().length;
+  const openDoorCount = HOME_DOORS.length;
   return (
     <Layout
       title="Home"
@@ -328,9 +349,9 @@ export const HomePage: FC<{
             </div>
           ) : null}
           <div class="stat-item">
-            <span class="stat-value">{liveCount.toLocaleString()}</span>
+            <span class="stat-value">{openDoorCount.toLocaleString()}</span>
             <span class="stat-label">
-              {liveCount === 1 ? "live collection" : "live collections"}
+              {openDoorCount === 1 ? "open doorway" : "open doorways"}
             </span>
           </div>
         </div>
@@ -340,8 +361,11 @@ export const HomePage: FC<{
       <section class="collections" aria-labelledby="collections-heading">
         <h2 id="collections-heading">Collections</h2>
         <div class="collection-grid">
-          {COLLECTIONS.map((collection) => (
-            <CollectionCard collection={collection} />
+          {HOME_DOORS.map((door) => (
+            <HomeDoorCard
+              door={door}
+              key={door.kind === "curated" ? door.collection.slug : door.slug}
+            />
           ))}
         </div>
       </section>
@@ -675,6 +699,46 @@ export const StandardPage: FC = () => {
           snapshot. See{" "}
           <a href="/psychotherapy">Psychotherapy</a> for the current
           published set.
+        </p>
+        <p>
+          Cross-field federation coverage, upstream status, and known blind
+          spots are published separately on the <a href="/coverage">Open Index
+          coverage page</a>.
+        </p>
+      </section>
+
+      <section class="standard-section">
+        <h2>Credibility signals, not a blacklist</h2>
+        <p>
+          Federated results are not admitted or rejected by a hidden gate.
+          Each result carries an expandable, versioned set of metadata signals:
+          DOI registration, recognized venue and institution records, access
+          and license information, publication version, metadata completeness,
+          and Retraction Watch notices.
+        </p>
+        <ul>
+          <li>
+            Absence from DOAJ, MEDLINE, OpenAlex, ROR, or another allow-list is
+            neutral. It is never presented as evidence that a work or publisher
+            is not credible.
+          </li>
+          <li>
+            Retractions and expressions of concern remain searchable and are
+            shown as prominent warnings; the historical record is not erased.
+          </li>
+          <li>
+            The Allodium does not use proprietary or unlicensed
+            predatory-publisher lists. Their licensing, false-positive, and
+            defamation risks are incompatible with a transparent public index.
+          </li>
+          <li>
+            A score describes available metadata evidence. It does not assess
+            methods, reproduce results, or endorse conclusions.
+          </li>
+        </ul>
+        <p class="meta">
+          Current federated policy: <code>1.0.0</code>. Every displayed signal
+          names its evidence source and license.
         </p>
       </section>
 

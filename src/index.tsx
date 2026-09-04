@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { listTaxonomyHierarchy } from "./authority/repository";
 import {
   getEntriesByIds,
   getEntry,
@@ -18,7 +19,18 @@ import { isCrisisIntent } from "./crisis";
 import { askGpu } from "./gpu";
 import { ASK_MAX_CHARS, normalizeNlFacets } from "./nl-query";
 import { buildSearchHref, withSearchFlag } from "./search-url";
-import { buildSitemapXml, STATIC_SITEMAP_PATHS } from "./sitemap";
+import {
+  buildSitemapXml,
+  STATIC_SITEMAP_PATHS,
+  taxonomySitemapPaths,
+} from "./sitemap";
+import {
+  resolveFederatedWork,
+  searchFederation,
+  type FederationBindings,
+} from "./federation/service";
+import { UpstreamRateLimiter } from "./federation/rate-limiter";
+import { handleMcpRequest } from "./mcp";
 import {
   AboutPage,
   DisclaimerPage,
@@ -33,6 +45,16 @@ import {
   StandardPage,
   TopicsPage,
 } from "./views/pages";
+import {
+  CoveragePage,
+  DomainPage,
+  FederatedSearchPage,
+  FederatedWorkPage,
+  FieldPage,
+  FieldsPage,
+  OpenIndexHomePage,
+  SubfieldPage,
+} from "./views/open-index-pages";
 
 export type AppBindings = {
   DB: D1Database;
@@ -41,6 +63,10 @@ export type AppBindings = {
   OG_CARDS: R2Bucket;
   GPU_ORIGIN?: string;
   GPU_SHARED_SECRET?: string;
+  AUTHORITY?: D1Database;
+  SEARCH_CACHE?: KVNamespace;
+  UPSTREAM_RATE_LIMITER?: DurableObjectNamespace;
+  FEDERATION_CONTACT_EMAIL?: string;
 };
 
 /**
@@ -93,6 +119,96 @@ app.get("/psychotherapy", async (c) => {
 app.get("/standard", (c) => c.html(<StandardPage />));
 
 app.get("/about", (c) => c.html(<AboutPage />));
+
+app.get("/open-index", (c) => c.html(<OpenIndexHomePage />));
+
+app.get("/search", async (c) => {
+  const query = (c.req.query("q") ?? "").trim().slice(0, 500);
+  const result =
+    query.length >= 2
+      ? await searchFederation(c.env satisfies FederationBindings, {
+          text: query,
+          pageSize: 10,
+        }, c.executionCtx)
+      : null;
+  return c.html(<FederatedSearchPage query={query} result={result} />);
+});
+
+app.get("/api/search", async (c) => {
+  const query = (c.req.query("q") ?? "").trim().slice(0, 500);
+  if (query.length < 2) {
+    return c.json({ error: "q must contain at least two characters" }, 400);
+  }
+  const result = await searchFederation(
+    c.env satisfies FederationBindings,
+    { text: query, pageSize: 10 },
+    c.executionCtx,
+  );
+  return c.json(result, 200, {
+    "Cache-Control": "public, max-age=300",
+  });
+});
+
+app.all("/mcp", (c) =>
+  handleMcpRequest(c.req.raw, (query) =>
+    searchFederation(
+      c.env satisfies FederationBindings,
+      { text: query, pageSize: 10 },
+      c.executionCtx,
+    ),
+  ),
+);
+
+app.get("/coverage", (c) => c.html(<CoveragePage />));
+
+async function taxonomyFor(db: D1Database | undefined) {
+  if (!db) return [];
+  try {
+    return await listTaxonomyHierarchy(db);
+  } catch {
+    return [];
+  }
+}
+
+app.get("/fields", async (c) => {
+  const domains = await taxonomyFor(c.env.AUTHORITY);
+  return c.html(<FieldsPage domains={domains} />);
+});
+
+app.get("/fields/:domain/:field/:subfield", async (c) => {
+  const domains = await taxonomyFor(c.env.AUTHORITY);
+  const domain = domains.find((item) => item.id === c.req.param("domain"));
+  const field = domain?.fields.find((item) => item.id === c.req.param("field"));
+  const subfield = field?.subfields.find((item) => item.id === c.req.param("subfield"));
+  if (!domain || !field || !subfield) return c.html(<NotFoundPage />, 404);
+  return c.html(<SubfieldPage domain={domain} field={field} subfield={subfield} />);
+});
+
+app.get("/fields/:domain/:field", async (c) => {
+  const domains = await taxonomyFor(c.env.AUTHORITY);
+  const domain = domains.find((item) => item.id === c.req.param("domain"));
+  const field = domain?.fields.find((item) => item.id === c.req.param("field"));
+  if (!domain || !field) return c.html(<NotFoundPage />, 404);
+  return c.html(<FieldPage domain={domain} field={field} />);
+});
+
+app.get("/fields/:domain", async (c) => {
+  const domains = await taxonomyFor(c.env.AUTHORITY);
+  const domain = domains.find((item) => item.id === c.req.param("domain"));
+  if (!domain) return c.html(<NotFoundPage />, 404);
+  return c.html(<DomainPage domain={domain} />);
+});
+
+app.get("/works/*", async (c) => {
+  const rawDoi = c.req.param("*") ?? "";
+  const item = await resolveFederatedWork(
+    c.env satisfies FederationBindings,
+    rawDoi,
+    c.executionCtx,
+  );
+  if (!item) return c.html(<NotFoundPage id={rawDoi} />, 404);
+  return c.html(<FederatedWorkPage item={item} />);
+});
 
 app.get("/psychotherapy/disclaimer", (c) => c.html(<DisclaimerPage />));
 app.get("/disclaimer", (c) => c.redirect("/psychotherapy/disclaimer", 301));
@@ -242,9 +358,13 @@ app.get("/psychotherapy/list", async (c) => {
 });
 
 app.get("/sitemap.xml", async (c) => {
-  const rows = await listEntriesForSitemap(c.env.DB);
+  const [rows, taxonomy] = await Promise.all([
+    listEntriesForSitemap(c.env.DB),
+    taxonomyFor(c.env.AUTHORITY),
+  ]);
   const urls = [
     ...STATIC_SITEMAP_PATHS.map((path) => ({ path })),
+    ...taxonomySitemapPaths(taxonomy).map((path) => ({ path })),
     ...rows.map((row) => ({
       path: `/psychotherapy/entries/${row.id}`,
       lastmod: row.updated_at,
@@ -265,6 +385,11 @@ app.get("/health", async (c) => {
     collection: manifest?.collection ?? null,
     entry_count: manifest?.entry_count ?? null,
     abstract_search_enabled: manifest?.abstract_search_enabled ?? null,
+    open_index: {
+      authority_bound: Boolean(c.env.AUTHORITY),
+      cache_bound: Boolean(c.env.SEARCH_CACHE),
+      rate_limiter_bound: Boolean(c.env.UPSTREAM_RATE_LIMITER),
+    },
   });
 });
 
@@ -280,3 +405,4 @@ app.onError(async (err, c) => {
 });
 
 export default app;
+export { UpstreamRateLimiter };

@@ -13,6 +13,8 @@ worker-configuration.d.ts
 # Test / coverage
 coverage/
 *.log
+__pycache__/
+*.pyc
 
 # OS / editor
 .DS_Store

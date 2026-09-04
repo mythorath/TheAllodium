@@ -1045,7 +1045,7 @@ describe("local D1 repository + routes", () => {
     expect(html).toContain("No results for");
   });
 
-  it("serves the home page as a collection directory", async () => {
+  it("serves the home page as a curated and federated directory", async () => {
     const ctx = createExecutionContext();
     const res = await app.request("/", {}, env, ctx);
     await waitOnExecutionContext(ctx);
@@ -1054,14 +1054,13 @@ describe("local D1 repository + routes", () => {
     expect(html).toContain("A place of free knowledge");
     expect(html).toContain('<span class="stat-value">12</span>');
     expect(html).toContain('<span class="stat-label">entries</span>');
-    expect(html).toContain("live collection");
+    expect(html).toContain("open doorways");
     expect(html).toContain("/standard");
     expect(html).toContain("Collections");
     expect(html).toContain('href="/psychotherapy"');
-    expect(html).toContain("Physics");
-    expect(html).toContain("Cosmology");
-    expect(html).toContain("In progress");
-    expect(html).toContain("collection-card-planned");
+    expect(html).toContain('href="/open-index"');
+    expect(html).toContain("The Open Index");
+    expect(html).not.toContain("collection-card-planned");
     expect(html).not.toContain("/psychotherapy/search?kind=literature");
     expect(html).not.toContain('id="shortlist-nav-link"');
     expect(html).not.toContain("Disclaimer &amp; crisis resources");
