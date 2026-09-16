@@ -7,7 +7,9 @@ declare module "cloudflare:test" {
     GPU_ORIGIN?: string;
     GPU_SHARED_SECRET?: string;
     AUTHORITY?: D1Database;
+    COLLECTION_MINERALS?: D1Database;
     TEST_MIGRATIONS?: D1Migration[];
     TEST_AUTHORITY_MIGRATIONS?: D1Migration[];
+    TEST_COLLECTION_MIGRATIONS?: D1Migration[];
   }
 }

@@ -23,6 +23,13 @@
       "database_name": "theallodium-authority-local",
       "database_id": "00000000-0000-0000-0000-000000000002",
       "migrations_dir": "authority-migrations"
+    },
+    {
+      // Test-only minerals example. Never added to staging/production.
+      "binding": "COLLECTION_MINERALS",
+      "database_name": "theallodium-minerals-local",
+      "database_id": "00000000-0000-0000-0000-000000000003",
+      "migrations_dir": "collection-migrations"
     }
   ],
   "kv_namespaces": [

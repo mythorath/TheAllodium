@@ -23,9 +23,10 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@allodium/collection": ["src/collections/module.ts"]
     }
   },
-  "include": ["src", "tests", "scripts", "e2e", "playwright.config.ts"],
+  "include": ["src", "tests", "scripts", "e2e", "fixtures/example-collection", "playwright.config.ts"],
   "exclude": ["node_modules", "dist", ".wrangler", "vitest.config.ts", "vite.config.ts"]
 }

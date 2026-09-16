@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://theallodium.org/schemas/collection.schema.json",
+  "title": "Allodium collection.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "slug",
+    "label",
+    "lede",
+    "icon",
+    "facetCategories",
+    "moduleContract"
+  ],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,47}$"
+    },
+    "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "lede": { "type": "string", "minLength": 1, "maxLength": 280 },
+    "icon": { "type": "string", "enum": ["index", "atom", "orbit"] },
+    "facetCategories": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]{0,31}$"
+      }
+    },
+    "nav": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "label"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^/" },
+          "label": { "type": "string", "minLength": 1, "maxLength": 40 }
+        }
+      }
+    },
+    "shortlistPath": { "type": ["string", "null"] },
+    "advisoryPath": { "type": ["string", "null"] },
+    "moduleContract": { "type": "string", "const": "1" }
+  }
+}

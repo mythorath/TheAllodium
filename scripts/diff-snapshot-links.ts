@@ -21,11 +21,12 @@ config();
 
 function usage(): never {
   throw new Error(
-    "Usage: diff-snapshot-links.ts --env staging|production [--snapshot <fixture-name>] [--acknowledge]\n" +
-      "  Compares the new fixtures/<snapshot>.sql about to be promoted against the currently-live\n" +
-      "  entries in --env. For every id present in both, flags any changed title/canonical_url.\n" +
-      "  Exits non-zero on any change unless --acknowledge is passed (evidence is written either way).\n" +
-      "  A live database with zero entries (first-ever promotion) has nothing to diff against and passes.",
+    "Usage: diff-snapshot-links.ts --env staging|production [--snapshot <fixture-name>] [--sql <path>] [--binding DB] [--acknowledge]\n" +
+      "  Compares the new snapshot SQL about to be promoted against the currently-live\n" +
+      "  entries in --env (and --binding, default DB). For every id present in both, flags\n" +
+      "  any changed title/canonical_url. Exits non-zero on any change unless --acknowledge\n" +
+      "  is passed (evidence is written either way). A live database with zero entries\n" +
+      "  (first-ever promotion) has nothing to diff against and passes.",
   );
 }
 
@@ -42,17 +43,24 @@ export interface DiffSnapshotLinksResult {
   evidencePath: string;
 }
 
+export type DiffSnapshotLinksOpts = {
+  acknowledge?: boolean;
+  binding?: string;
+  sqlPath?: string;
+};
+
 export function diffSnapshotLinks(
   env: "staging" | "production",
   snapshotName: string,
-  opts?: { acknowledge?: boolean },
+  opts?: DiffSnapshotLinksOpts,
 ): DiffSnapshotLinksResult {
-  const sqlPath = resolve(`fixtures/${snapshotName}.sql`);
+  const binding = opts?.binding ?? "DB";
+  const sqlPath = resolve(opts?.sqlPath ?? `fixtures/${snapshotName}.sql`);
   const newLinks = parseEntryLinksFromSnapshotSql(readFileSync(sqlPath, "utf8"));
   console.log(`Parsed ${newLinks.size} entries from ${sqlPath}`);
 
-  console.log(`Querying currently-live entries in env=${env}…`);
-  const liveCountRow = remoteQuery(env, "SELECT COUNT(*) AS c FROM entries;");
+  console.log(`Querying currently-live entries in env=${env} binding=${binding}…`);
+  const liveCountRow = remoteQuery(env, "SELECT COUNT(*) AS c FROM entries;", binding);
   const liveCount = (liveCountRow.rows[0] as { c?: number } | undefined)?.c ?? 0;
 
   const changes: LinkChange[] = [];
@@ -61,7 +69,7 @@ export function diffSnapshotLinks(
   if (liveCount === 0) {
     console.log(`  env=${env} currently has no live entries (first promotion) — nothing to diff against.`);
   } else {
-    const liveRows = remoteQuery(env, "SELECT id, title, canonical_url FROM entries;");
+    const liveRows = remoteQuery(env, "SELECT id, title, canonical_url FROM entries;", binding);
     for (const row of liveRows.rows) {
       const r = row as { id: string; title: string; canonical_url: string };
       const next = newLinks.get(r.id);
@@ -92,7 +100,18 @@ export function diffSnapshotLinks(
   const evidencePath = resolve(`evidence/diff-snapshot-links-${env}-${Date.now()}.json`);
   writeFileSync(
     evidencePath,
-    JSON.stringify({ at: new Date().toISOString(), env, snapshot: snapshotName, overlap, changes }, null, 2),
+    JSON.stringify(
+      {
+        at: new Date().toISOString(),
+        env,
+        binding,
+        snapshot: snapshotName,
+        overlap,
+        changes,
+      },
+      null,
+      2,
+    ),
   );
   console.log(`Wrote ${evidencePath}`);
 
@@ -112,7 +131,11 @@ function main() {
   const env = flags.env;
   if (env !== "staging" && env !== "production") usage();
   requireEnv(["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]);
-  diffSnapshotLinks(env, flags.snapshot ?? "full_snapshot", { acknowledge: booleans.has("acknowledge") });
+  diffSnapshotLinks(env, flags.snapshot ?? "full_snapshot", {
+    acknowledge: booleans.has("acknowledge"),
+    binding: flags.binding,
+    sqlPath: flags.sql,
+  });
 }
 
 // Runs standalone (`npm run diff:links -- --env staging`) as well as being

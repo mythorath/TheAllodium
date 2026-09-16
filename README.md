@@ -233,8 +233,10 @@ python3 scripts/generate_federated_overviews.py \
 
 See [docs/federation-contract-v1.md](docs/federation-contract-v1.md),
 [docs/authority-data.md](docs/authority-data.md),
-[docs/credibility-standard-v1.md](docs/credibility-standard-v1.md), and
-[docs/open-index-coverage.md](docs/open-index-coverage.md).
+[docs/credibility-standard-v1.md](docs/credibility-standard-v1.md),
+[docs/open-index-coverage.md](docs/open-index-coverage.md),
+[docs/collection-module-contract-v1.md](docs/collection-module-contract-v1.md),
+and [docs/collection-two-playbook.md](docs/collection-two-playbook.md).
 
 ## Setup
 
@@ -306,3 +308,6 @@ until Phase 1F.
 | `npm run authority:rollback:staging` / `authority:rollback:production` | Restore the authority database to its pre-promotion Time Travel bookmark |
 | `npm run authority:publish:r2` / `authority:publish:zenodo` | Publish the licensed bulk bundle to R2 and its metadata/checksum record to Zenodo |
 | `npm run gate:5a` … `gate:5h` | Verify and close each independently shippable Open Index sub-phase |
+| `npm run collection:validate -- --dir <path>` | Validate a collection module bundle (contract v2 rows, checksums, static analysis) and write `evidence/collection-validate-<slug>.json` |
+| `npm run collection:install -- --dir <path>` | After validate: copy the bundle in-repo, patch `wrangler.jsonc`, register `src/contributed/<slug>`, create staging D1 (`--yes` also creates production; `--skip-remote` skips Cloudflare) |
+| `npm run collection:pack-kit` | Package `collection-kit/` plus the minerals example as `collection-kit/allodium-collection-kit.tgz` |

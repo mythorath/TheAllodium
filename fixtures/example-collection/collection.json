@@ -1,0 +1,13 @@
+{
+  "slug": "minerals",
+  "label": "Minerals",
+  "lede": "A tiny public-domain geology sample used to prove the collection module contract.",
+  "icon": "atom",
+  "facetCategories": ["topic", "era"],
+  "nav": [
+    { "path": "/search", "label": "Search" }
+  ],
+  "shortlistPath": null,
+  "advisoryPath": null,
+  "moduleContract": "1"
+}

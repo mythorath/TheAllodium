@@ -1,0 +1,31 @@
+{
+  "contract_version": "2",
+  "schema_version": "1",
+  "collection": "minerals",
+  "source_generated_at": "2026-09-16T00:00:00Z",
+  "entry_count": 2,
+  "tag_link_count": 3,
+  "alias_count": 0,
+  "checksum": "25e744fdf53bb056a96215611d03088b102bfb475d11d7cc39eb6d0b0eeec755",
+  "abstract_search_enabled": false,
+  "exclusion_counts_json": {},
+  "coverage_json": {
+    "total_entries": 2,
+    "verifications": {
+      "link": {
+        "ok": 2
+      }
+    },
+    "link_status": {
+      "ok": 2
+    },
+    "identifiers": {
+      "doi": 2,
+      "pmid": 0,
+      "pmcid": 0
+    },
+    "resource_types": {
+      "paper": 2
+    }
+  }
+}

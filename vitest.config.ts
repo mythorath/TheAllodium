@@ -10,8 +10,16 @@ export default defineWorkersConfig(async () => {
   const authorityMigrations = await readD1Migrations(
     path.join(__dirname, "authority-migrations"),
   );
+  const collectionMigrations = await readD1Migrations(
+    path.join(__dirname, "collection-migrations"),
+  );
 
   return {
+    resolve: {
+      alias: {
+        "@allodium/collection": path.join(__dirname, "src/collections/module.ts"),
+      },
+    },
     test: {
       // e2e/ is a separate Playwright suite (real browser + axe-core) run
       // via `npm run test:e2e`, not compatible with the Workers pool
@@ -40,6 +48,7 @@ export default defineWorkersConfig(async () => {
               ABSTRACT_SEARCH_ENABLED: "0",
               TEST_MIGRATIONS: migrations,
               TEST_AUTHORITY_MIGRATIONS: authorityMigrations,
+              TEST_COLLECTION_MIGRATIONS: collectionMigrations,
             },
           },
         },

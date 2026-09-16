@@ -116,6 +116,7 @@ import {
   WorksPartial,
 } from "./views/open-index-pages";
 import { venuePath } from "./open-index/paths";
+import { mountInstalledCollections } from "./collections/mount";
 
 export type AppBindings = {
   DB: D1Database;
@@ -854,6 +855,8 @@ app.get("/health", async (c) => {
     },
   });
 });
+
+mountInstalledCollections(app);
 
 app.notFound((c) => c.html(<NotFoundPage />, 404));
 

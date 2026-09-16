@@ -58,7 +58,7 @@ todos:
     status: pending
   - id: collection-two-playbook
     content: Document the repeatable steps for adding a second collection as a new D1 binding and path route on the same Worker, splitting into a dedicated Worker only if its code diverges enough to warrant it
-    status: pending
+    status: completed
 isProject: false
 ---
 

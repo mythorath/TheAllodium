@@ -1,3 +1,6 @@
+import { INSTALLED_COLLECTION_MODULES } from "./collections/installed";
+import { collectionToChrome } from "./collections/module";
+
 export type CollectionIcon = "index" | "atom" | "orbit";
 
 export type CollectionStatus = "live" | "planned";
@@ -48,8 +51,11 @@ export const PSYCHOTHERAPY: Collection = {
   advisoryPath: "/psychotherapy/disclaimer",
 };
 
+const INSTALLED_CHROME = INSTALLED_COLLECTION_MODULES.map(collectionToChrome);
+
 export const COLLECTIONS: readonly Collection[] = [
   PSYCHOTHERAPY,
+  ...INSTALLED_CHROME,
 ];
 
 export const HOME_DOORS: readonly HomeDoor[] = [
@@ -66,6 +72,10 @@ export const HOME_DOORS: readonly HomeDoor[] = [
     kind: "curated",
     collection: PSYCHOTHERAPY,
   },
+  ...INSTALLED_CHROME.map((collection) => ({
+    kind: "curated" as const,
+    collection,
+  })),
 ];
 
 export function liveCollections(): Collection[] {

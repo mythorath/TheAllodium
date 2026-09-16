@@ -16,3 +16,11 @@ if (!env.AUTHORITY) {
 
 await applyD1Migrations(env.AUTHORITY, env.TEST_AUTHORITY_MIGRATIONS);
 await resetAuthority(env.AUTHORITY);
+
+if (!env.TEST_COLLECTION_MIGRATIONS) {
+  throw new Error("TEST_COLLECTION_MIGRATIONS binding missing from vitest miniflare config");
+}
+if (!env.COLLECTION_MINERALS) {
+  throw new Error("COLLECTION_MINERALS binding missing from vitest miniflare config");
+}
+await applyD1Migrations(env.COLLECTION_MINERALS, env.TEST_COLLECTION_MIGRATIONS);

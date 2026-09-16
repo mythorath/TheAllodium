@@ -35,7 +35,6 @@
     "configure:ask-ratelimit": "tsx scripts/configure-ask-ratelimit.ts --yes",
     "configure:bot-access": "tsx scripts/configure-bot-access.ts --yes",
     "promote:og-cards": "tsx scripts/upload-og-cards.ts",
-    "promote:og-cards": "tsx scripts/upload-og-cards.ts",
     "smoke:live": "tsx scripts/smoke-live.ts",
     "smoke:gpu": "tsx scripts/smoke-gpu.ts",
     "smoke:og-cards": "tsx scripts/smoke-og-cards.ts",
@@ -81,7 +80,10 @@
     "gate:5g": "tsx scripts/close-5-gate.ts 5g",
     "gate:5h": "tsx scripts/close-5-gate.ts 5h",
     "gate:5": "tsx scripts/close-5-gate.ts all",
-    "secrets:scan": "tsx scripts/secrets-scan.ts"
+    "secrets:scan": "tsx scripts/secrets-scan.ts",
+    "collection:validate": "tsx scripts/validate-collection.ts",
+    "collection:install": "tsx scripts/install-collection.ts",
+    "collection:pack-kit": "tsx scripts/pack-collection-kit.ts"
   },
   "dependencies": {
     "hono": "^4.9.0"
