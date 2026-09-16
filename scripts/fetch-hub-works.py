@@ -605,7 +605,7 @@ def main(argv: list[str] | None = None) -> int:
                     flush=True,
                 )
                 break
-            except Exception as exc:  # noqa: BLE001 — keep going; never print payloads
+            except Exception as exc:  # noqa: BLE001. Keep going; never print payloads
                 errors += 1
                 print(
                     f"{hub_kind}\t{hub_id}\t{rank_kind}\terror\t{type(exc).__name__}",

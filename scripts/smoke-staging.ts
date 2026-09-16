@@ -73,7 +73,7 @@ function main() {
     resolve("evidence/staging-smoke.json"),
     JSON.stringify(evidence, null, 2),
   );
-  console.log("Staging smoke ok — evidence/staging-smoke.json");
+  console.log("Staging smoke ok, evidence/staging-smoke.json");
 }
 
 main();

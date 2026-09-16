@@ -36,12 +36,12 @@ function main() {
 
   if (!health || health.http_status !== 200 || health.body?.status !== "ok") {
     throw new Error(
-      "Missing or failing evidence/gpu-health.json — curl https://gpu.theallodium.org/api/health must return 200 {status:ok} and be recorded first",
+      "Missing or failing evidence/gpu-health.json, curl https://gpu.theallodium.org/api/health must return 200 {status:ok} and be recorded first",
     );
   }
   if (!failClosed || failClosed.http_status === 200 || failClosed.service !== "stopped") {
     throw new Error(
-      "Missing or failing evidence/gpu-fail-closed.json — stop allodium-gpu-api, curl the public hostname, record a non-200, then restart",
+      "Missing or failing evidence/gpu-fail-closed.json, stop allodium-gpu-api, curl the public hostname, record a non-200, then restart",
     );
   }
 
@@ -58,7 +58,7 @@ no LLM generation. The live origin is \`gpu.theallodium.org\` on the existing
 with a 500ms timeout.
 
 No Worker deploy this phase. \`CONTRACT_VERSION\` is unchanged. CSP is
-unchanged (\`default-src 'self'\` — the browser never calls the GPU origin).
+unchanged (\`default-src 'self'\`: the browser never calls the GPU origin).
 
 ## Token scope
 
@@ -82,7 +82,7 @@ dead tunnel.
 
 Preferred model: \`qwen2.5:7b-instruct-q6_k\` (already kept warm-ish by
 MythsMind Leaves; same 3080 Ti). Contention with Leaves is best-effort on
-both sides — extra fallbacks, not failures.
+both sides, extra fallbacks, not failures.
 
 ## Tunnel merge safety
 
@@ -118,7 +118,7 @@ Service was restarted and public health returned 200 again.
 ## Worker helper
 
 \`src/gpu.ts\` \`pingGpu(env)\` returns \`false\` when \`GPU_ORIGIN\` is
-unset/blank, on non-OK HTTP, on network throw, and on abort — and never
+unset/blank, on non-OK HTTP, on network throw, and on abort, and never
 throws. Timeout is 500ms. \`GPU_ORIGIN\` is a wrangler \`vars\` value on
 staging and production only; local/tests leave it unset so the suite never
 hits the live GPU. No route calls \`pingGpu\` yet.
@@ -135,7 +135,7 @@ GPU.
 - \`npm run secrets:scan\`, \`typecheck\`, \`test\` (Vitest, Workers runtime)
   pass, including \`tests/gpu.test.ts\`.
 - \`npm run test:e2e\` (Playwright + axe-core) passes with zero
-  serious/critical accessibility violations — existing suite, no new UI.
+  serious/critical accessibility violations, existing suite, no new UI.
 - Live evidence: public health 200 + fail-closed after stop.
 - Neither staging nor production Worker was deployed this phase.
 

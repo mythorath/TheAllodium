@@ -1,7 +1,7 @@
 import { requireEnv } from "./cli";
 
 /** Phase 1F: minimal authenticated-fetch helper for the parts of the
- * Cloudflare REST API that Wrangler doesn't cover (zone lookup, Rulesets) —
+ * Cloudflare REST API that Wrangler doesn't cover (zone lookup, Rulesets),
  * everything else in this project goes through `wrangler` subcommands. */
 
 const API_BASE = "https://api.cloudflare.com/client/v4";
@@ -54,7 +54,7 @@ export async function getZoneByName(domain: string): Promise<CloudflareZone> {
   const zone = zones[0];
   if (!zone) {
     throw new Error(
-      `No Cloudflare zone found for domain "${domain}" — is it added to this account?`,
+      `No Cloudflare zone found for domain "${domain}". Is it added to this account?`,
     );
   }
   return zone;
@@ -76,7 +76,7 @@ interface DnsRecord {
 }
 
 /**
- * Idempotently ensures a DNS record exists with the given content — needed
+ * Idempotently ensures a DNS record exists with the given content: needed
  * because a zone with zero DNS records has no hostname for Cloudflare's
  * edge to route to, so a purely edge-side Ruleset (like a redirect) is
  * unreachable without one. Creates it if missing, updates it if it drifted,

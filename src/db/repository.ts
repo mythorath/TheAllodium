@@ -52,7 +52,7 @@ type EntryRow = {
 };
 
 /** A parse failure here means the exporter's own preflight (which already
- * validates authors_json parses before it's ever written to D1 — see
+ * validates authors_json parses before it's ever written to D1. See
  * validate_snapshot() in export_allodium_snapshot.py) was bypassed upstream.
  * Degrading to null rather than 500ing the entry page is the safer failure
  * mode for a non-essential citation-metadata field. */
@@ -167,7 +167,7 @@ export type TagCount = { name: string; count: number };
 
 /** Unfiltered directory counts for topic/hexaflex landings. Request-time
  * GROUP BY, not coverage_json and not the ten-query computeFacetCounts
- * path — directories are indexes, not cross-filtered facet bands. */
+ * path. Directories are indexes, not cross-filtered facet bands. */
 export async function getTagCounts(
   db: D1Database,
   category: "topic" | "hexaflex",
@@ -195,7 +195,7 @@ export type NlAllowlists = {
   hexaflex: Set<string>;
 };
 
-/** Canonical facet tokens actually present in this snapshot — used to
+/** Canonical facet tokens actually present in this snapshot, used to
  * re-validate GPU NL output. Case of the stored value is the canonical form. */
 export async function loadNlAllowlists(db: D1Database): Promise<NlAllowlists> {
   const [modality, type, topic, hexaflex] = await Promise.all([
@@ -313,7 +313,7 @@ export async function getRelatedEntries(
 const SHORTLIST_MAX_IDS = 50;
 
 /** Phase 2D: pure parsing/validation for the `?ids=` query param on
- * `/psychotherapy/list` — a single comma-separated list is the entire
+ * `/psychotherapy/list`: a single comma-separated list is the entire
  * shareable state, so this never touches the database. Dedupes (keeping
  * first occurrence, since list order is meaningful to the reader) and caps
  * at `SHORTLIST_MAX_IDS` so an oversized URL can't turn into an oversized
@@ -337,7 +337,7 @@ export type ShortlistResult = {
   missingIds: string[];
 };
 
-/** Phase 2D: batched multi-id fetch for the shortlist page — a handful of
+/** Phase 2D: batched multi-id fetch for the shortlist page, a handful of
  * `IN (...)` queries regardless of list size, rather than looping
  * `getEntry()` per id. Aliases resolve transparently against the same
  * `entry_aliases` table `resolveCanonicalId` uses, and any requested id that
@@ -384,7 +384,7 @@ export async function getEntriesByIds(
   const missingIds = ids.filter((id) => !canonicalFor.has(id));
 
   // Two requested ids (e.g. a canonical id and its retired alias) can
-  // resolve to the same entry — dedupe by canonical id, keeping the order
+  // resolve to the same entry, dedupe by canonical id, keeping the order
   // the reader's list first requested them in.
   const canonicalIds: string[] = [];
   const canonicalSeen = new Set<string>();
@@ -465,7 +465,7 @@ export async function getEntriesByIds(
   return { entries, missingIds };
 }
 
-/** Phase 1F: minimal row shape for /sitemap.xml — never selects public-safe
+/** Phase 1F: minimal row shape for /sitemap.xml, never selects public-safe
  * fields beyond what's already on the contract, since this is still a
  * public surface. */
 export async function listEntriesForSitemap(
@@ -636,7 +636,7 @@ async function searchViaLike(
   offset: number,
   sort: SortOption,
 ): Promise<{ hits: SearchHit[]; total: number }> {
-  // LIKE fallback searches title + meta only — never abstract_text.
+  // LIKE fallback searches title + meta only, never abstract_text.
   const where = andFragments(
     { sql: "(lower(d.title) LIKE ? OR lower(d.meta) LIKE ?)", binds: [needle, needle] },
     facetWhere,
@@ -673,7 +673,7 @@ async function searchViaLike(
   };
 }
 
-/** Phase 2B: browsing with filters but no text query — first-class, not a
+/** Phase 2B: browsing with filters but no text query, first-class, not a
  * fallback. Defaults to title A–Z when sort is relevance (no bm25 score). */
 async function browseViaFacets(
   db: D1Database,

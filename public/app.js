@@ -1,6 +1,6 @@
 // Phase 2C/2D: single self-hosted, self-contained progressive-enhancement
 // script (no build step, no framework), loaded site-wide via Layout. Every
-// feature here degrades gracefully — every page must already be fully
+// feature here degrades gracefully, every page must already be fully
 // usable with this file absent.
 //
 // Copy-to-clipboard: any `<button data-copy-target="some-id">` copies the
@@ -10,7 +10,7 @@
 // selectable without JS.
 //
 // Shortlist (Phase 2D): any `<button data-shortlist-id="some-entry-id">`
-// toggles that id in a localStorage array — no accounts, no cookies, no
+// toggles that id in a localStorage array, no accounts, no cookies, no
 // server round-trip. The array only ever feeds a plain
 // "/psychotherapy/list?ids=..." URL, the same shape a reader could type or
 // share by hand, so building a list is JS-only but *reading* one never is.
@@ -68,7 +68,7 @@
       });
     } catch (err) {
       // Storage unavailable or corrupted (private mode, quota, disabled,
-      // hand-edited value) — treat exactly like an empty shortlist.
+      // hand-edited value). Treat exactly like an empty shortlist.
       return [];
     }
   }
@@ -77,7 +77,7 @@
     try {
       window.localStorage.setItem(SHORTLIST_KEY, JSON.stringify(ids));
     } catch (err) {
-      // Storage unavailable — the buttons simply stop persisting; nothing
+      // Storage unavailable, the buttons simply stop persisting; nothing
       // else on the page depends on this succeeding.
     }
   }
@@ -156,7 +156,7 @@
           loadWorks(button);
         }
       },
-      // Fire when the loader is on screen or just below the fold — not while
+      // Fire when the loader is on screen or just below the fold, not while
       // it is still far down a long hub page.
       { rootMargin: "0px 0px 80px 0px", threshold: 0 },
     );
@@ -237,7 +237,7 @@
   });
 
   // This script is loaded with `defer`, so the DOM is already fully parsed
-  // by the time it runs — the nav link and any shortlist buttons on the
+  // by the time it runs, the nav link and any shortlist buttons on the
   // current page are ready to read/update immediately, no load-event wait
   // needed.
   renderShortlistNav();

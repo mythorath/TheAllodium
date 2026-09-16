@@ -39,10 +39,10 @@ host source.
 
 At minimum:
 
-- `GET /` — collection home with a count and a link to search
-- `GET /search` — optional `?q=` full-text query via `entry_fts`, else
+- `GET /`: collection home with a count and a link to search
+- `GET /search`: optional `?q=` full-text query via `entry_fts`, else
   a title listing
-- `GET /entries/:id` — one entry, 404 text if missing
+- `GET /entries/:id`: one entry, 404 text if missing
 
 Use `ctx.Layout` for HTML. Pass `collection={ctx.collection}` and a
 `canonicalPath` under `/<slug>`.

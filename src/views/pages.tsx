@@ -21,7 +21,7 @@ export const OverviewSection: FC<{ overview: string }> = ({ overview }) => (
   <section class="entry-overview" aria-labelledby="entry-overview-heading">
     <h2 id="entry-overview-heading">Overview</h2>
     <p class="meta">
-      AI-generated summary — not a substitute for reading the source.
+      AI-generated summary, not a substitute for reading the source.
     </p>
     <p class="entry-overview-body">{overview}</p>
   </section>
@@ -44,7 +44,7 @@ export const Layout: FC<{
    * every page with a `canonicalPath` gets a valid social-preview image
    * even before a page-specific one is threaded through. */
   ogImage?: string;
-  /** Phase 2E: short og:description/twitter:description text — always
+  /** Phase 2E: short og:description/twitter:description text, always
    * either hand-written per page or synthesized only from public-contract
    * fields (see `EntryPage` below); never sourced from
    * notes/abstract/rationale. */
@@ -153,14 +153,14 @@ export const Layout: FC<{
           {props.collection?.advisoryPath ? (
             <p class="meta">
               Automated checks only, not clinical endorsement or advice. If you
-              are in crisis, help is available now — see{" "}
+              are in crisis, help is available now. See{" "}
               <a href={props.collection.advisoryPath}>the disclaimer page</a>.
             </p>
           ) : null}
         </footer>
         {/* Phase 2D: loaded site-wide now that both copy-to-clipboard
          * (entry pages) and shortlist add/remove (entry + search/browse +
-         * list pages) live here — still the roadmap's single small
+         * list pages) live here: still the roadmap's single small
          * self-hosted progressive-enhancement file, same unchanged CSP. */}
         <script src="/app.js" defer />
         {props.bodyExtra ?? null}
@@ -341,13 +341,13 @@ export const HomePage: FC<{
     <Layout
       title="Home"
       canonicalPath="/"
-      ogDescription="A public, ad-free place of free knowledge — a verified index of published research and resources, starting with psychotherapy."
+      ogDescription="A public, ad-free place of free knowledge: a verified index of published research and resources, starting with psychotherapy."
     >
       <section class="home-hero">
         <h1>A place of free knowledge</h1>
         <p class="home-lede">
           Welcome. The Allodium is a public, ad-free index of published
-          research and resources — verified for identity, legitimacy, and
+          research and resources, verified for identity, legitimacy, and
           link health before they're listed. Explore what's here today, and
           come back as more fields open.
         </p>
@@ -414,7 +414,7 @@ export const PsychotherapyHomePage: FC<{
       <section class="home-hero">
         <h1>A verified index of evidence</h1>
         <p class="home-lede">
-          Direct links to research, papers, and resources — checked for
+          Direct links to research, papers, and resources, all checked for
           identity, legitimacy, and link health.
         </p>
         {manifest ? (
@@ -526,7 +526,7 @@ export const PsychotherapyHomePage: FC<{
       <section class="standard-section">
         <h2>What's excluded, and why</h2>
         <p class="meta">
-          Publishing the index, never the contents — and never a row that
+          Publishing the index, never the contents, and never a row that
           failed a check.
         </p>
         <CountList
@@ -557,7 +557,7 @@ export const TopicsPage: FC<{ tags: Array<{ name: string; count: number }> }> = 
       title="Topics"
       canonicalPath="/psychotherapy/topics"
       collection={PSYCHOTHERAPY}
-      ogDescription="Browse The Allodium's psychotherapy catalog by topic — depression, anxiety, trauma, and more."
+      ogDescription="Browse The Allodium's psychotherapy catalog by topic: depression, anxiety, trauma, and more."
     >
       <h1>Topics</h1>
       <p>
@@ -581,12 +581,12 @@ export const HexaflexPage: FC<{ tags: Array<{ name: string; count: number }> }> 
       title="Hexaflex"
       canonicalPath="/psychotherapy/hexaflex"
       collection={PSYCHOTHERAPY}
-      ogDescription="Browse ACT hexaflex processes in The Allodium — acceptance, defusion, values, and the rest."
+      ogDescription="Browse ACT hexaflex processes in The Allodium: acceptance, defusion, values, and the rest."
     >
       <h1>Hexaflex</h1>
       <p>
         The six ACT processes. Each link opens client materials first so
-        exercises are not buried under papers — switch Corpus to Literature on
+        exercises are not buried under papers. Switch Corpus to Literature on
         the search page to include papers.
       </p>
       <DirectoryList
@@ -681,7 +681,7 @@ export const StandardPage: FC = () => {
           <dd>
             Entries are screened for topical relevance, source legitimacy, and
             identity agreement. Screens that don't clear a confidence
-            threshold are marked <code>needs_review</code> rather than kept —
+            threshold are marked <code>needs_review</code> rather than kept,
             the default when a check is uncertain is exclusion, not inclusion.
           </dd>
           <dt>Link health</dt>
@@ -694,7 +694,7 @@ export const StandardPage: FC = () => {
           </dd>
         </dl>
         <p class="meta">
-          Every check above is a normalized, timestamped record — see the
+          Every check above is a normalized, timestamped record. See the
           "Verification" section on any entry page. Automated checks are not
           endorsement or advice.
         </p>
@@ -703,8 +703,8 @@ export const StandardPage: FC = () => {
       <section class="standard-section">
         <h2>Coverage</h2>
         <p>
-          Live coverage numbers — identity checks, legitimacy triage, link
-          health, identifiers, modalities, and exclusions — live on each
+          Live coverage numbers, identity checks, legitimacy triage, link
+          health, identifiers, modalities, and exclusions. Live on each
           collection's landing, because they describe that collection's
           snapshot. See{" "}
           <a href="/psychotherapy">Psychotherapy</a> for the current
@@ -762,11 +762,11 @@ export const StandardPage: FC = () => {
           </li>
           <li>
             A <code>blocked</code> link means the automated check was
-            inconclusive (for example, a bot wall) — not that the resource is
+            inconclusive (for example, a bot wall), not that the resource is
             gone. Verify manually if it matters for your use case.
           </li>
           <li>
-            No full text, abstracts, or stored files are published here — only
+            No full text, abstracts, or stored files are published here, just
             index metadata and an outbound link to the original source.
           </li>
         </ul>
@@ -804,7 +804,7 @@ export const StandardPage: FC = () => {
         <h2>Update cadence</h2>
         <p>
           Each public snapshot is regenerated from its source catalog and
-          redeployed as a whole — coverage numbers on a collection landing
+          redeployed as a whole, coverage numbers on a collection landing
           always describe exactly the entries currently live, not a newer or
           older dataset.
         </p>
@@ -832,17 +832,17 @@ export const AboutPage: FC = () => (
   <Layout
     title="About"
     canonicalPath="/about"
-    ogDescription="Why The Allodium exists: a deep desire to find knowledge and hand it on, freely — no ads, no accounts, no paywalls on the index."
+    ogDescription="Why The Allodium exists: a deep desire to find knowledge and hand it on, freely, no ads, no accounts, no paywalls on the index."
   >
     <h1>Why The Allodium exists</h1>
     <div class="prose">
       <p>
         I have a deep desire to find things out and hand them on. Not to
-        gatekeep them, not to meter them out — to put good information where
-        anyone can reach it. That urge is the whole reason this site exists.
+        gatekeep them, not to meter them out, but to put good information
+        where anyone can reach it. That urge is the whole reason this site exists.
       </p>
       <p>
-        An <em>allodium</em> is land held outright — owned freely, owing rent
+        An <em>allodium</em> is land held outright, owned freely, owing rent
         to no lord. That is what I want knowledge to be: held by everyone,
         owing nothing to anyone. So The Allodium collects published research
         and resources, runs every entry through the identity, legitimacy, and
@@ -851,7 +851,7 @@ export const AboutPage: FC = () => (
       </p>
       <p>
         It starts with psychotherapy because that is where I began digging.
-        It will not end there — physics, cosmology, and more fields are on
+        It will not end there: physics, cosmology, and more fields are on
         the way. The shape stays the same wherever it goes: verified,
         readable, and free.
       </p>
@@ -860,7 +860,7 @@ export const AboutPage: FC = () => (
         <li>No ads, no accounts, no cookies, no tracking. Ever.</li>
         <li>
           Every entry is checked before it is listed, and the checks
-          themselves are published — see{" "}
+          themselves are published. See{" "}
           <a href="/standard">The Standard</a>.
         </li>
         <li>
@@ -872,7 +872,7 @@ export const AboutPage: FC = () => (
         <section class="support-section" aria-labelledby="support-heading">
           <h2 id="support-heading">If you'd like to leave a tip</h2>
           <p class="meta">
-            Everything here is free and always will be — nothing is ever
+            Everything here is free and always will be. Nothing is ever
             behind a tip. But if The Allodium has been useful and you feel
             like keeping the lights on, it's appreciated.
           </p>
@@ -923,7 +923,7 @@ export const DisclaimerPage: FC = () => (
       </p>
       <p>
         Listing a resource here means it passed our identity, legitimacy,
-        and link-health checks — it is not a clinical endorsement of any
+        and link-health checks. It is not a clinical endorsement of any
         specific treatment, provider, or organization.
       </p>
       <p>
@@ -955,7 +955,7 @@ export const ErrorPage: FC = () => (
     <h1>Something went wrong</h1>
     <p class="meta">
       An unexpected error occurred while handling that request. Nothing was
-      lost — please try again.
+      lost. Please try again.
     </p>
     <p>
       <a href="/">Back to home</a>
@@ -965,7 +965,7 @@ export const ErrorPage: FC = () => (
 
 /**
  * Phase 1F: structured data for search engines. Describes the page itself
- * (`WebPage`) rather than claiming to host the resource — the `mainEntity`
+ * (`WebPage`) rather than claiming to host the resource: the `mainEntity`
  * points back at `canonical_url`, the actual source. Built only from
  * `PublicEntry` fields already on the publication contract; never touches
  * abstract/notes/rationale.
@@ -1025,7 +1025,7 @@ function formatEntryAuthors(entry: PublicEntry): string {
       .map((a) => (a.institution ? `${a.name} (${a.institution})` : a.name))
       .join(", ");
   }
-  return entry.author ?? "—";
+  return entry.author ?? "Not recorded";
 }
 
 type ResultMetaFields = {
@@ -1064,7 +1064,7 @@ const CITATION_LABELS = {
 
 /** Phase 2C: renders a citation's text with its trailing DOI/URL segment as
  * a real clickable `doi.org` link, while the combined text content stays
- * exactly `citations.apa` — enforced by slicing the known-length `url` off
+ * exactly `citations.apa`: enforced by slicing the known-length `url` off
  * the end of the full formatted string rather than duplicating formatting
  * logic. Shared by the single-entry (`ApaCitation`) and whole-shortlist
  * (`ApaCitationList`, Phase 2D) renderings below. */
@@ -1088,7 +1088,7 @@ function ApaCitation(props: { text: string; url: string }) {
   );
 }
 
-/** Phase 2D: the shortlist page's combined APA block — one `<p>` per entry
+/** Phase 2D: the shortlist page's combined APA block, one `<p>` per entry
  * inside a single wrapping `#citation-apa`, so the existing copy-button
  * `textContent` logic in `app.js` needs no changes to cover every entry. */
 function ApaCitationList(props: { items: Array<{ id: string; text: string; url: string }> }) {
@@ -1179,21 +1179,21 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
           <code>{entry.id}</code>
         </dd>
         <dt>Source org</dt>
-        <dd>{entry.source_org ?? "—"}</dd>
+        <dd>{entry.source_org ?? "Not recorded"}</dd>
         <dt>Author</dt>
         <dd>{formatEntryAuthors(entry)}</dd>
         <dt>Published</dt>
-        <dd class="mono">{entry.published_date ?? "—"}</dd>
+        <dd class="mono">{entry.published_date ?? "Not recorded"}</dd>
         <dt>OA status</dt>
-        <dd>{entry.oa_status ?? "—"}</dd>
+        <dd>{entry.oa_status ?? "Not recorded"}</dd>
         <dt>DOI</dt>
-        <dd class="mono">{entry.doi ?? "—"}</dd>
+        <dd class="mono">{entry.doi ?? "Not recorded"}</dd>
         <dt>PMID</dt>
-        <dd class="mono">{entry.pmid ?? "—"}</dd>
+        <dd class="mono">{entry.pmid ?? "Not recorded"}</dd>
         <dt>PMCID</dt>
-        <dd class="mono">{entry.pmcid ?? "—"}</dd>
+        <dd class="mono">{entry.pmcid ?? "Not recorded"}</dd>
         <dt>Citations</dt>
-        <dd class="mono">{entry.citation_count ?? "—"}</dd>
+        <dd class="mono">{entry.citation_count ?? "Not recorded"}</dd>
       </dl>
 
       <h2>Tags</h2>
@@ -1215,7 +1215,7 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
 
       <h2>Verification</h2>
       <p class="meta">
-        Automated checks only — not clinical endorsement or advice.
+        Automated checks only, not clinical endorsement or advice.
       </p>
       {entry.verifications.length === 0 ? (
         <p class="meta">No verification records</p>
@@ -1306,7 +1306,7 @@ function clearableFilters(filters: FacetFilters): FacetFilters {
 }
 
 /** Phase 2D: the shortlist's entire state is this one query param, so
- * "remove one item" is just linking to the same route with a shorter list —
+ * "remove one item" is just linking to the same route with a shorter list,
  * no JS required to edit a shortlist you're currently viewing. */
 function buildListHref(ids: string[]): string {
   if (ids.length === 0) return "/psychotherapy/list";
@@ -1542,7 +1542,7 @@ export const SearchPage: FC<{
       {props.crisis ? <CrisisResources banner /> : null}
       {props.assistOffline ? (
         <p class="assist-notice" role="status">
-          AI search assist is offline — showing keyword results.
+          AI search assist is offline, showing keyword results.
         </p>
       ) : null}
       {props.mode === "empty" ? (
@@ -1635,7 +1635,7 @@ export const SearchPage: FC<{
 };
 
 /**
- * Phase 2D: `/psychotherapy/list?ids=…` — the URL is the entire shared
+ * Phase 2D: `/psychotherapy/list?ids=…`. The URL is the entire shared
  * state, no accounts, no cookies. `entries` is already in request order
  * with aliases resolved and duplicates collapsed (see
  * `getEntriesByIds()`); `missingCount` covers ids that didn't resolve to
@@ -1660,7 +1660,7 @@ export const ListPage: FC<{
             someone shared with you.
           </p>
           <p class="meta">
-            Shared lists live entirely in the URL — no accounts required.
+            Shared lists live entirely in the URL: no accounts required.
           </p>
         </div>
       ) : (

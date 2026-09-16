@@ -375,7 +375,7 @@ describe("Open Index routes", () => {
         expect(withOverview.response.status).toBe(200);
         expect(withOverview.body).toContain("Overview");
         expect(withOverview.body).toContain(
-          "AI-generated summary — not a substitute for reading the source.",
+          "AI-generated summary, not a substitute for reading the source.",
         );
         expect(withOverview.body).toContain(
           "This paper studies encoded DOI routing without redistributing abstracts.",

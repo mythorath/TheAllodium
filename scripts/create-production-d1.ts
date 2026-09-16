@@ -7,7 +7,7 @@ config();
 
 // Mirrors create-staging-d1.ts. Phase 1D creates this now so the full
 // promote/rollback pipeline can be rehearsed against genuine Cloudflare
-// infrastructure — the Worker itself is not deployed to any public domain
+// infrastructure. The Worker itself is not deployed to any public domain
 // against it until Phase 1F.
 const STAGING_ENV_TAIL = `        }
       ]
@@ -56,7 +56,7 @@ function main() {
   } else {
     if (!text.endsWith(STAGING_ENV_TAIL)) {
       throw new Error(
-        'wrangler.jsonc did not end with the expected "staging" env closing shape — ' +
+        'wrangler.jsonc did not end with the expected "staging" env closing shape, ' +
           'insert the "production" env block by hand and re-run this script to just set the database_id.',
       );
     }

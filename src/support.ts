@@ -1,7 +1,7 @@
 /**
  * Tip/support options rendered on /about. Kept as data so adding or
  * removing a method never touches the view. Leave both arrays empty to
- * hide the support section entirely — nothing half-configured ever
+ * hide the support section entirely: nothing half-configured ever
  * renders.
  */
 

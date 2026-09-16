@@ -12,7 +12,7 @@ function usage(): never {
   );
 }
 
-/** Refuses to point a freshly deployed Worker at an empty database — code
+/** Refuses to point a freshly deployed Worker at an empty database, code
  * and data go live together, so a deploy against a not-yet-promoted D1
  * would just serve null-manifest pages (or worse, look like data loss). */
 function assertManifestNonEmpty(env: "staging" | "production"): void {
@@ -28,7 +28,7 @@ function assertManifestNonEmpty(env: "staging" | "production"): void {
         `Run 'npm run db:promote:${env}' (or db:load:staging-sample for staging) before deploying code.`,
     );
   }
-  console.log(`  entry_count=${row.entry_count} — safe to deploy.`);
+  console.log(`  entry_count=${row.entry_count}, safe to deploy.`);
 }
 
 function main() {
@@ -37,7 +37,7 @@ function main() {
   if (env !== "staging" && env !== "production") usage();
   if (env === "production" && !booleans.has("yes")) {
     throw new Error(
-      "Refusing to deploy to production without --yes — this makes the new Worker version live at theallodium.org.",
+      "Refusing to deploy to production without --yes. This makes the new Worker version live at theallodium.org.",
     );
   }
 
@@ -58,7 +58,7 @@ function main() {
   const versionId = versionMatch?.[1] ?? "unknown";
   if (versionId === "unknown") {
     console.warn(
-      "Could not parse a Version ID from wrangler's output — recording 'unknown'. " +
+      "Could not parse a Version ID from wrangler's output, recording 'unknown'. " +
         "Check `wrangler deployments list --env " + env + "` if a rollback is ever needed.",
     );
   }

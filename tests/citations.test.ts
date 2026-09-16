@@ -12,8 +12,8 @@ import {
 import type { PublicEntry } from "../src/contract";
 
 /**
- * Phase 2C. `src/citations.ts` is a pure function of `PublicEntry` — no D1,
- * no Workers runtime needed — so these are plain unit tests. Per the
+ * Phase 2C. `src/citations.ts` is a pure function of `PublicEntry`: no D1,
+ * no Workers runtime needed, so these are plain unit tests. Per the
  * roadmap's exit-gate criterion, BibTeX/RIS output is validated against
  * real third-party parsers (`@retorquere/bibtex-parser`, the engine behind
  * Better BibTeX for Zotero; `@customcommander/ris`), not just re-checked
@@ -226,7 +226,7 @@ describe("buildCitations", () => {
 
 /**
  * Phase 2D. Whole-shortlist export is just per-entry citations concatenated
- * — validated the same way as the single-entry case, against real
+ *: validated the same way as the single-entry case, against real
  * multi-record parsing rather than our own string-joining logic.
  */
 describe("buildBibtexList", () => {

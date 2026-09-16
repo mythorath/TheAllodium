@@ -30,12 +30,12 @@ export function parseSortOption(raw: string | undefined | null): SortOption {
  * Date/citation sorts put NULLs last so undated / uncited entries don't
  * crowd the top of "newest" / "most cited" lists.
  *
- * Every branch ends in `e.id ASC` — the corpus has duplicate titles (and
+ * Every branch ends in `e.id ASC`. The corpus has duplicate titles (and
  * could, in principle, have duplicate dates/citation counts), so without a
  * final tiebreaker on the one column guaranteed unique per row, SQLite/D1
  * is free to return tied rows in an implementation-defined order. Left
  * unfixed, that meant which entry landed at a given list position/page
- * could silently differ between two otherwise identical requests — the
+ * could silently differ between two otherwise identical requests: the
  * root cause of entry links appearing to "change" over time. See
  * tests/link-integrity.test.ts for the regression test.
  */

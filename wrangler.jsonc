@@ -10,7 +10,7 @@
   },
   // Local / default: placeholder UUID until staging DB is created.
   // Remote staging ID is written by scripts/create-staging-d1.ts into the
-  // "staging" environment below — never put API tokens here.
+  // "staging" environment below, never put API tokens here.
   "d1_databases": [
     {
       "binding": "DB",
@@ -68,7 +68,7 @@
       "name": "theallodium-staging",
       // Phase 3A: Worker-side GPU origin. Local/default stays unset so
       // tests never hit the live tunnel. pingGpu() is not called from
-      // routes yet — 3B wires ?ask=.
+      // routes yet, 3B wires ?ask=.
       "vars": {
         "GPU_ORIGIN": "https://gpu.theallodium.org"
       },

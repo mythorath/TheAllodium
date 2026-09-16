@@ -63,7 +63,7 @@ npm run gate:1d
 ```
 
 To roll a database back to the state immediately before its most recent
-promotion (proven against real staging infrastructure — see the decision
+promotion (proven against real staging infrastructure. See the decision
 record):
 
 ```bash
@@ -87,7 +87,7 @@ npm run gate:1e
 ```
 
 The e2e suite runs against `npm run dev` (Miniflare-backed) using the same
-local D1 spike fixture as the Vitest suite — see `playwright.config.ts` and
+local D1 spike fixture as the Vitest suite. See `playwright.config.ts` and
 `e2e/routes.spec.ts`.
 
 ## Phase 1F
@@ -119,7 +119,7 @@ at 08:00) and appends every run's pass/fail result to
 regression in production is caught continuously going forward rather than
 only when someone happens to run the audit by hand. After the link audit it
 also runs `npm run smoke:gpu` and appends pass/fail to
-`evidence/cron-gpu-health.log` — that GPU check is **non-fatal** (Selis
+`evidence/cron-gpu-health.log`. That GPU check is **non-fatal** (Selis
 asleep is expected) and must not fail the daily job. Re-install is not
 required if the same crontab already calls this script; the next 08:00 run
 picks the GPU log up. Re-install after moving the checkout or upgrading
@@ -131,7 +131,7 @@ node (`NODE_BIN_DIR` in the script is a fixed path):
 
 `deploy:production` and `configure:com-redirect` need a `CLOUDFLARE_API_TOKEN`
 with Zone-level permissions in addition to the Account-level ones used by
-earlier phases — Cloudflare API tokens scope Account and Zone permissions
+earlier phases: Cloudflare API tokens scope Account and Zone permissions
 independently, so full Account access does **not** imply any Zone access.
 Add, scoped to `theallodium.org` and `theallodium.com` specifically:
 
@@ -139,7 +139,7 @@ Add, scoped to `theallodium.org` and `theallodium.com` specifically:
 - Zone → Zone → Read, on both
 - Zone → Single Redirect → Edit, on `theallodium.com` (for the redirect rule)
 - Zone → DNS → Edit, on `theallodium.com` (a zone with zero DNS records has
-  no hostname for Cloudflare's edge to route requests to at all —
+  no hostname for Cloudflare's edge to route requests to at all,
   `configure-com-redirect.ts` also provisions a placeholder proxied A
   record there, idempotently, before applying the redirect rule)
 
@@ -171,7 +171,7 @@ token scopes. This is **not** `CLOUDFLARE_API_TOKEN`:
   and `--env production` (same value). Local/tests leave it unset so `askGpu`
   fails closed without hitting the live GPU.
 
-## Phase 5 — The Open Index
+## Phase 5: The Open Index
 
 `/open-index` and `/search` add an all-fields federated research index without
 copying the complete scholarly graph into D1. Ten isolated adapters cover
@@ -269,7 +269,7 @@ npm run db:promote:production
 ```
 
 Same token scope as staging. Creates `theallodium-psychotherapy-production`
-and loads the full snapshot into it — the Worker is not deployed against it
+and loads the full snapshot into it. The Worker is not deployed against it
 until Phase 1F.
 
 ## Scripts

@@ -36,11 +36,11 @@ function main() {
 
   const manifest = readJson(resolve("fixtures/full_snapshot.manifest.json")) as Phase2bManifest | null;
   if (!manifest) {
-    throw new Error("Missing fixtures/full_snapshot.manifest.json — Phase 2B adds no new snapshot data, so this should already exist from 2A.");
+    throw new Error("Missing fixtures/full_snapshot.manifest.json: Phase 2B adds no new snapshot data, so this should already exist from 2A.");
   }
 
   console.log(
-    "Re-promoting the current full snapshot to staging — content is unchanged from 2A, but this " +
+    "Re-promoting the current full snapshot to staging. Content is unchanged from 2A, but this " +
       "applies migrations/0005_facets.sql (idempotent: 'wrangler d1 migrations apply' only runs " +
       "unapplied files) and exercises the extended post-promotion smoke checks against real remote D1.",
   );
@@ -49,7 +49,7 @@ function main() {
   const log = readDeploymentsLog() as PromoteLogEntry[];
   const stagingPromotes = log.filter((e) => e.env === "staging" && e.type === "promote");
   if (stagingPromotes.length === 0) {
-    throw new Error("deployments/log.json has no staging promotion after running db:promote:staging — something went wrong.");
+    throw new Error("deployments/log.json has no staging promotion after running db:promote:staging, something went wrong.");
   }
   const lastPromote = stagingPromotes[stagingPromotes.length - 1];
   if (lastPromote.checksum !== manifest.checksum) {
@@ -67,7 +67,7 @@ function main() {
   };
   if (!evidence.results?.facetModalityAudience) {
     throw new Error(
-      `${lastPromote.evidencePath} is missing the Phase 2B facetModalityAudience smoke check — ` +
+      `${lastPromote.evidencePath} is missing the Phase 2B facetModalityAudience smoke check, ` +
         "scripts/smoke-checks.ts::runSmokeChecks() should have been extended before this gate.",
     );
   }
@@ -83,15 +83,15 @@ Phase 2A extended the publication contract to v1.1 (\`audience\`, \`authors_json
 Phase 2B turns \`/psychotherapy/search\` into a real faceted browse-and-search
 experience: five filterable dimensions (modality, audience, free-vs-paywalled,
 stored-vs-link-only, link status), each multi-select and fully URL-stated, plus
-a first-class no-query browse mode — all still server-rendered, still no
+a first-class no-query browse mode, all still server-rendered, still no
 accounts/cookies/JS required to use.
 
 ## Confirmed design decisions (see phase_2_roadmap.md and the approved plan)
 
 - **Multi-select facets** via checkboxes in one GET form, not single-select
-  links — URL uses repeated params (\`?modality=cbt&modality=dbt\`).
+  links: URL uses repeated params (\`?modality=cbt&modality=dbt\`).
 - **Cross-filtered counts**: each dimension's counts reflect every *other*
-  active filter plus the text query, but never that dimension's own filter —
+  active filter plus the text query, but never that dimension's own filter,
   so switching a selection within a dimension is always visible as an option,
   not just the values present in the already-filtered result set.
 - **Access bucketing**: \`paywalled\` = \`oa_status = 'closed'\`; \`free\` = any
@@ -104,7 +104,7 @@ Kept separate from \`src/db/repository.ts\` to keep the query-composition
 surface (parsing, WHERE-building, cross-filtered counting) in one place while
 \`repository.ts\` stays focused on orchestrating the fts/like/browse paths.
 \`FacetFilters\`/\`buildFacetWhere\`/\`computeFacetCounts\`/\`parseFacetFilters\`
-are all pure/DB-boundary functions with no route or view code — Phase 4's MCP
+are all pure/DB-boundary functions with no route or view code: Phase 4's MCP
 routes can reuse them unchanged, per the roadmap's later-phase compatibility
 rule.
 
@@ -120,7 +120,7 @@ extended to AND a facet WHERE fragment into both their \`COUNT(*)\` and paged
 A real implementation-time fix beyond the plan's literal text: the *truly*
 empty landing state (no query, no filters) originally short-circuited before
 computing any facet counts, which would have made the checkbox menu itself
-invisible on first page load — filters would only have been reachable by
+invisible on first page load. Filters would only have been reachable by
 already knowing the URL param names. Fixed by always computing facet counts
 (against the current filters, ignoring an empty/rejected search term) even on
 the "empty" path, so browsing is discoverable from a cold landing on
@@ -130,7 +130,7 @@ the "empty" path, so browsing is discoverable from a cold landing on
 
 \`SearchPage\` renders one \`<fieldset>\`/\`<legend>\` per dimension from
 whatever values \`computeFacetCounts()\` actually returns (data-driven, same
-"no hardcoded enum" philosophy as \`/standard/\`'s coverage \`CountList\`) —
+"no hardcoded enum" philosophy as \`/standard/\`'s coverage \`CountList\`),
 modality, audience, and link status show their raw values; only the two
 synthetic bucket dimensions (access, storage), whose values don't already
 appear anywhere else in the UI, get a small inline label map
@@ -140,7 +140,7 @@ state uses, so they can't drift out of sync with what's actually selected.
 
 ## Schema: \`migrations/0005_facets.sql\`
 
-Adds \`idx_entries_audience\` and \`idx_entries_is_link_only\` — the two facet
+Adds \`idx_entries_audience\` and \`idx_entries_is_link_only\`: the two facet
 dimensions that didn't already have an index from \`0001_schema.sql\`
 (\`therapy_modality\`, \`oa_status\`, and \`link_status\` were already indexed).
 
@@ -161,21 +161,21 @@ dimensions that didn't already have an index from \`0001_schema.sql\`
   are discoverable and labeled, checking a box and submitting browses
   correctly with no query, a query+filter combination can legitimately
   return zero results, and Clear filters preserves the query while dropping
-  every facet param — each with a zero-serious-violation axe scan.
+  every facet param, each with a zero-serious-violation axe scan.
 
 ## Staging: migration applied, smoke checks extended, no code deploy
 
 Following 2A's precedent (which also promoted data without a Worker code
 deploy, since old code is schema-tolerant of new columns it doesn't select),
 this phase re-ran \`npm run db:promote:staging\` against the *same* full
-snapshot content (checksum \`${manifest.checksum}\`) — the only thing that
+snapshot content (checksum \`${manifest.checksum}\`): the only thing that
 changes on staging is that \`wrangler d1 migrations apply\` now also applies
 \`0005_facets.sql\`, adding the two new indexes to real remote D1.
 
 An implementation-time correction from the plan's literal text: the plan
 named \`scripts/smoke-staging.ts\` as the file to extend with a faceted-query
 check, but that script is a Phase 1A-era harness hardcoded against
-\`spike_fixture.sql\`'s synthetic ids/words — it hasn't reflected staging's
+\`spike_fixture.sql\`'s synthetic ids/words, it hasn't reflected staging's
 actual (real-corpus) content since Phase 1C. The smoke checks that actually
 run after every real promotion live in \`scripts/smoke-checks.ts\`'s
 \`runSmokeChecks()\`, invoked automatically by \`promote-snapshot.ts\`. That's
@@ -186,7 +186,7 @@ against real remote D1, with results captured in this promotion's
 
 Deploying the updated Worker code itself (so the live staging *site* actually
 serves the new checkbox UI, not just updated D1 indexes) is intentionally
-left as a separate, deliberate action — same as production Worker deploys
+left as a separate, deliberate action, same as production Worker deploys
 were kept separate from data promotions in every prior phase.
 
 ## Exit gate
@@ -202,11 +202,11 @@ were kept separate from data promotions in every prior phase.
 ## Explicitly deferred to 2C+
 
 - A repository read function for \`entry_neighbors\` and the related-entries
-  UI — Phase 2C.
-- Citation export (BibTeX/RIS/APA) — Phase 2C.
-- Deploying the updated Worker code to staging/production — a separate,
+  UI: Phase 2C.
+- Citation export (BibTeX/RIS/APA): Phase 2C.
+- Deploying the updated Worker code to staging/production: a separate,
   deliberate action outside any data-promotion gate.
-- Shareable shortlists, print support, and the OpenGraph card pipeline —
+- Shareable shortlists, print support, and the OpenGraph card pipeline,
   later Phase 2 subphases per the roadmap.
 
 ## Stop

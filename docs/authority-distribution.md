@@ -2,13 +2,13 @@
 
 The authority database is metadata-only. Its public artifacts are:
 
-- `import.sql` — deterministic D1 import. When the uncompressed file exceeds
+- `import.sql`: deterministic D1 import. When the uncompressed file exceeds
   Wrangler's 300 MiB `r2 object put` limit, the R2 object is `import.sql.gz`
   plus `import.sql.gz.sha256`; `import.sql.sha256` and `checksum.txt` still
   hash the uncompressed SQL.
-- `manifest.json` — schema, snapshot timestamp, and per-family row counts
-- `import.sql.sha256` — uncompressed content checksum
-- `licenses.json` — source URL, license, attribution, and fetched timestamp for
+- `manifest.json`: schema, snapshot timestamp, and per-family row counts
+- `import.sql.sha256`: uncompressed content checksum
+- `licenses.json`: source URL, license, attribution, and fetched timestamp for
   every data family
 
 Publish the checksummed bundle to R2:

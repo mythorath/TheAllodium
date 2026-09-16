@@ -3,7 +3,7 @@
 // packaging gap on their end, not something to fix upstream from here).
 // This covers only the surface used by tests/citations.test.ts to
 // structurally validate generated BibTeX against a real third-party
-// parser — see docs/phase-2c-decision-record.md.
+// parser. See docs/phase-2c-decision-record.md.
 declare module "@retorquere/bibtex-parser" {
   export interface BibtexParseError {
     error: string;

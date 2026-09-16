@@ -1,5 +1,5 @@
 /** Optional Selis GPU bridge. Absence is a boolean false / null, never an
- * exception. The browser never calls this origin — CSP stays default-src
+ * exception. The browser never calls this origin. CSP stays default-src
  * 'self'. POST /api/nl-query requires GPU_SHARED_SECRET. */
 
 export const GPU_PING_TIMEOUT_MS = 500;

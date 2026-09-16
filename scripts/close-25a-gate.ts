@@ -38,7 +38,7 @@ stays \`"1.2"\`.
 ## Corpus split
 
 \`kind=literature\` means \`e.resource_type = 'paper'\`. \`kind=materials\`
-means everything else. Not \`credibility_tier\` — that mapping is almost
+means everything else. Not \`credibility_tier\`. That mapping is almost
 1:1 with papers vs. not, and would hide non-paper clinician protocols.
 
 \`kind\` is exclusive (\`KindValue | null\`), parsed from a single \`?kind=\`
@@ -67,7 +67,7 @@ is how a reader leaves the split.
 
 Search (and shortlist) result meta is now \`modality · type · audience\`
 plus year (first four-digit run of \`published_date\`) plus citation count
-when present, then org / blocked as before — so "newest" / "most cited"
+when present, then org / blocked as before, so "newest" / "most cited"
 sorts are visible, not magical.
 
 The entry page shows an audience badge (the field was already a facet and
@@ -97,10 +97,10 @@ falling back to the plain \`author\` string.
 
 ## Explicitly deferred to 2.5B+
 
-- Topic / hexaflex / type / decade facets and clickable tags — 2.5B.
-- Directory landings (\`/psychotherapy/topics\`, \`/hexaflex\`) — 2.5C.
-- Facet auto-submit, compact pagination, \`?like={id}\` — 2.5D.
-- Deploying the updated Worker code to staging/production — a separate,
+- Topic / hexaflex / type / decade facets and clickable tags: 2.5B.
+- Directory landings (\`/psychotherapy/topics\`, \`/hexaflex\`): 2.5C.
+- Facet auto-submit, compact pagination, \`?like={id}\`: 2.5D.
+- Deploying the updated Worker code to staging/production: a separate,
   deliberate action outside any phase gate.
 
 ## Stop

@@ -142,7 +142,7 @@ const sqlBytes = readFileSync(join(root, "import.sql"));
 const sql = sqlBytes.toString("utf8");
 const transport = readFileSync(join(root, "checksum.txt"), "utf8").trim();
 if (sha256(sqlBytes) !== transport) {
-  fail("checksum.txt does not match SHA-256 of import.sql — run write-checksums.mjs");
+  fail("checksum.txt does not match SHA-256 of import.sql. Run write-checksums.mjs");
 }
 
 const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));

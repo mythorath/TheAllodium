@@ -35,7 +35,7 @@ function main() {
   if (env !== "staging" && env !== "production") usage();
   if (env === "production" && !booleans.has("yes")) {
     throw new Error(
-      "Refusing to promote to production without --yes — this replaces all live content.",
+      "Refusing to promote to production without --yes. This replaces all live content.",
     );
   }
   if (flags.snapshot && flags["snapshot-dir"]) {
@@ -70,7 +70,7 @@ function main() {
     (snapshotDir && manifest.collection
       ? collectionBindingName(manifest.collection)
       : "DB");
-  // Recorded in the deployment log only — wrangler reads the real
+  // Recorded in the deployment log only. Wrangler reads the real
   // migrations_dir from this binding's entry in wrangler.jsonc.
   const migrationsDir =
     schema === "collection-v2" ? "collection-migrations" : "migrations";
@@ -132,7 +132,7 @@ function main() {
 
   try {
     console.log(
-      `Executing exactly one 'wrangler d1 execute --file' against env=${env} binding=${binding} — D1 wraps the entire file ` +
+      `Executing exactly one 'wrangler d1 execute --file' against env=${env} binding=${binding}: D1 wraps the entire file ` +
         "in one implicit transaction, so any failure mid-file rolls back and the prior content is untouched.",
     );
     run("npx", [

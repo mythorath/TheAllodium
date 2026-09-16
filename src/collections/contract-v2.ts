@@ -1,4 +1,4 @@
-/** Collection module publication contract v2 — collection-neutral D1 rows.
+/** Collection module publication contract v2, collection-neutral D1 rows.
  * Psychotherapy continues to use src/contract.ts (v1.2). */
 
 export const MODULE_CONTRACT_VERSION = "2" as const;

@@ -192,7 +192,7 @@ const DECADE_SELECT_EXPR = `CASE WHEN e.published_date >= '2020' AND e.published
 /**
  * ANDs together one condition per non-empty facet dimension (all assumed to
  * reference the `entries e` alias). `excludeDimension` leaves that one
- * dimension's own filter out — used when computing that dimension's own
+ * dimension's own filter out: used when computing that dimension's own
  * cross-filtered counts, so a facet never filters itself out of its own
  * count query. Returns an empty clause (no leading AND/WHERE) when nothing
  * is active.
@@ -294,7 +294,7 @@ function toOptions(rows: CountRow[], selected: string[]): FacetOption[] {
 /**
  * Computes cross-filtered facet value counts: each dimension's counts
  * reflect the text-search match (if any) plus every *other* active
- * dimension's filter, but never that dimension's own filter — so a user can
+ * dimension's filter, but never that dimension's own filter, so a user can
  * see which values would still return results if added to (not replacing)
  * the current selection. Zero-count values simply don't appear (GROUP BY
  * naturally excludes them), matching how most faceted search UIs hide dead

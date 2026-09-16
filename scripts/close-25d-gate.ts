@@ -26,7 +26,7 @@ doors, topic/hexaflex/type/decade facets, and directory landings. The
 form still required a Search click for every facet change, pagination
 was Previous/Next only, and "related entries" on an entry page had no
 way to open that neighborhood as a search. Phase 2.5D is interaction
-polish on that engine — progressive enhancement, a compact pager, and
+polish on that engine, progressive enhancement, a compact pager, and
 \`?like={id}\` as a neighbors search mode.
 
 No migration, no contract version bump, no ACT exporter change, no
@@ -51,7 +51,7 @@ There are still no numbered page buttons.
 
 ## Neighbors search (\`?like={id}\`)
 
-Internal mode name is \`"neighbors"\` — not the SQL LIKE fallback
+Internal mode name is \`"neighbors"\`: not the SQL LIKE fallback
 (\`fallback=1\` → \`mode: "like"\`). Query param is \`like\`.
 
 If trimmed \`q\` is non-empty, keyword search wins and \`like\` is
@@ -62,7 +62,7 @@ Relevance/default order is \`n.rank ASC, n.neighbor_id ASC, e.id ASC\`
 (same neighborhood as \`getRelatedEntries()\`, plus the locked id
 tiebreaker). Other sorts reorder the subset through existing
 \`sortOrderBy\`. The seed entry is not in the set. Missing id or zero
-neighbors: \`mode: "neighbors"\`, \`total === 0\`, honest copy — not a
+neighbors: \`mode: "neighbors"\`, \`total === 0\`, honest copy, not a
 404.
 
 The entry page grows a "More like this" link to
@@ -103,7 +103,7 @@ auto-submit and Clear filters preserve it. Clear-filters keeps \`kind\`,
 - \`source_org\` facet, author browse, abstract FTS, LLM / Phase 3.
 - Numbered page button lists, facet auto-submit on corpus radios,
   changing \`PAGE_SIZE\`.
-- Deploying the updated Worker code to staging/production — a separate,
+- Deploying the updated Worker code to staging/production: a separate,
   deliberate action outside any phase gate.
 
 ## Stop

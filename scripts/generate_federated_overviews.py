@@ -45,7 +45,7 @@ USER_AGENT = "TheAllodium-federated-overviews/0.1 (https://theallodium.org; mail
 
 SYSTEM_PROMPT = """You write short, neutral overviews for a public scholarly
 index (The Allodium Open Index). Readers use these to decide whether to open
-the original paper — they are NOT clinical advice and not a substitute for
+the original paper. They are NOT clinical advice and not a substitute for
 the source.
 
 Rules:
@@ -496,7 +496,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             generated += 1
             print(f"{doi}\tok\tsource={source_note}", flush=True)
-        except Exception as exc:  # noqa: BLE001 — keep going; never print abstract
+        except Exception as exc:  # noqa: BLE001. Keep going; never print abstract
             errors += 1
             print(f"{doi}\terror\t{type(exc).__name__}", flush=True)
         if args.sleep:

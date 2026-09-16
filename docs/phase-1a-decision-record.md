@@ -27,7 +27,7 @@ Generated: 2026-08-07T00:27:56.931Z
 | Snapshot replace (fixture scale) | In-place: delete content tables → insert → drop/recreate FTS. No binding swap required at spike scale. |
 | Abstract policy | Off by default; rights review required before production enablement |
 
-## Latency evidence (fixture only — not a 5,643-row prediction)
+## Latency evidence (fixture only: not a 5,643-row prediction)
 
 Local smoke:
 ```json

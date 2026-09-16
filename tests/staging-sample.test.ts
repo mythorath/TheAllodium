@@ -133,7 +133,7 @@ describe("staging sample (real ACT data) - repository + routes", () => {
     await waitOnExecutionContext(ctx);
     expect(res.status).toBe(200);
     const html = await res.text();
-    expect(html).toContain("—");
+    expect(html).toContain("Not recorded");
   });
 
   it("ranks real FTS keyword results and paginates correctly", async () => {

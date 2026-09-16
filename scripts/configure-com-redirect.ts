@@ -12,7 +12,7 @@ function usage(): never {
     `Usage: configure-com-redirect.ts --yes\n` +
       `  Idempotently ensures placeholder DNS records exist (so the zone is reachable at all) and\n` +
       `  configures a 301 redirect from ${COM_DOMAIN} to ${SITE_URL} via a zone-level Single Redirect\n` +
-      "  (Dynamic) rule — no Worker involved, not billed as Worker requests.",
+      "  (Dynamic) rule, no Worker involved, not billed as Worker requests.",
   );
 }
 
@@ -26,13 +26,13 @@ async function main() {
   const zone = await getZoneByName(COM_DOMAIN);
   if (zone.status !== "active") {
     throw new Error(
-      `Zone ${COM_DOMAIN} is not active (status=${zone.status}) — its nameservers likely aren't pointed at Cloudflare yet.`,
+      `Zone ${COM_DOMAIN} is not active (status=${zone.status}): its nameservers likely aren't pointed at Cloudflare yet.`,
     );
   }
   console.log(`  zone id=${zone.id}, status=${zone.status}`);
 
   // A zone with zero DNS records has no hostname for Cloudflare's edge to
-  // route to at all — an edge-side Ruleset (like this redirect) is
+  // route to at all, an edge-side Ruleset (like this redirect) is
   // unreachable without at least one proxied record. This placeholder A
   // record never needs to resolve to a real origin: the redirect rule
   // below runs before any request would reach it.
@@ -49,7 +49,7 @@ async function main() {
   }
 
   // The http_request_dynamic_redirect phase has exactly one ruleset per
-  // zone (the "entrypoint" ruleset) — PUTing the full desired rule list
+  // zone (the "entrypoint" ruleset): PUTing the full desired rule list
   // replaces it wholesale, which is what makes this safely re-runnable.
   const rule = {
     action: "redirect",

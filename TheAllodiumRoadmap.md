@@ -1,6 +1,6 @@
 ---
 name: Database sharing strategy
-overview: Build The Allodium as a Cloudflare Worker with D1 — entries are database rows, not files — so the architecture scales unchanged from the 5,643-row psychotherapy collection to future 250,000+ row collections, with Selis doing heavy lifting at build time and an optional live GPU layer over Tunnel.
+overview: Build The Allodium as a Cloudflare Worker with D1. Entries are database rows, not files, so the architecture scales unchanged from the 5,643-row psychotherapy collection to future 250,000+ row collections, with Selis doing heavy lifting at build time and an optional live GPU layer over Tunnel.
 todos:
   - id: schema-design
     content: Design the D1 entry schema and FTS5 virtual table for the psychotherapy collection, mirroring the public-safe fields already in export_showcase.py
@@ -62,17 +62,17 @@ todos:
 isProject: false
 ---
 
-# The Allodium — Worker + D1 architecture
+# The Allodium: Worker + D1 architecture
 
 ## What changed from the first draft, and why
 
-The original plan pre-rendered one static HTML file per entry (Next.js `generateStaticParams`, deployed to Cloudflare Pages). That works at 5,643 rows but breaks by construction at 250,000 — no amount of file stripping, subdomain-splitting, or Pages-tier upgrade fixes a problem that is architectural. **Entries need to be database rows queried on demand, not files baked at build time.**
+The original plan pre-rendered one static HTML file per entry (Next.js `generateStaticParams`, deployed to Cloudflare Pages). That works at 5,643 rows but breaks by construction at 250,000, no amount of file stripping, subdomain-splitting, or Pages-tier upgrade fixes a problem that is architectural. **Entries need to be database rows queried on demand, not files baked at build time.**
 
 Two corrections to the plan's assumptions, confirmed against current Cloudflare docs:
 
 - The static-file ceiling is **per Worker version**, not per domain and not even meaningfully per Pages project in the way originally assumed. Domains are irrelevant to it; one Worker can serve many domains, or many Workers one domain.
-- **Pages and Workers Static Assets are different products with different ceilings.** Pages stays capped at 20,000 files even on a paid Workers plan — confirmed by a live Cloudflare Community thread where a 51,000-file Pages deployment failed despite Workers Paid. The 100,000-file tier (Wrangler ≥ 4.34.0) only exists on **Workers Static Assets**. Since dynamic D1-backed routes require Workers anyway, this settles which product to build on.
-- A domain-naming correction for later: a collection subdomain would be `programming.theallodium.org`, not `theallodium.programming.org` — the latter would be a subdomain of someone else's `programming.org`. Subdomains of your own zone are free and unlimited either way, but this no longer matters much: since entries aren't files anymore, there is no file-budget reason to prefer subdomains over path-based routing. Path-based routing (`theallodium.org/psychotherapy/`) consolidates SEO authority with no downside now, so that decision is settled in favor of paths.
+- **Pages and Workers Static Assets are different products with different ceilings.** Pages stays capped at 20,000 files even on a paid Workers plan. Confirmed by a live Cloudflare Community thread where a 51,000-file Pages deployment failed despite Workers Paid. The 100,000-file tier (Wrangler ≥ 4.34.0) only exists on **Workers Static Assets**. Since dynamic D1-backed routes require Workers anyway, this settles which product to build on.
+- A domain-naming correction for later: a collection subdomain would be `programming.theallodium.org`, not `theallodium.programming.org`. The latter would be a subdomain of someone else's `programming.org`. Subdomains of your own zone are free and unlimited either way, but this no longer matters much: since entries aren't files anymore, there is no file-budget reason to prefer subdomains over path-based routing. Path-based routing (`theallodium.org/psychotherapy/`) consolidates SEO authority with no downside now, so that decision is settled in favor of paths.
 
 ## Architecture
 
@@ -101,8 +101,8 @@ Workers Static Assets, confirmed from `developers.cloudflare.com/workers/platfor
 
 - Static asset files per Worker version: 20,000 free, 100,000 paid, requires Wrangler ≥ 4.34.0
 - Individual file size: 25 MiB on both tiers
-- Workers per account: 100 free, 500 paid — never a real constraint across four collections
-- Worker script size: 3 MB free, 10 MB paid — the reason to prefer a lean server framework over a React/Next runtime for this Worker specifically
+- Workers per account: 100 free, 500 paid, never a real constraint across four collections
+- Worker script size: 3 MB free, 10 MB paid, the reason to prefer a lean server framework over a React/Next runtime for this Worker specifically
 
 D1, confirmed from `developers.cloudflare.com/d1/platform/pricing` and `/limits`:
 
@@ -112,7 +112,7 @@ D1, confirmed from `developers.cloudflare.com/d1/platform/pricing` and `/limits`
 - Maximum `d1 execute` file import: 5 GB
 - FTS5 is supported (confirmed by Cloudflare staff and the official SQL statements doc), with one caveat below
 
-Sizing against the roadmap: 250,000 rows of link-plus-metadata at roughly 1 KB per row is about 250 MB, doubling with an FTS5 index to roughly 500 MB. That sits right at the free tier's 500 MB per-database ceiling. Practically: the psychotherapy collection (5,643 rows) launches free with room to spare, and a single 250,000-row collection can likely still launch free but with no slack — the $5/month plan is the natural upgrade point when a collection nears six figures, not a day-one requirement.
+Sizing against the roadmap: 250,000 rows of link-plus-metadata at roughly 1 KB per row is about 250 MB, doubling with an FTS5 index to roughly 500 MB. That sits right at the free tier's 500 MB per-database ceiling. Practically: the psychotherapy collection (5,643 rows) launches free with room to spare, and a single 250,000-row collection can likely still launch free but with no slack. The $5/month plan is the natural upgrade point when a collection nears six figures, not a day-one requirement.
 
 ## The FTS5 caveat
 
@@ -120,13 +120,13 @@ D1's FTS5 support has a documented instability: shadow tables (`_data`, `_idx`, 
 
 It does not apply cleanly here: Allodium's writes are **batch imports from Selis**, not live per-row user writes. The mitigation is to rebuild the FTS5 table fully on each import (drop and recreate from the content table) rather than maintaining it incrementally via triggers, which sidesteps the exact failure mode that was reported. Keep a `LIKE`-based fallback query path regardless, as a hedge.
 
-One related operational detail: **D1 does not support database export while virtual tables exist.** The R2 dataset dump workflow needs to drop the FTS5 table before exporting a shareable SQLite file, then recreate it afterward — a scripted step, not a blocker.
+One related operational detail: **D1 does not support database export while virtual tables exist.** The R2 dataset dump workflow needs to drop the FTS5 table before exporting a shareable SQLite file, then recreate it afterward, a scripted step, not a blocker.
 
 ## Framework choice for the Worker
 
-Open decision, with a lean recommendation: given the 3 MB (free) / 10 MB (paid) Worker script size ceiling, and that entry and search pages are read-only reference content with no need for client-side React hydration, a lightweight server-rendered framework (for example Hono) is the safer default for Allodium's Worker specifically. Next.js via the OpenNext Cloudflare adapter is a viable alternative if reusing MythsMind's React components matters more than bundle size — but it is not the default recommendation here, and it does not affect MythsMind, which stays on classic Pages regardless.
+Open decision, with a lean recommendation: given the 3 MB (free) / 10 MB (paid) Worker script size ceiling, and that entry and search pages are read-only reference content with no need for client-side React hydration, a lightweight server-rendered framework (for example Hono) is the safer default for Allodium's Worker specifically. Next.js via the OpenNext Cloudflare adapter is a viable alternative if reusing MythsMind's React components matters more than bundle size, but it is not the default recommendation here, and it does not affect MythsMind, which stays on classic Pages regardless.
 
-## Phase 1 — Foundation
+## Phase 1: Foundation
 
 Goal: the house exists, and the first collection is queryable, not pre-rendered.
 
@@ -135,12 +135,12 @@ Goal: the house exists, and the first collection is queryable, not pre-rendered.
 - Scaffold the Allodium Worker: static assets for the shell (landing, `/standard/`, search UI) plus dynamic routes for entries and queries, path-routed at `theallodium.org/psychotherapy/*`
 - Build the export-to-D1-import pipeline, run from Selis, producing a SQLite file under the 5 GB `d1 execute` ceiling
 - Stand up FTS5 with the full-rebuild-on-import strategy, plus the `LIKE` fallback
-- Write `/standard/` — the methodology page. No competitor in this space publishes their link-integrity and DOI-identity provenance; this is the differentiator
+- Write `/standard/`: the methodology page. No competitor in this space publishes their link-integrity and DOI-identity provenance; this is the differentiator
 - Add JSON-LD per entry, a sitemap generated from D1, `robots.txt`, `llms.txt`
 
-## Phase 2 — Make it genuinely useful
+## Phase 2: Make it genuinely useful
 
-Goal: fast, faceted, and correct — with Selis asleep.
+Goal: fast, faceted, and correct, with Selis asleep.
 
 - Facet queries against D1: modality, client-facing versus clinician-facing, free versus paywalled via `oa_status`, stored versus link-only, combined with FTS5 keyword search, uncapped
 - Precomputed related entries: run kNN over [`backend/data/embeddings.npy`](backend/data/embeddings.npy) at build time, write neighbor pairs into a D1 table
@@ -150,7 +150,7 @@ Goal: fast, faceted, and correct — with Selis asleep.
 
 Everything here survives Selis being offline; only the ingestion step depends on it.
 
-## Phase 3 — The Selis live layer
+## Phase 3: The Selis live layer
 
 Goal: real intelligence, built so its absence is a shrug.
 
@@ -161,18 +161,18 @@ Goal: real intelligence, built so its absence is a shrug.
 
 Baseline search always works. It gets smarter when Selis is on.
 
-## Phase 4 — Distribution beyond the website
+## Phase 4: Distribution beyond the website
 
 Goal: usable by people and machines that never visit.
 
-- Publish full dataset dumps (SQLite, CSV, Parquet) of the public-safe catalog to R2 — 10 GB free storage, zero egress fees, meaning bulk downloads cost nothing regardless of volume. An allodium should let visitors cart the whole archive out the front gate
+- Publish full dataset dumps (SQLite, CSV, Parquet) of the public-safe catalog to R2: 10 GB free storage, zero egress fees, meaning bulk downloads cost nothing regardless of volume. An allodium should let visitors cart the whole archive out the front gate
 - Publish a versioned, DOI'd metadata-only dataset to Zenodo with a dataset card, mirrored to Hugging Face, linking back to the R2 dumps for bulk access
-- Add MCP routes to the same Worker, querying the same D1 database — always up regardless of Selis, and no longer a separate deployment to maintain
+- Add MCP routes to the same Worker, querying the same D1 database: always up regardless of Selis, and no longer a separate deployment to maintain
 - Shrink the cabinet's `/archive` to a doorway
 
-## Phase 5 — Repeatable playbook for future collections
+## Phase 5: Repeatable playbook for future collections
 
-Start every new collection as a new D1 binding and a new path route on the existing Allodium Worker: one codebase, `/psychotherapy`, `/photography`, and so on, routed internally. Split a collection into its own Worker, attached to the same zone with a route pattern, only if its code genuinely diverges enough to warrant separate deployment — the URL never changes, visitors never notice. Worker-count ceilings (100 free, 500 paid) are never the constraint; code complexity is.
+Start every new collection as a new D1 binding and a new path route on the existing Allodium Worker: one codebase, `/psychotherapy`, `/photography`, and so on, routed internally. Split a collection into its own Worker, attached to the same zone with a route pattern, only if its code genuinely diverges enough to warrant separate deployment, the URL never changes, visitors never notice. Worker-count ceilings (100 free, 500 paid) are never the constraint; code complexity is.
 
 One D1 database per collection is the right shape regardless of Worker topology: each D1 database processes queries single-threaded, so per-collection databases also spread query load rather than contending on one.
 
@@ -180,7 +180,7 @@ One D1 database per collection is the right shape regardless of Worker topology:
 
 Roughly zero to five dollars a month across the entire four-collection roadmap, plus the two domains already purchased.
 
-- Workers Static Assets: unlimited bandwidth, free tier covers the file counts at issue here comfortably for any single collection under about 20,000 rows, and 100,000 with Wrangler ≥ 4.34.0 on the $5/month plan if a collection's static shell ever needs it — though the shell itself stays tiny regardless, since entries are no longer files
+- Workers Static Assets: unlimited bandwidth, free tier covers the file counts at issue here comfortably for any single collection under about 20,000 rows, and 100,000 with Wrangler ≥ 4.34.0 on the $5/month plan if a collection's static shell ever needs it. Though the shell itself stays tiny regardless, since entries are no longer files
 - D1: free through roughly six figures of rows per collection per the sizing math above; $5/month Workers Paid removes the ceiling entirely
 - R2: 10 GB free, zero egress, covers media plus dataset dumps
 - Redirect Rules for `.com` to `.org` run at the edge, not billed as Worker requests
@@ -197,11 +197,11 @@ Publish the index, never the contents.
 
 ## Where this sits against the field
 
-- Psychology Tools — around 3,500 tools in 70 languages, commercial and paywalled, no API
-- Therapist Aid — freemium worksheets, closed
-- Metapsy — versioned meta-analytic databases with minted DOIs, researcher-only, no experience layer
-- EBP Directory — registry crosswalk shipped as a web app plus MCP server, no full text
-- CBT Toolkit — 217 records, CC BY-NC-SA
+- Psychology Tools: around 3,500 tools in 70 languages, commercial and paywalled, no API
+- Therapist Aid: freemium worksheets, closed
+- Metapsy: versioned meta-analytic databases with minted DOIs, researcher-only, no experience layer
+- EBP Directory: registry crosswalk shipped as a web app plus MCP server, no full text
+- CBT Toolkit: 217 records, CC BY-NC-SA
 
 The unoccupied position is cross-modality breadth, published verification provenance, an architecture that scales to millions of rows without a rewrite, and an MCP surface. The experiential layer stays on MythsMind.
 

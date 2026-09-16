@@ -5,8 +5,8 @@ Generated: 2026-08-12T23:31:49.898Z
 ## What this phase proved
 
 Phase 2.5A made the catalog honest about papers vs. materials. The
-dimensions that actually discriminate *within* each side — topic tags,
-hexaflex processes, resource type, and publication decade — were already
+dimensions that actually discriminate *within* each side, topic tags,
+hexaflex processes, resource type, and publication decade. Were already
 in D1 and already in FTS meta, but they were not filterable and tags on
 the entry page were not links. Phase 2.5B turns those unused columns into
 facets and makes topic/hexaflex tags a way to start a search.
@@ -19,7 +19,7 @@ sort tiebreaker from the link-integrity work is unchanged.
 ## Four new repeatable facets
 
 `FacetFilters` gained `topic`, `hexaflex`, `type`, and `decade`.
-OR within a dimension, AND across dimensions, cap 25 — same rules as
+OR within a dimension, AND across dimensions, cap 25, same rules as
 modality/audience.
 
 - `topic` / `hexaflex` use `EXISTS (entry_tags JOIN tags …)` filtered
@@ -43,7 +43,7 @@ kind, no facets) is unchanged.
 ## Clickable tags
 
 On the entry page, `category === "topic"` and `"hexaflex"` become
-links to `/psychotherapy/search?topic=…` or `?hexaflex=…` — a fresh
+links to `/psychotherapy/search?topic=…` or `?hexaflex=…`: a fresh
 search, preserving nothing (not even `kind`). Other categories
 (modality, format, skill modules) stay plain text. No generic `?tag=`
 param.
@@ -75,11 +75,11 @@ param.
 ## Explicitly deferred to 2.5C+
 
 - Directory landings (`/psychotherapy/topics`, `/psychotherapy/hexaflex`),
-  home directory strip, nav/sitemap — 2.5C.
-- Facet auto-submit, compact pagination, `?like={id}` — 2.5D.
+  home directory strip, nav/sitemap, 2.5C.
+- Facet auto-submit, compact pagination, `?like={id}`: 2.5D.
 - Within-modality process tags (CBT skill, DBT module, …) as global facets.
 - `source_org` facet, author browse, abstract FTS, LLM.
-- Deploying the updated Worker code to staging/production — a separate,
+- Deploying the updated Worker code to staging/production: a separate,
   deliberate action outside any phase gate.
 
 ## Stop

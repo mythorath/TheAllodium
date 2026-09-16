@@ -14,12 +14,12 @@ config();
  * environment, keyed exactly as the Worker's `GET /og/:filename` route
  * reads them: `{checksum}/{entry id}.png`. Concurrent REST PUTs (a plain
  * `wrangler r2 object put` per file would be far too slow at ~5,643 files,
- * each spawning a new CLI process) via a small bounded worker-pool — no new
+ * each spawning a new CLI process) via a small bounded worker-pool: no new
  * dependency, matching this project's existing hand-rolled-helper style
  * (see cli.ts's own `--flag` parser).
  *
  * Idempotent: which objects already exist is determined by one upfront
- * paginated listing of the checksum prefix (not a HEAD request per file —
+ * paginated listing of the checksum prefix (not a HEAD request per file,
  * at ~5,643 files that would double the request count against the R2 REST
  * API's real, observed rate limit of 1,200 requests/300s, which a first,
  * naive per-file-HEAD version of this script hit reproducibly around the
@@ -27,7 +27,7 @@ config();
  * and other transient failures, since even PUT-only traffic at concurrency
  * 12 can occasionally outrun the limit. After a fully successful upload,
  * any *other* checksum prefix already in the bucket is deleted so R2
- * storage doesn't grow unbounded across promotions — the new set is always
+ * storage doesn't grow unbounded across promotions. The new set is always
  * uploaded in full before the old one is removed, so an interrupted run
  * never leaves the bucket without a complete, servable generation.
  */
@@ -43,7 +43,7 @@ function usage(): never {
 /** The R2 REST API's observed rate limit is 1,200 requests/300s (~4/s), but
  * a burst that trips Cloudflare's general abuse-prevention throttle (error
  * 971, "Please wait and consider throttling your request speed") takes far
- * longer than a few seconds of backoff to clear — observed over a minute of
+ * longer than a few seconds of backoff to clear: observed over a minute of
  * every request failing, including plain LIST calls. Low concurrency plus a
  * fixed per-request pacing delay (see PACING_MS below) keeps sustained
  * throughput well under the limit so that throttle is never triggered,
@@ -55,7 +55,7 @@ function bucketNameFor(env: "staging" | "production"): string {
   return env === "production" ? "theallodium-og-cards-production" : "theallodium-og-cards-staging";
 }
 
-/** Minimal bounded-concurrency worker pool — no new dependency. Each of
+/** Minimal bounded-concurrency worker pool, no new dependency. Each of
  * `concurrency` lanes pulls the next item off a shared cursor until the
  * list is exhausted, so slow uploads don't block fast ones behind them. */
 async function runPool<T>(
@@ -82,7 +82,7 @@ function sleep(ms: number): Promise<void> {
 const MAX_ATTEMPTS = 8;
 
 /** Retries transient failures (429 rate-limiting, 5xx, and network errors)
- * with exponential backoff — the R2 REST API's observed limit is 1,200
+ * with exponential backoff: the R2 REST API's observed limit is 1,200
  * requests/300s, easily exceeded by a concurrency-12 pool over ~5,643
  * objects without this. */
 async function withRetry<T>(description: string, fn: () => Promise<T>): Promise<T> {
@@ -195,11 +195,11 @@ async function main() {
   const manifestRows = remoteQuery(env, "SELECT checksum FROM snapshot_manifest WHERE id = 1;");
   const liveChecksum = (manifestRows.rows[0] as { checksum?: string } | undefined)?.checksum;
   if (!liveChecksum) {
-    throw new Error(`No snapshot_manifest row found on env=${env} — promote a snapshot first.`);
+    throw new Error(`No snapshot_manifest row found on env=${env}, promote a snapshot first.`);
   }
   if (liveChecksum !== checksum) {
     throw new Error(
-      `--checksum ${checksum} does not match env=${env}'s live snapshot_manifest.checksum ${liveChecksum} — ` +
+      `--checksum ${checksum} does not match env=${env}'s live snapshot_manifest.checksum ${liveChecksum}, ` +
         "refusing to upload cards for a different snapshot generation than what's actually deployed.",
     );
   }
@@ -237,7 +237,7 @@ async function main() {
     prunedCount += count;
   }
   if (otherPrefixes.size === 0) {
-    console.log("  no previous checksum prefix found — nothing to prune");
+    console.log("  no previous checksum prefix found, nothing to prune");
   }
 
   appendDeploymentsLog({

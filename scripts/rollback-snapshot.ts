@@ -35,7 +35,7 @@ function findTargetPromotion(
   });
   if (promotions.length === 0) {
     throw new Error(
-      `No 'promote' entries found for env=${env} binding=${binding} in deployments/log.json — nothing to roll back.`,
+      `No 'promote' entries found for env=${env} binding=${binding} in deployments/log.json, nothing to roll back.`,
     );
   }
   if (to) {
@@ -58,7 +58,7 @@ function main() {
   if (env !== "staging" && env !== "production") usage();
   if (!booleans.has("yes")) {
     throw new Error(
-      "Refusing to roll back without --yes — this destructively overwrites the target database's current content.",
+      "Refusing to roll back without --yes, this destructively overwrites the target database's current content.",
     );
   }
 
@@ -68,7 +68,7 @@ function main() {
   const target = findTargetPromotion(env, flags.to, binding);
   const preBookmark = target.preBookmark as string | undefined;
   if (!preBookmark) {
-    throw new Error(`Target promote entry (at=${target.at}) has no preBookmark recorded — cannot roll back to it.`);
+    throw new Error(`Target promote entry (at=${target.at}) has no preBookmark recorded, cannot roll back to it.`);
   }
 
   console.log(

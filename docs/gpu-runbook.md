@@ -22,8 +22,8 @@ curl -sS -m 5 http://127.0.0.1:8421/api/health
 
 HTTP 200 with `"status":"ok"` means the tunnel, the unit, and Ollama are
 up, and the preferred model is listed. HTTP 200 with `"status":"degraded"`
-means the unit is up but Ollama is missing or the model is not listed —
-that is still a pass for `npm run smoke:gpu`. Connection error or
+means the unit is up but Ollama is missing or the model is not listed.
+That is still a pass for `npm run smoke:gpu`. Connection error or
 non-200 means the origin is unreachable.
 
 `npm run smoke:gpu` writes `evidence/gpu-smoke.json`. The daily
@@ -33,7 +33,7 @@ run if GPU smoke fails.
 
 ## Restart order
 
-`cloudflared` is independent of the GPU unit — do not restart the tunnel
+`cloudflared` is independent of the GPU unit. Do not restart the tunnel
 to recover Ollama or the FastAPI origin.
 
 1. `sudo systemctl restart ollama`
@@ -83,7 +83,7 @@ Visitor IPs are capped on `theallodium.org/psychotherapy/search?ask=`
 `npm run configure:ask-ratelimit`. If the zone plan is only entitled to a
 10s counting period, the script records that fallback (20/10s) in
 `evidence/ask-ratelimit.json`. Do **not** rate-limit
-`gpu.theallodium.org` itself — Worker fetches share Cloudflare egress
+`gpu.theallodium.org` itself: Worker fetches share Cloudflare egress
 IPs, so an origin cap would collapse every visitor into one bucket.
 A 429 is the abuse path; it does not fall through to keyword search.
 Timeout / Selis-asleep still does.

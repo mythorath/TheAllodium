@@ -46,7 +46,7 @@ environment variable printed by `--help`. HTTPS, no embedded credentials, a
 timeout, and a byte limit are enforced.
 
 The OpenAlex URLs must point to complete, already captured small-entity JSON
-files—not an API's first results page. This executable
+files, not an API's first results page. This executable
 download command covers every input family (set the URL environment variables
 listed by `--help` first):
 

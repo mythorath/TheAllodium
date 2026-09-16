@@ -6,7 +6,7 @@ Generated: 2026-08-07T01:21:50.201Z
 
 Phase 1A proved the Hono/D1/FTS mechanics against a 12-row **synthetic**
 fixture. Phase 1C proves the same route/search/provenance code paths against
-a **real, ACT-sourced representative sample** — no new Worker code was
+a **real, ACT-sourced representative sample**, no new Worker code was
 required, since `src/index.tsx`, `src/db/repository.ts`, and
 `src/views/pages.tsx` already implemented everything this phase needed to
 validate.

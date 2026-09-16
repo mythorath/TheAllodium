@@ -67,7 +67,7 @@ export function diffSnapshotLinks(
   let overlap = 0;
 
   if (liveCount === 0) {
-    console.log(`  env=${env} currently has no live entries (first promotion) — nothing to diff against.`);
+    console.log(`  env=${env} currently has no live entries (first promotion): nothing to diff against.`);
   } else {
     const liveRows = remoteQuery(env, "SELECT id, title, canonical_url FROM entries;", binding);
     for (const row of liveRows.rows) {
@@ -88,9 +88,9 @@ export function diffSnapshotLinks(
   }
 
   if (changes.length === 0) {
-    console.log("No id kept its id but changed title/canonical_url — safe to promote.");
+    console.log("No id kept its id but changed title/canonical_url, safe to promote.");
   } else {
-    console.log(`\n${changes.length} field change(s) under a STABLE id — review before promoting:`);
+    console.log(`\n${changes.length} field change(s) under a STABLE id, review before promoting:`);
     for (const change of changes) {
       console.log(`  [${change.field}] ${change.id}\n    was: ${change.before}\n    now: ${change.after}`);
     }
@@ -117,7 +117,7 @@ export function diffSnapshotLinks(
 
   if (changes.length > 0 && !opts?.acknowledge) {
     throw new Error(
-      `${changes.length} entry link(s) would silently change under a stable id — review ${evidencePath}, ` +
+      `${changes.length} entry link(s) would silently change under a stable id, review ${evidencePath}, ` +
         "then re-run with --acknowledge (or pass --acknowledge-link-changes to promote-snapshot.ts) once " +
         "you've confirmed these are intentional (e.g. a re-crawled canonical_url), not a data bug.",
     );

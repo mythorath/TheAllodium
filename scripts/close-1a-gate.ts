@@ -23,7 +23,7 @@ function main() {
 
   if (!staging) {
     throw new Error(
-      "Missing evidence/staging-smoke.json — run npm run db:create:staging && npm run db:migrate:staging && npm run db:smoke:staging first",
+      "Missing evidence/staging-smoke.json. Run npm run db:create:staging && npm run db:migrate:staging && npm run db:smoke:staging first",
     );
   }
 
@@ -56,7 +56,7 @@ Generated: ${new Date().toISOString()}
 | Snapshot replace (fixture scale) | In-place: delete content tables → insert → drop/recreate FTS. No binding swap required at spike scale. |
 | Abstract policy | Off by default; rights review required before production enablement |
 
-## Latency evidence (fixture only — not a 5,643-row prediction)
+## Latency evidence (fixture only: not a 5,643-row prediction)
 
 Local smoke:
 \`\`\`json

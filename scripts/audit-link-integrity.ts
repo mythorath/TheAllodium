@@ -128,7 +128,7 @@ async function main() {
   const results: CheckResult[] = [];
   function record(name: string, ok: boolean, detail?: string) {
     results.push({ name, ok, detail });
-    console.log(`${ok ? "✓" : "✗"} ${name}${detail ? ` — ${detail}` : ""}`);
+    console.log(`${ok ? "✓" : "✗"} ${name}${detail ? `, ${detail}` : ""}`);
   }
 
   console.log(`Auditing link integrity for ${base}${env ? ` (env=${env})` : ""}…\n`);
@@ -239,7 +239,7 @@ async function main() {
 
   if (!bounded) {
     console.warn(
-      "  No modality with more than one page of results was found — skipping order-stability and pagination-completeness checks (dataset too small, e.g. a local dev fixture).",
+      "  No modality with more than one page of results was found, skipping order-stability and pagination-completeness checks (dataset too small, e.g. a local dev fixture).",
     );
   } else {
     record("discovered a bounded modality for pagination checks", true, `modality=${bounded.value}, count=${bounded.count}`);

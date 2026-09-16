@@ -15,7 +15,7 @@ Two independent bugs in ACT's PubMed Central harvester
    for `pub-id-type="pmc"`, which essentially never matches. In practice
    this lookup always returned nothing.
 2. **Unsafe positional fallback.** When the (always-failing) lookup above
-   came back empty, the code fell back to `f"PMC{pmc_ids[idx]}"` — the
+   came back empty, the code fell back to `f"PMC{pmc_ids[idx]}"`: the
    `idx`-th id of the *originally requested* batch, assumed to line up
    with the `idx`-th `<article>` in NCBI's response. That assumption isn't
    safe: a single missing/embargoed/moved id in a batch shifts every
@@ -24,7 +24,7 @@ Two independent bugs in ACT's PubMed Central harvester
 
 Because bug 1 always fired, bug 2's positional guess effectively became
 the *only* way PMCIDs were ever assigned for anything harvested through
-this path (`source_org = 'PubMed Central'`, 2,316 rows) — correct only by
+this path (`source_org = 'PubMed Central'`, 2,316 rows): correct only by
 coincidence when a batch happened to come back in request order. DOI
 extraction used the standard, always-present `pub-id-type="doi"` and was
 never affected, which is why the entry's title/DOI/identity verification
@@ -39,23 +39,23 @@ The bug did not affect the 143 rows harvested via Europe PMC
 - `scripts/act_lib/crawl/research.py`: extraction now looks for
   `pub-id-type` in `("pmcid", "pmc")`, scoped to
   `front/article-meta` (so a `<sub-article>`'s own ids can never be
-  picked up), and the positional fallback was removed entirely — if an
+  picked up), and the positional fallback was removed entirely, if an
   article's own id truly isn't present, `pmcid` stays unset rather than
   guessed.
-- `scripts/fix_pmcid_conflicts.py` (new): no-network regression check —
+- `scripts/fix_pmcid_conflicts.py` (new): no-network regression check,
   flags any `pmcid` shared across rows with different DOIs. Safe to
   re-run anytime; a clean corpus reports zero conflicts.
 - `scripts/verify_pmcid_doi.py` (new): live check against NCBI's
-  [PMC ID Converter](https://pmc.ncbi.nlm.nih.gov/tools/idconv/) —
+  [PMC ID Converter](https://pmc.ncbi.nlm.nih.gov/tools/idconv/),
   for every stored `pmcid`, confirms NCBI actually associates it with the
   row's own DOI. Catches wrong PMCIDs that don't happen to collide with
   another row in our corpus (which is what the originally reported entry
-  was — the paper that PMC13240989 really belongs to was never harvested
+  was, the paper that PMC13240989 really belongs to was never harvested
   into our database at all, so `fix_pmcid_conflicts.py` alone couldn't
   have caught it).
 
 Both scripts only ever *clear* an untrustworthy `pmcid` (and, when it was
-derived from that same wrong id, `source_url`) — they never write a
+derived from that same wrong id, `source_url`). They never write a
 guessed replacement. `act_lib/catalog.py`'s `_canonical_link()` then falls
 back to the row's independently-verified `oa_url`, or its DOI resolver,
 both already validated separately from PMCID.
@@ -76,7 +76,7 @@ both already validated separately from PMCID.
 ## Promotion
 
 - Re-exported the snapshot from the corrected `act.db`
-  (`export_allodium_snapshot.py`) — same 5,643 public-safe entries,
+  (`export_allodium_snapshot.py`): same 5,643 public-safe entries,
   same tag/verification/neighbor counts as before the fix.
 - `npm run diff:links` against the live corpus showed exactly
   **1,885 `canonical_url` changes, 0 `title` changes** on entries already
@@ -93,14 +93,14 @@ both already validated separately from PMCID.
 ## Follow-ups (not done here)
 
 - The ~220 rows still carrying a `pmcid` were independently confirmed
-  correct against NCBI (or intentionally left alone — no DOI to check, or
+  correct against NCBI (or intentionally left alone, no DOI to check, or
   NCBI didn't resolve the id). No action needed unless new harvests
   reintroduce a mismatch, which the two verification scripts above would
   now catch.
 - Recovering the *true* PMCID for the 2,374 corrected rows (rather than
   leaving `pmcid` empty) would require a per-DOI reverse lookup; out of
   scope here since `canonical_url` no longer depends on it and the public
-  entry page already shows `PMCID: —` gracefully for rows without one.
+  entry page already shows `PMCID: Not recorded` gracefully for rows without one.
 - Consider wiring `fix_pmcid_conflicts.py` into `verify_corpus.py`'s
   deterministic gates (it's fast and network-free) so a future
   regression is caught automatically rather than by user report.

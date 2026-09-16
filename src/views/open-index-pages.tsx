@@ -602,13 +602,13 @@ export const FederatedWorkPage: FC<{
       {trimmedOverview ? <OverviewSection overview={trimmedOverview} /> : null}
       <dl class="entry-fields">
         <dt>DOI</dt>
-        <dd class="mono">{work.doi ?? "—"}</dd>
+        <dd class="mono">{work.doi ?? "Not recorded"}</dd>
         <dt>Published</dt>
-        <dd>{work.publishedDate ?? work.publicationYear ?? "—"}</dd>
+        <dd>{work.publishedDate ?? work.publicationYear ?? "Not recorded"}</dd>
         <dt>Container</dt>
-        <dd>{work.containerTitle ?? "—"}</dd>
+        <dd>{work.containerTitle ?? "Not recorded"}</dd>
         <dt>Publisher</dt>
-        <dd>{work.publisher ?? "—"}</dd>
+        <dd>{work.publisher ?? "Not recorded"}</dd>
         <dt>Open access</dt>
         <dd>{work.isOpenAccess === null ? "unknown" : work.isOpenAccess ? "yes" : "no"}</dd>
       </dl>
@@ -681,7 +681,7 @@ export const CoveragePage: FC = () => (
                 <strong>{source.label}</strong>
               </a>
               : {source.scope}
-              {source.limitation ? <span class="meta"> — {source.limitation}</span> : null}
+              {source.limitation ? <span class="meta">, {source.limitation}</span> : null}
             </li>
           ))}
         </ul>
@@ -1215,20 +1215,20 @@ export const OrganizationPage: FC<{
       <h1>{organization.displayName}</h1>
       <dl class="entry-fields">
         <dt>ROR</dt>
-        <dd class="mono">{organization.rorId ?? "—"}</dd>
+        <dd class="mono">{organization.rorId ?? "Not recorded"}</dd>
         <dt>OpenAlex</dt>
-        <dd class="mono">{organization.openAlexId ?? "—"}</dd>
+        <dd class="mono">{organization.openAlexId ?? "Not recorded"}</dd>
         <dt>Country</dt>
-        <dd>{organization.countryCode ?? "—"}</dd>
+        <dd>{organization.countryCode ?? "Not recorded"}</dd>
         <dt>Type</dt>
         <dd>
           {organization.institutionType ||
             (organization.organizationTypes.length > 0
               ? organization.organizationTypes.join(", ")
-              : "—")}
+              : "Not recorded")}
         </dd>
         <dt>Status</dt>
-        <dd>{organization.status ?? "—"}</dd>
+        <dd>{organization.status ?? "Not recorded"}</dd>
       </dl>
       {organization.websiteUrl ? (
         <p>
@@ -1455,13 +1455,13 @@ export const RetractionNoticePage: FC<{
       <dt>Type</dt>
       <dd>{notice.noticeType}</dd>
       <dt>Notice date</dt>
-      <dd>{notice.noticeDate ?? "—"}</dd>
+      <dd>{notice.noticeDate ?? "Not recorded"}</dd>
       <dt>Journal</dt>
-      <dd>{notice.journal ?? "—"}</dd>
+      <dd>{notice.journal ?? "Not recorded"}</dd>
       <dt>Publisher</dt>
-      <dd>{notice.publisher ?? "—"}</dd>
+      <dd>{notice.publisher ?? "Not recorded"}</dd>
       <dt>Notice DOI</dt>
-      <dd class="mono">{notice.doi ?? "—"}</dd>
+      <dd class="mono">{notice.doi ?? "Not recorded"}</dd>
       <dt>Original paper DOI</dt>
       <dd class="mono">
         {notice.originalPaperDoi ? (
@@ -1469,7 +1469,7 @@ export const RetractionNoticePage: FC<{
             {notice.originalPaperDoi}
           </a>
         ) : (
-          "—"
+          "Not recorded"
         )}
       </dd>
     </dl>
@@ -1485,7 +1485,7 @@ export const RetractionNoticePage: FC<{
       <>
         <h2>Matching venue names</h2>
         <p class="meta">
-          Name match only — not an authoritative journal identifier.
+          Name match only, not an authoritative journal identifier.
         </p>
         <DirectoryList
           items={venues.map((item) => ({

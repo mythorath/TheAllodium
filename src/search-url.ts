@@ -17,7 +17,7 @@ const FACET_PARAM_NAMES = {
 
 export { FACET_PARAM_NAMES };
 
-/** Every active filter, as `[paramName, value][]` — the single source both
+/** Every active filter, as `[paramName, value][]`: the single source both
  * the checkbox `checked` state and the URL-building helpers draw from. */
 export function filterEntries(filters: FacetFilters): Array<[string, string]> {
   return [

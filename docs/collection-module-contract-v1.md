@@ -4,7 +4,7 @@ Module contract version: `1`
 Publication contract for contributed data: `2`
 Host psychotherapy collection: publication contract `1.2` (untouched)
 
-This contract is how an outside author — often an AI in another IDE — ships
+This contract is how an outside author, often an AI in another IDE: ships
 a whole site section to The Allodium: public catalog rows plus the TypeScript
 that renders them. The host mounts the module at `/<slug>` against a
 dedicated D1 binding named `COLLECTION_<SLUG>`.

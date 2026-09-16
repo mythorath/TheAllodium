@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { run } from "./cli";
 
-/** Shared helpers for `deployments/log.json` — the git-tracked, append-only
+/** Shared helpers for `deployments/log.json`: the git-tracked, append-only
  * audit trail of every promotion and rollback, used by promote-snapshot.ts
  * and rollback-snapshot.ts. Never rewrites an existing entry. */
 
@@ -40,7 +40,7 @@ export function authorityDatabaseNameFor(env: "staging" | "production"): string 
 }
 
 /** Matches the `name` field under `env.staging` / `env.production` in
- * wrangler.jsonc — used to build the *.workers.dev URL for smoke tests. */
+ * wrangler.jsonc: used to build the *.workers.dev URL for smoke tests. */
 export function workerNameFor(env: "staging" | "production"): string {
   return env === "production" ? "theallodium-production" : "theallodium-staging";
 }

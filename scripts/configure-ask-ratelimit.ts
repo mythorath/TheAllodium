@@ -174,7 +174,7 @@ async function main() {
   console.log(
     current
       ? `  entrypoint id=${current.id}, ${existingRules.length} existing rule(s)`
-      : "  no http_ratelimit entrypoint yet (HTTP 404) — PUT will create it",
+      : "  no http_ratelimit entrypoint yet (HTTP 404). PUT will create it",
   );
 
   const attempts: RuleAttempt[] = [

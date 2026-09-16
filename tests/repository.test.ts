@@ -574,7 +574,7 @@ describe("local D1 repository + routes", () => {
       const result = await searchEntries(env.DB, "", 1, filters({ audience: ["clinician"] }));
 
       // The audience dimension itself must show BOTH values (client and
-      // clinician), not just the one currently selected — that's what makes
+      // clinician), not just the one currently selected. That's what makes
       // switching between them possible without starting over.
       const audienceOptions = Object.fromEntries(
         result.facets.audience.map((o) => [o.value, o]),
@@ -622,7 +622,7 @@ describe("local D1 repository + routes", () => {
       );
       // An unrecognized value never reaches SQL from parseFacetFilters, but
       // searchEntries itself must also stay safe if a filter object is
-      // constructed directly with a bogus value — worst case it's bound as a
+      // constructed directly with a bogus value, worst case it's bound as a
       // literal that matches nothing, never throws.
       expect(result.mode).toBe("browse");
       expect(result.total).toBe(0);
@@ -1126,7 +1126,7 @@ describe("local D1 repository + routes", () => {
     expect(html).toContain("What you can count on");
     expect(html).toContain('href="/standard"');
     // The support section renders only once real tip links/addresses are
-    // configured in src/support.ts — never an empty shell.
+    // configured in src/support.ts, never an empty shell.
     if (!hasSupportOptions()) {
       expect(html).not.toContain("support-section");
       expect(html).not.toContain("leave a tip");

@@ -38,7 +38,7 @@ function findProductionSmokeEvidence(): SmokeLiveEvidence {
   const dir = resolve("evidence");
   if (!existsSync(dir)) {
     throw new Error(
-      `No evidence/ directory found — run 'npm run smoke:live -- --url ${SITE_URL}' against the live production Worker first.`,
+      `No evidence/ directory found. Run 'npm run smoke:live -- --url ${SITE_URL}' against the live production Worker first.`,
     );
   }
   const candidates = readdirSync(dir)
@@ -50,7 +50,7 @@ function findProductionSmokeEvidence(): SmokeLiveEvidence {
   const latest = candidates[candidates.length - 1];
   if (!latest) {
     throw new Error(
-      `No evidence/smoke-live-*.json found for base=${SITE_URL} — run 'npm run smoke:live -- --url ${SITE_URL}' first.`,
+      `No evidence/smoke-live-*.json found for base=${SITE_URL}. Run 'npm run smoke:live -- --url ${SITE_URL}' first.`,
     );
   }
   const failed = latest.results.filter((r) => !r.ok);
@@ -82,14 +82,14 @@ function main() {
       !(ratelimit.period === 10 && ratelimit.entitlement_fallback === true))
   ) {
     throw new Error(
-      "Missing or incomplete evidence/ask-ratelimit.json — run 'npm run configure:ask-ratelimit' first (20 req / 60s on ?ask=, or entitled fallback with entitlement_fallback).",
+      "Missing or incomplete evidence/ask-ratelimit.json. Run 'npm run configure:ask-ratelimit' first (20 req / 60s on ?ask=, or entitled fallback with entitlement_fallback).",
     );
   }
 
   const gpuSmoke = readJson(resolve("evidence/gpu-smoke.json")) as GpuSmokeEvidence | null;
   if (!gpuSmoke || gpuSmoke.http_status !== 200 || gpuSmoke.ok !== true) {
     throw new Error(
-      "Missing or failing evidence/gpu-smoke.json — run 'npm run smoke:gpu' (HTTP 200, status ok or degraded) first.",
+      "Missing or failing evidence/gpu-smoke.json. Run 'npm run smoke:gpu' (HTTP 200, status ok or degraded) first.",
     );
   }
 
@@ -112,7 +112,7 @@ and an operator runbook. Staging then production were deployed with
 \`smoke:live\` and \`smoke:gpu\` after the rate-limit rule existed.
 
 NL/crisis/normalize behavior is unchanged from 3B. \`CONTRACT_VERSION\` is
-unchanged. CSP is unchanged. \`nl-query-rag\` stays **pending** — this
+unchanged. CSP is unchanged. \`nl-query-rag\` stays **pending**, this
 phase does not add grounded answers.
 
 ## Rate-limit \`?ask=\` (visitor IPs, not the GPU origin)
@@ -133,7 +133,7 @@ Cloudflare requires \`cf.colo.id\` alongside \`ip.src\` in
 - Threshold: ${ratelimit.requests_per_period} requests / ${ratelimit.period}s / IP
   ${
     ratelimit.entitlement_fallback
-      ? `(requested path+query \`ask=\` at ${ratelimit.requested_period ?? 60}s; this zone's WAF plan is not entitled to a 60s period or to \`http.request.uri.query\` — applied \`${ratelimit.fallback_label ?? "entitled fallback"}\`)`
+      ? `(requested path+query \`ask=\` at ${ratelimit.requested_period ?? 60}s; this zone's WAF plan is not entitled to a 60s period or to \`http.request.uri.query\`: applied \`${ratelimit.fallback_label ?? "entitled fallback"}\`)`
       : ""
   }
 - Action: block ${ratelimit.status_code ?? 429}

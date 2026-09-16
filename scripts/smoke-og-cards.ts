@@ -8,7 +8,7 @@ config();
 
 /**
  * Phase 2E: true edge/HTTP-level verification for the OpenGraph card
- * pipeline, complementing `smoke-live.ts`'s general route checks — this is
+ * pipeline, complementing `smoke-live.ts`'s general route checks. This is
  * the roadmap's "card-validator" check for the *deployed* Worker + R2 pair,
  * as opposed to ACT's `validate_og_cards()` (a local, pre-upload check over
  * files on disk). Never run automatically by any gate script; run manually
@@ -34,7 +34,7 @@ const EXPECTED_WIDTH = 1200;
 const EXPECTED_HEIGHT = 630;
 
 /** Parses a PNG's dimensions directly from its IHDR chunk (the mandatory
- * first chunk right after the 8-byte signature) — no image-parsing
+ * first chunk right after the 8-byte signature): no image-parsing
  * dependency needed for a single, always-uncompressed header. Returns null
  * if the signature doesn't match. */
 function parsePng(bytes: Uint8Array): { width: number; height: number } | null {
@@ -58,7 +58,7 @@ async function main() {
   const results: CheckResult[] = [];
   function record(name: string, ok: boolean, detail?: string) {
     results.push({ name, ok, detail });
-    console.log(`${ok ? "✓" : "✗"} ${name}${detail ? ` — ${detail}` : ""}`);
+    console.log(`${ok ? "✓" : "✗"} ${name}${detail ? `, ${detail}` : ""}`);
   }
 
   async function checkCard(path: string, label: string): Promise<void> {

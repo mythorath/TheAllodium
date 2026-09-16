@@ -1,10 +1,10 @@
 # The Allodium
 
 > A public, ad-free place of free knowledge. The Allodium is a verified
-> index of published research and resources — starting with psychotherapy,
+> index of published research and resources, starting with psychotherapy,
 > with physics, cosmology, and more on the way. Every entry carries
-> published verification provenance — DOI identity checks against
-> Crossref/OpenAlex, legitimacy triage, and live link-health status — so a
+> published verification provenance: DOI identity checks against
+> Crossref/OpenAlex, legitimacy triage, and live link-health status, so a
 > source can be judged before it's followed. No accounts, no cookies, no
 > tracking.
 
@@ -15,7 +15,7 @@ republish full text, abstracts, or copyrighted files.
 
 - [Home](https://theallodium.org/): welcome and collection directory.
 - [Psychotherapy](https://theallodium.org/psychotherapy): the live
-  psychotherapy collection — coverage numbers, literature and materials
+  psychotherapy collection: coverage numbers, literature and materials
   doors.
 - [Search](https://theallodium.org/psychotherapy/search): keyword search
   over the full psychotherapy collection.
@@ -23,10 +23,11 @@ republish full text, abstracts, or copyrighted files.
   topic tags, each linking into search.
 - [Hexaflex](https://theallodium.org/psychotherapy/hexaflex): the six ACT
   processes, linking into client materials first.
-- [About](https://theallodium.org/about): why The Allodium exists — a
+- [About](https://theallodium.org/about): why The Allodium exists, and the
   mission to find knowledge and hand it on, freely.
 - [The Standard](https://theallodium.org/standard): the verification
-  methodology — identity checks, legitimacy triage, link-health gates.
+  methodology, covering identity checks, legitimacy triage, and link-health
+  gates.
 - [Disclaimer](https://theallodium.org/psychotherapy/disclaimer):
   psychotherapy scope, limitations, and crisis resources.
 - [Sitemap](https://theallodium.org/sitemap.xml): machine-readable list of

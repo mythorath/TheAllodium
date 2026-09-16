@@ -1427,7 +1427,7 @@ dl.entry-fields dd,
  * well. Interactive-only chrome (nav, footer boilerplate, copy/shortlist
  * buttons, the shortlist's remove-links, the skip-link) never means
  * anything on paper, so it's hidden rather than left to print as dead
- * controls. Everything else keeps its normal on-screen layout — this is a
+ * controls. Everything else keeps its normal on-screen layout. This is a
  * light print pass, not a second stylesheet. */
 @media print {
   .skip-link,

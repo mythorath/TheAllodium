@@ -15,7 +15,7 @@ export function run(
     env: { ...process.env, ...options?.env },
     // Default Node maxBuffer (1MB) is too small for a `wrangler d1 execute
     // --json` dump of thousands of rows (diff-snapshot-links.ts's
-    // whole-table id/title/canonical_url query in particular) — spawnSync
+    // whole-table id/title/canonical_url query in particular): spawnSync
     // silently kills the process (status: null) rather than throwing when
     // it's exceeded, which is easy to misread as an unrelated failure.
     maxBuffer: 1024 * 1024 * 200,
@@ -46,7 +46,7 @@ export function mask(value: string | undefined): string {
   return `${value.slice(0, 4)}…${value.slice(-4)} (len=${value.length})`;
 }
 
-/** Minimal `--flag value` / `--flag=value` / `--boolean-flag` argv parser —
+/** Minimal `--flag value` / `--flag=value` / `--boolean-flag` argv parser,
  * no dependency on a CLI-args package, matching load-env.ts's philosophy. */
 export function parseFlags(argv: string[]): {
   flags: Record<string, string>;

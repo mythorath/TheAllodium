@@ -219,7 +219,7 @@ test.describe("search", () => {
     await expect(page).toHaveURL(/assist=offline/);
     await expect(page).toHaveURL(/q=worksheets/);
     await expect(
-      page.getByText("AI search assist is offline — showing keyword results."),
+      page.getByText("AI search assist is offline, showing keyword results."),
     ).toBeVisible();
     await expectNoSeriousA11yViolations(page);
   });
@@ -359,7 +359,7 @@ test.describe("faceted browse (Phase 2B)", () => {
     // Playwright's check()/click() navigation wait never settles. Drive the
     // change from the page, then wait on location.search directly. (String
     // bodies, not typed callbacks, since this project's tsconfig has no DOM
-    // lib — these run in the browser, not under our Node types.)
+    // lib. These run in the browser, not under our Node types.)
     await page.evaluate(
       `document.querySelector('input[name="modality"][value="cbt"]').checked = true;
        document.querySelector('input[name="modality"][value="cbt"]')
@@ -407,7 +407,7 @@ test.describe("entries", () => {
       page.getByRole("heading", { name: "Overview" }),
     ).toBeVisible();
     await expect(
-      page.getByText("AI-generated summary — not a substitute for reading the source."),
+      page.getByText("AI-generated summary, not a substitute for reading the source."),
     ).toBeVisible();
     await expect(
       page.getByText("helps people name personal values", { exact: false }),
@@ -581,7 +581,7 @@ test.describe("citations and related entries (Phase 2C)", () => {
         "Researcher, C., & Colleague, D.",
       );
       // Copy buttons stay visible (inert without JS) rather than being
-      // hidden — see the copy-script section of docs/phase-2c-decision-record.md
+      // hidden. See the copy-script section of docs/phase-2c-decision-record.md
       // for why a <noscript> hide would itself violate the current CSP.
       await expect(
         page.getByRole("button", { name: "Copy BibTeX" }),
@@ -710,7 +710,7 @@ test.describe("shortlists and print (Phase 2D)", () => {
         "@article{allodium:bbbbbbbb00000003,",
       );
       // Add-to-shortlist buttons stay visible (inert without JS, same
-      // pattern as the copy buttons) — building a list needs JS, but
+      // pattern as the copy buttons). Building a list needs JS, but
       // reading/removing from an existing shared link never does.
       await expect(
         page.getByRole("button", { name: "Add to shortlist" }).first(),

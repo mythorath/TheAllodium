@@ -70,9 +70,9 @@ into underscores, e.g. `minerals` → `COLLECTION_MINERALS`.
 `import.sql` must insert into the collection-neutral schema
 (`collection-migrations/0001_core.sql` on the host):
 
-- `snapshot_manifest` — `contract_version` `'2'`, `schema_version` `'1'`,
+- `snapshot_manifest`: `contract_version` `'2'`, `schema_version` `'1'`,
   `collection` equal to the slug
-- `entries` — allowlisted columns only
+- `entries`: allowlisted columns only
 - `tags`, `entry_tags`, `entry_verifications`, `entry_aliases` (optional),
   `entry_search_documents`, `entry_neighbors` (optional)
 
@@ -134,13 +134,13 @@ Handlers are **not** Hono handlers. They receive `CollectionContext`:
 
 - `slug`, `collection` (chrome for `Layout`)
 - `request.method`, `url`, `params`, `query(name)`
-- `db.query(sql, binds)` / `db.first(sql, binds)` — `SELECT` only
-- `Layout` — the host page shell. Pass `collection={ctx.collection}`.
+- `db.query(sql, binds)` / `db.first(sql, binds)`: `SELECT` only
+- `Layout`. The host page shell. Pass `collection={ctx.collection}`.
 
 Return one of:
 
-- `{ kind: "html", status?, body }` — JSX
-- `{ kind: "redirect", status: 301 | 302, location }` — location must
+- `{ kind: "html", status?, body }`. JSX
+- `{ kind: "redirect", status: 301 | 302, location }`. Location must
   stay under `/<slug>`
 - `{ kind: "json", status?, body }`
 - `{ kind: "text", status?, body, contentType? }`
@@ -179,7 +179,7 @@ and that copy is authoritative.
 ## What the host does after intake
 
 1. `collection:validate`
-2. `collection:install -- --dir <path>` — create D1, patch `wrangler.jsonc`,
+2. `collection:install -- --dir <path>`: create D1, patch `wrangler.jsonc`,
    register `src/contributed/<slug>`
 3. `promote-snapshot.ts --env staging --snapshot-dir collection-modules/<slug>`
 4. Staging smoke, then production with `--yes`

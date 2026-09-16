@@ -1,4 +1,4 @@
--- Phase 2A: contract v1.1 — audience, structured authors, precomputed
+-- Phase 2A: contract v1.1, audience, structured authors, precomputed
 -- nearest-neighbor pairs for the related-entries feature (2C). Migrations
 -- are append-only: 0001/0002/0003 already applied to real staging/production
 -- D1 stay untouched.

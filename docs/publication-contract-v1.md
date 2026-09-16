@@ -55,7 +55,7 @@ Never store raw `notes`, LLM rationale strings, or remote title dumps.
 
 ## Aliases
 
-`entry_aliases(alias_id, canonical_id)` — retired ACT IDs redirect to the
+`entry_aliases(alias_id, canonical_id)`: retired ACT IDs redirect to the
 current canonical entry.
 
 ## Snapshot manifest
@@ -110,10 +110,10 @@ Two new allowed entry fields, plus one new snapshot-content table:
 
 | Field | Type | Notes |
 |-------|------|-------|
-| `audience` | text | `client` \| `clinician` \| `unknown` — derived at export time from `format`-category tags (`clinician_facing`/`group_protocol` → clinician, `client_facing`/`self_help` → client) falling back to `resource_type` when no format tag is present. `unknown` is a safety net, not an intended steady state. |
+| `audience` | text | `client` \| `clinician` \| `unknown`: derived at export time from `format`-category tags (`clinician_facing`/`group_protocol` → clinician, `client_facing`/`self_help` → client) falling back to `resource_type` when no format tag is present. `unknown` is a safety net, not an intended steady state. |
 | `authors_json` | text \| null | Structured OpenAlex author list (name, ORCID, institution, position) for papers; `null` for everything else. The plain `author` display string is unchanged and still required. |
 
-`entry_neighbors(entry_id, neighbor_id, rank, score)` — precomputed
+`entry_neighbors(entry_id, neighbor_id, rank, score)`: precomputed
 cosine-kNN (top 10) over `backend/data/embeddings.npy`, rebuilt in full on
 every snapshot import like every other content table. Not read by any route
 until Phase 2C's related-entries UI. `snapshot_manifest.coverage_json` gains

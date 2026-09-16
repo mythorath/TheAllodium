@@ -11,7 +11,7 @@ and an operator runbook. Staging then production were deployed with
 `smoke:live` and `smoke:gpu` after the rate-limit rule existed.
 
 NL/crisis/normalize behavior is unchanged from 3B. `CONTRACT_VERSION` is
-unchanged. CSP is unchanged. `nl-query-rag` stays **pending** — this
+unchanged. CSP is unchanged. `nl-query-rag` stays **pending**, this
 phase does not add grounded answers.
 
 ## Rate-limit `?ask=` (visitor IPs, not the GPU origin)
@@ -30,7 +30,7 @@ Cloudflare requires `cf.colo.id` alongside `ip.src` in
 - Rule id: `cb163ccba96d4b5bab1e7657e1b99999`
 - Expression: `http.request.uri.path eq "/psychotherapy/search"`
 - Threshold: 20 requests / 10s / IP
-  (requested path+query `ask=` at 60s; this zone's WAF plan is not entitled to a 60s period or to `http.request.uri.query` — applied `path-only, 20/10s, custom 429`)
+  (requested path+query `ask=` at 60s; this zone's WAF plan is not entitled to a 60s period or to `http.request.uri.query`: applied `path-only, 20/10s, custom 429`)
 - Action: block 429
 
 **429 is the abuse path.** It does **not** fall through to keyword search.

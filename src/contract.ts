@@ -1,4 +1,4 @@
-/** Publication contract v1.2 — allowlist and denylist for public D1 rows. */
+/** Publication contract v1.2, allowlist and denylist for public D1 rows. */
 
 export const CONTRACT_VERSION = "1.2" as const;
 export const SCHEMA_VERSION = "1" as const;
@@ -120,7 +120,7 @@ export type EntryNeighbor = {
 /**
  * Phase 2C: the public-safe join of an `entry_neighbors` row against its
  * `entries` row, used by the related-entries block on the entry page. Only
- * the fields the roadmap actually asks for (title, modality, link status) —
+ * the fields the roadmap actually asks for (title, modality, link status),
  * the raw `rank`/`score` ranking signal from `EntryNeighbor` is an internal
  * detail, not surfaced to readers.
  */
@@ -150,7 +150,7 @@ export type SearchHit = {
  * time in ACT's `export_allodium_snapshot.py::compute_coverage()` and stored
  * immutably so /standard/'s published numbers always describe exactly the
  * deployed snapshot. Inner keys are dynamic (whatever check_kind/result,
- * link_status, or therapy_modality values actually occur) — no hardcoded
+ * link_status, or therapy_modality values actually occur): no hardcoded
  * enum on either side of the contract.
  */
 export type CoverageStats = {

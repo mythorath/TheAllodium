@@ -43,7 +43,7 @@ async function main() {
   const results: CheckResult[] = [];
   function record(name: string, ok: boolean, detail?: string) {
     results.push({ name, ok, detail });
-    console.log(`${ok ? "✓" : "✗"} ${name}${detail ? ` — ${detail}` : ""}`);
+    console.log(`${ok ? "✓" : "✗"} ${name}${detail ? `, ${detail}` : ""}`);
   }
 
   async function checkPage(path: string, expectedSubstring: string): Promise<Response> {

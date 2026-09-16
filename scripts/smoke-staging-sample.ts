@@ -16,7 +16,7 @@ function main() {
     resolve("evidence/staging-sample-smoke.json"),
     JSON.stringify(evidence, null, 2),
   );
-  console.log("Staging sample smoke ok — evidence/staging-sample-smoke.json");
+  console.log("Staging sample smoke ok, evidence/staging-sample-smoke.json");
 }
 
 main();

@@ -13,11 +13,11 @@ The score starts at 50 and is clamped to 0–100. Every contribution is returned
 as an ordered signal so a reader can expand the composite and inspect its
 evidence, source, source license, polarity, and policy version.
 
-- 0–29 — `serious-concern`: one or more serious warnings require inspection.
-- 30–49 — `limited-evidence`: adverse or incomplete evidence outweighs support.
-- 50–69 — `uncertain`: the available signals do not justify a stronger summary.
-- 70–84 — `supported`: several independent authority signals support the record.
-- 85–100 — `strongly-supported`: broad authority support is present.
+- 0–29: `serious-concern`: one or more serious warnings require inspection.
+- 30–49: `limited-evidence`: adverse or incomplete evidence outweighs support.
+- 50–69. `uncertain`: the available signals do not justify a stronger summary.
+- 70–84: `supported`: several independent authority signals support the record.
+- 85–100: `strongly-supported`: broad authority support is present.
 
 Scores compare the evidence supplied to this policy, not scientific quality
 across disciplines. A high score does not validate methods or conclusions. A

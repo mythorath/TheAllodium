@@ -3,15 +3,15 @@ import type { NormalizedWork } from "./federation/types";
 
 /**
  * Phase 2C: pure, DB-free citation formatting for the entry page's BibTeX /
- * RIS / APA export. Every function here takes only a `PublicEntry` — no D1,
- * no I/O — so it's testable in isolation and safe to call from view code.
+ * RIS / APA export. Every function here takes only a `PublicEntry`: no D1,
+ * no I/O: so it's testable in isolation and safe to call from view code.
  *
  * Known simplifications (documented rather than silently assumed):
  * - Author names are stored as opaque display strings (`author`) or
  *   `{ name }` records (`authors_json`), never structured given/family
  *   fields. `splitName()` guesses family name = last whitespace token,
  *   which is wrong for multi-word surnames, particles ("van der Berg"),
- *   and name suffixes — a documented best-effort, not scholarly-grade
+ *   and name suffixes: a documented best-effort, not scholarly-grade
  *   parsing.
  * - The contract has no journal/volume/issue/page fields, so `source_org`
  *   stands in for BibTeX's `journal`/`organization` field. This is the best
@@ -24,7 +24,7 @@ import type { NormalizedWork } from "./federation/types";
  * safely run `splitName()`/initialing over. A plain `author` string is an
  * opaque display string with unknown internal structure (could already be
  * "Given Family", multiple names joined some other way, an org name, etc.)
- * — kept as one atomic unit and never re-split, per each format's own
+ *: kept as one atomic unit and never re-split, per each format's own
  * handling below.
  */
 type AuthorSource =
@@ -83,7 +83,7 @@ function escapeBibtex(value: string): string {
 
 function bibtexKey(entry: PublicEntry): string {
   // The entry's own id is already a stable, URL-safe, globally unique
-  // identifier — reusing it avoids fragile name/year-based key generation
+  // identifier, reusing it avoids fragile name/year-based key generation
   // (collisions, empty-author entries, non-Latin names) entirely.
   return `allodium:${entry.id}`;
 }
@@ -187,7 +187,7 @@ export function buildCitations(entry: PublicEntry): EntryCitations {
 /**
  * Phase 2D: whole-shortlist citation export. A `.bib` file is just its
  * entries concatenated (each already self-delimiting via `@type{key, ...}`),
- * so a blank line between them is purely for human readability — reference
+ * so a blank line between them is purely for human readability: reference
  * parsers handle multi-entry files natively, which is exactly why these are
  * tested against them the same way single-entry `buildBibtex` is.
  */

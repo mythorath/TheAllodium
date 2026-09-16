@@ -290,7 +290,7 @@ describe("full snapshot (complete 5,643-row corpus) - integrity", () => {
     expect(sample.length).toBe(50);
 
     // Deliberately reversed so a naive `ORDER BY id` in the batched query
-    // would fail this — order must come from the request, not from SQL.
+    // would fail this. Order must come from the request, not from SQL.
     const requested = [...sample].reverse();
     const { entries, missingIds } = await getEntriesByIds(env.DB, requested);
     expect(missingIds).toEqual([]);

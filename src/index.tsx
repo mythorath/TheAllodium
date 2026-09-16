@@ -134,7 +134,7 @@ export type AppBindings = {
 /**
  * Phase 1F: same header set as `public/_headers` (which only covers literal
  * static-asset responses, per Cloudflare's docs), applied here to every
- * Worker-rendered response — including error responses, set explicitly in
+ * Worker-rendered response: including error responses, set explicitly in
  * `app.onError` below since a thrown error bypasses the rest of this
  * middleware's post-`next()` code.
  */
@@ -672,8 +672,8 @@ app.get("/favicon.ico", (c) => c.redirect("/favicon.svg", 301));
 // Phase 2E: per-entry OpenGraph card, content-addressed by
 // {checksum}/{canonical id}.png in the OG_CARDS R2 bucket (rendered by
 // ACT's render_og_cards.py, uploaded by scripts/upload-og-cards.ts). Every
-// failure mode here — a malformed filename, an unknown/retired id, no
-// current manifest, a missing R2 object, or any thrown error — redirects to
+// failure mode here, a malformed filename, an unknown/retired id, no
+// current manifest, a missing R2 object, or any thrown error, redirects to
 // the static default card rather than ever 500ing on a social-preview
 // fetch; a D1 Time-Travel rollback to a checksum whose cards were already
 // pruned degrades the same way. `resolveCanonicalId` also means an alias id
@@ -794,7 +794,7 @@ app.get("/psychotherapy/search", async (c) => {
   );
 });
 
-// Phase 2D: the entire shortlist lives in this one query param — no
+// Phase 2D: the entire shortlist lives in this one query param, no
 // accounts, no cookies. An empty/absent `ids` renders a "build a list"
 // prompt (mirroring search's empty-query prompt), never an error.
 app.get("/psychotherapy/list", async (c) => {

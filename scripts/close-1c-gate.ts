@@ -31,13 +31,13 @@ function main() {
 
   if (!sampleManifest) {
     throw new Error(
-      "Missing fixtures/staging_sample.manifest.json — copy it from ACT's " +
+      "Missing fixtures/staging_sample.manifest.json, copy it from ACT's " +
         "exports/allodium/psychotherapy/staging-sample-*/ directory first",
     );
   }
   if (!stagingSmoke) {
     throw new Error(
-      "Missing evidence/staging-sample-smoke.json — run npm run db:load:staging-sample && npm run db:smoke:staging-sample first",
+      "Missing evidence/staging-sample-smoke.json. Run npm run db:load:staging-sample && npm run db:smoke:staging-sample first",
     );
   }
 
@@ -49,7 +49,7 @@ Generated: ${new Date().toISOString()}
 
 Phase 1A proved the Hono/D1/FTS mechanics against a 12-row **synthetic**
 fixture. Phase 1C proves the same route/search/provenance code paths against
-a **real, ACT-sourced representative sample** — no new Worker code was
+a **real, ACT-sourced representative sample**, no new Worker code was
 required, since \`src/index.tsx\`, \`src/db/repository.ts\`, and
 \`src/views/pages.tsx\` already implemented everything this phase needed to
 validate.

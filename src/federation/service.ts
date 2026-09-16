@@ -70,7 +70,7 @@ async function credibilityLookups(
 
   try {
     // Querying an unloaded family would return zero rows for every DOI, which
-    // would be published as "no retraction notice matched" — reassurance drawn
+    // would be published as "no retraction notice matched": reassurance drawn
     // from an empty table. Absent data has to stay unchecked instead.
     if (!(await hasAuthorityFamily(authority, "retraction_watch"))) return lookups;
 

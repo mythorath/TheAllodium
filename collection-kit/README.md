@@ -6,14 +6,14 @@ clone is required. Hand the finished bundle to the host as
 
 ## Files
 
-- `SPEC.md` — the module contract an authoring agent must satisfy
-- `AGENTS.md` — a drop-in prompt for an outside AI
-- `types.d.ts` — `defineCollection` and public row types
-- `collection.schema.json` — JSON Schema for `collection.json`
-- `write-checksums.mjs` — writes `manifest.json` and `checksum.txt`
-- `validate.mjs` — dependency-free validator (`node validate.mjs <dir>`)
-- `snapshot-sql.mjs` — shared SQL parsing used by the two scripts above
-- `example/` — a two-entry minerals collection that must pass validation
+- `SPEC.md`: the module contract an authoring agent must satisfy
+- `AGENTS.md`: a drop-in prompt for an outside AI
+- `types.d.ts`: `defineCollection` and public row types
+- `collection.schema.json`: JSON Schema for `collection.json`
+- `write-checksums.mjs`. Writes `manifest.json` and `checksum.txt`
+- `validate.mjs`: dependency-free validator (`node validate.mjs <dir>`)
+- `snapshot-sql.mjs`: shared SQL parsing used by the two scripts above
+- `example/`: a two-entry minerals collection that must pass validation
 
 Everything runs on stock Node 18+. There is nothing to install.
 
@@ -28,7 +28,7 @@ src/index.tsx
 ```
 
 You write `collection.json`, `import.sql`, and `src/index.tsx` by hand.
-`manifest.json` and `checksum.txt` are generated — the row-set checksum
+`manifest.json` and `checksum.txt` are generated, the row-set checksum
 cannot be computed by hand:
 
 ```bash

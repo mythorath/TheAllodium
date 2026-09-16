@@ -117,7 +117,7 @@ export function runSmokeChecks(env: string, options: SmokeOptions = {}): SmokeEv
       binding,
     );
   } else {
-    console.warn(`[${env}/${binding}] No entry_aliases row found — skipping alias resolution check`);
+    console.warn(`[${env}/${binding}] No entry_aliases row found, skipping alias resolution check`);
   }
 
   console.log(`[${env}/${binding}] smoke: dynamically-discovered blocked-link discoverability`);
@@ -138,7 +138,7 @@ export function runSmokeChecks(env: string, options: SmokeOptions = {}): SmokeEv
       );
     }
   } else {
-    console.warn(`[${env}/${binding}] No blocked-link entry found — skipping discoverability check`);
+    console.warn(`[${env}/${binding}] No blocked-link entry found, skipping discoverability check`);
   }
 
   if (schema === "psychotherapy") {
@@ -164,7 +164,7 @@ export function runSmokeChecks(env: string, options: SmokeOptions = {}): SmokeEv
         binding,
       );
     } else {
-      console.warn(`[${env}/${binding}] No modality found — skipping faceted browse smoke check`);
+      console.warn(`[${env}/${binding}] No modality found, skipping faceted browse smoke check`);
     }
   } else {
     console.log(`[${env}/${binding}] smoke: tag-category facets`);

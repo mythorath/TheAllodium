@@ -64,10 +64,10 @@ the count cannot drift. `llms.txt` lists both pages.
 
 ## Explicitly deferred to 2.5D+
 
-- Facet auto-submit, compact pagination, `?like={id}` — 2.5D.
+- Facet auto-submit, compact pagination, `?like={id}`: 2.5D.
 - Within-modality process tags (CBT skill, DBT module, …) as global facets.
 - `source_org` facet, author browse, abstract FTS, LLM.
-- Deploying the updated Worker code to staging/production — a separate,
+- Deploying the updated Worker code to staging/production: a separate,
   deliberate action outside any phase gate.
 
 ## Stop

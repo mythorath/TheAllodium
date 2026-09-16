@@ -37,7 +37,7 @@ function main() {
 
   if (!manifest) {
     throw new Error(
-      "Missing fixtures/full_snapshot.manifest.json — generate it with " +
+      "Missing fixtures/full_snapshot.manifest.json, generate it with " +
         "/tank/ACT/.venv/bin/python3 scripts/export_allodium_snapshot.py and copy it over first",
     );
   }
@@ -48,14 +48,14 @@ function main() {
   const rollbacks = log.filter((e) => e.type === "rollback");
 
   if (stagingPromotes.length === 0) {
-    throw new Error("deployments/log.json has no staging promotion — run npm run db:promote:staging first");
+    throw new Error("deployments/log.json has no staging promotion. Run npm run db:promote:staging first");
   }
   if (productionPromotes.length === 0) {
-    throw new Error("deployments/log.json has no production promotion — run npm run db:promote:production first");
+    throw new Error("deployments/log.json has no production promotion. Run npm run db:promote:production first");
   }
   if (rollbacks.length === 0) {
     throw new Error(
-      "deployments/log.json has no rollback entry — rollback must be proven, not just implemented " +
+      "deployments/log.json has no rollback entry. Rollback must be proven, not just implemented " +
         "(run npm run db:rollback:staging against a real promotion, then re-promote staging)",
     );
   }
@@ -76,7 +76,7 @@ Generated: ${new Date().toISOString()}
 Phase 1C proved the route/search/provenance pipeline against a 260-row real
 sample. Phase 1D proves the **complete, deterministic 5,643-row snapshot**
 can be rebuilt, preflight-validated, and promoted through staging into a
-newly created production D1 — without hand-editing SQL — with a tested
+newly created production D1: without hand-editing SQL, with a tested
 rollback and an auditable deployment record.
 
 ## Full snapshot
@@ -116,7 +116,7 @@ the real corpus: 12 distinct RCT citations legitimately share ACBS's trials
 index page as their only available link (each is \`is_link_only\`, since no
 per-study URL exists). This is real data, not an undeduped accident. The
 check was refined to only require uniqueness among entries claiming a
-*dedicated* link (\`is_link_only = 0\`) — \`is_link_only\` entries may share a
+*dedicated* link (\`is_link_only = 0\`). \`is_link_only\` entries may share a
 common bibliography/index URL by design. Regression tests
 (\`test_validate_snapshot_allows_shared_url_for_link_only_entries\` and the
 sibling rejection tests) cover both directions.
@@ -126,15 +126,15 @@ sibling rejection tests) cover both directions.
 - **Atomicity**: \`wrangler d1 execute --file\` wraps its entire file in one
   implicit D1 transaction (confirmed against
   <https://developers.cloudflare.com/d1/best-practices/import-export-data/>
-  — this is why dump files must never contain their own \`BEGIN\`/\`COMMIT\`).
+ . This is why dump files must never contain their own \`BEGIN\`/\`COMMIT\`).
   \`promote-snapshot.ts\` concatenates \`reset_content_tables.sql\` + the
   snapshot's \`import.sql\` + \`migrations/0002_fts.sql\` into **one file**
   executed via **one** \`d1 execute\` call, so a failure anywhere rolls back
-  the whole replacement and the prior content stays intact — satisfying the
+  the whole replacement and the prior content stays intact, satisfying the
   "failure leaves production intact" requirement without a binding-swap
   architecture.
 - **Migrations**: \`wrangler d1 migrations apply\` (a real tracked migrations
-  table, not raw re-execution) applies \`0001\`/\`0002\`/\`0003\` idempotently —
+  table, not raw re-execution) applies \`0001\`/\`0002\`/\`0003\` idempotently,
   necessary now that \`0003_coverage.sql\` uses a non-idempotent
   \`ALTER TABLE ADD COLUMN\`.
 - **Rollback**: D1 Time Travel, not SQL replay. \`promote-snapshot.ts\`
@@ -153,14 +153,14 @@ sibling rejection tests) cover both directions.
 database (wired into \`wrangler.jsonc\`'s \`production\` environment) and holds
 the full ${manifest.entry_count}-entry snapshot as of
 \`${lastProduction.at}\` (checksum \`${lastProduction.checksum}\`). The Worker
-itself is not deployed to any public domain against it — that remains
+itself is not deployed to any public domain against it. That remains
 Phase 1F's job.
 
 ## Rollback proof (real, not simulated)
 
 1. Promoted the full snapshot to staging (5,643 entries).
 2. Rolled staging back via \`npm run db:rollback:staging\`, restoring it to
-   \`${lastRollback.restoredToBookmark}\` — the exact pre-promotion state
+   \`${lastRollback.restoredToBookmark}\`: the exact pre-promotion state
    (verified: entry count reverted to 260, the Phase 1C sample size, with
    \`coverage_json\` correctly showing \`"{}"\` since that pre-1D row predates
    the coverage column).
@@ -174,11 +174,11 @@ corresponding \`evidence/promote-*.json\` / \`evidence/rollback-*.json\` files.
 
 - ACT: \`CoverageMetricsTests\`, \`PreflightValidationTests\` (7 cases covering
   every rejection path plus the \`is_link_only\` exemption), and a
-  determinism regression test — 30 tests total in \`test_allodium_export.py\`.
+  determinism regression test, 30 tests total in \`test_allodium_export.py\`.
 - TheAllodium: \`tests/full-snapshot.test.ts\` (5 tests) validates FTS parity,
   coverage round-trip against recomputed spot totals, manifest checksum
   parity, and the abstract-search gate against the complete corpus in
-  Miniflare — kept separate from the fast spike/staging-sample suites since
+  Miniflare: kept separate from the fast spike/staging-sample suites since
   it's the largest dataset.
 
 ## Exit gate
@@ -197,13 +197,13 @@ corresponding \`evidence/promote-*.json\` / \`evidence/rollback-*.json\` files.
 
 ## Explicitly deferred to 1E/1F
 
-- Building \`/standard/\` itself (consuming \`coverage_json\`) — Phase 1E.
+- Building \`/standard/\` itself (consuming \`coverage_json\`): Phase 1E.
 - Pointing the Worker's actual deployment (\`wrangler deploy\`, no \`--env\`) at
   production, domain/route binding, security headers, and a human-readable
-  operational rollback runbook — Phase 1F.
+  operational rollback runbook: Phase 1F.
 - Extending \`src/contract.ts\`/\`getManifest()\` to surface \`coverage_json\` at
   the application layer (only the raw column was needed for this phase's
-  storage/round-trip proof) — Phase 1E, when \`/standard/\` actually consumes it.
+  storage/round-trip proof): Phase 1E, when \`/standard/\` actually consumes it.
 
 ## Stop
 

@@ -1,5 +1,5 @@
 /** Phase 3B: hotline-intent phrases only. Catalog topics (trauma, bpd,
- * suicidality as a search term) must not trip this — they go through
+ * suicidality as a search term) must not trip this: they go through
  * NL→facets. Match still runs keyword search; this only skips the GPU. */
 
 const INTENT_PATTERNS: RegExp[] = [

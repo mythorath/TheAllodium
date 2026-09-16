@@ -68,7 +68,7 @@ junk, timeout, 401, and crisis vs trauma.
 - `npm run test:e2e` passes with zero serious/critical accessibility
   violations.
 - Neither staging nor production Worker was deployed this phase.
-- `nl-query-rag` stays pending — grounded answers are still deferred.
+- `nl-query-rag` stays pending. Grounded answers are still deferred.
 
 ## Explicitly deferred (3C / later)
 

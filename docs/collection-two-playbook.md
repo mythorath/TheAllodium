@@ -10,7 +10,7 @@ contract v1, publication contract v2) on `COLLECTION_<SLUG>` and
 enough that sharing the host would cost more than it saves. Until then,
 stay on this Worker and this zone.
 
-## Path A — contributed module (preferred)
+## Path A: contributed module (preferred)
 
 An outside author, often an AI in another IDE, receives
 `collection-kit/allodium-collection-kit.tgz` (or this repo). They return
@@ -48,7 +48,7 @@ collection is follow-up work, not part of intake.
 `--skip-remote` on install patches the repo without creating D1s, which
 is useful for reviewing the TypeScript before spending a database.
 
-## Path B — first-party, same as psychotherapy historically
+## Path B: first-party, same as psychotherapy historically
 
 If the second collection is authored in this repo rather than handed over
 as a tarball, still use the module interface (`defineCollection`, v2

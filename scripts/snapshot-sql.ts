@@ -1,4 +1,4 @@
-/** Pure parsing of generated snapshot SQL artifacts — enough of each
+/** Pure parsing of generated snapshot SQL artifacts, enough of each
  * `INSERT INTO entries (...)` statement to recover id/title/canonical_url
  * for diff-snapshot-links.ts. Column order is taken from the INSERT header
  * so psychotherapy v1.2 and collection-module v2 snapshots both parse. */
