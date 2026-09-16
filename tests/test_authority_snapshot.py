@@ -125,6 +125,85 @@ class AuthoritySnapshotTest(unittest.TestCase):
                 [("clinical",), ("therapy",)],
             )
 
+            connection.execute(
+                "INSERT INTO federated_work_overviews "
+                "(doi, overview, model, generated_at, source_note) VALUES (?,?,?,?,?)",
+                (
+                    "10.1000/keep-me",
+                    "A paraphrase that must survive snapshot promotion.",
+                    "qwen3.6:35b",
+                    "2026-09-03T00:00:00Z",
+                    "test",
+                ),
+            )
+            connection.execute(
+                "INSERT INTO hub_work_records "
+                "(doi, title, authors_json, publication_year, publication_date, "
+                "container_title, work_type, is_open_access, cited_by_count, "
+                "canonical_url, openalex_id, fetched_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    "10.1000/keep-hub",
+                    "A hub work that must survive snapshot promotion.",
+                    "[]",
+                    2020,
+                    "2020-01-01",
+                    "Example Journal",
+                    "article",
+                    1,
+                    3,
+                    "https://doi.org/10.1000/keep-hub",
+                    "https://openalex.org/Wkeep",
+                    "2026-09-03T00:00:00Z",
+                ),
+            )
+            connection.execute(
+                "INSERT INTO hub_works (hub_kind, hub_id, rank_kind, rank, doi) "
+                "VALUES (?,?,?,?,?)",
+                ("topic", "T-keep", "cited", 1, "10.1000/keep-hub"),
+            )
+            connection.executescript(sql.decode("utf-8"))
+            self.assertEqual(
+                connection.execute(
+                    "SELECT overview FROM federated_work_overviews WHERE doi = ?",
+                    ("10.1000/keep-me",),
+                ).fetchone()[0],
+                "A paraphrase that must survive snapshot promotion.",
+            )
+            self.assertEqual(
+                connection.execute(
+                    "SELECT title FROM hub_work_records WHERE doi = ?",
+                    ("10.1000/keep-hub",),
+                ).fetchone()[0],
+                "A hub work that must survive snapshot promotion.",
+            )
+            self.assertEqual(
+                connection.execute(
+                    "SELECT doi FROM hub_works WHERE hub_kind = ? AND hub_id = ? "
+                    "AND rank_kind = ? AND rank = ?",
+                    ("topic", "T-keep", "cited", 1),
+                ).fetchone()[0],
+                "10.1000/keep-hub",
+            )
+
+    def test_delete_order_omits_federated_work_overviews(self) -> None:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("authority_snapshot", BUILDER)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        self.assertNotIn("federated_work_overviews", module.DELETE_ORDER)
+
+    def test_delete_order_omits_hub_works_tables(self) -> None:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("authority_snapshot", BUILDER)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        self.assertNotIn("hub_works", module.DELETE_ORDER)
+        self.assertNotIn("hub_work_records", module.DELETE_ORDER)
+
 
 if __name__ == "__main__":
     unittest.main()

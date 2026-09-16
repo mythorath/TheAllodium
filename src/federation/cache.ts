@@ -1,5 +1,7 @@
 const CACHE_VERSION = "federation-v1";
 const DEFAULT_TTL_SECONDS = 900;
+/** Contract §9: identifier lookups cache for 7 days. */
+export const IDENTIFIER_LOOKUP_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export type SearchCache = {
   get<T>(key: string): Promise<T | null>;
@@ -23,6 +25,10 @@ export function federatedSearchCacheKey(
     .filter(([, value]) => value !== null && value !== "")
     .sort(([left], [right]) => left.localeCompare(right));
   return `${CACHE_VERSION}:${normalizeKeyPart(query)}:${Math.max(1, page)}:${JSON.stringify(stableFilters)}`;
+}
+
+export function federatedIdentifierCacheKey(doi: string): string {
+  return `${CACHE_VERSION}:doi:${normalizeKeyPart(doi)}`;
 }
 
 export function createSearchCache(

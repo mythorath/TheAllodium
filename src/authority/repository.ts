@@ -8,11 +8,16 @@ import type {
   BrowsePage,
   DoajSubjectLink,
   FieldPath,
+  HubKind,
+  HubWork,
+  HubWorkAuthor,
+  HubWorksByRank,
   IssnResolution,
   KeywordTopic,
   NamedCount,
   OrganizationSummary,
   PublisherSummary,
+  RankKind,
   RetractionNotice,
   SubjectSummary,
   SubfieldPath,
@@ -632,6 +637,297 @@ export async function getTopic(
   };
 }
 
+type HubWorkRow = {
+  doi: string;
+  title: string;
+  authors_json: string;
+  publication_year: number | null;
+  publication_date: string | null;
+  container_title: string | null;
+  work_type: string | null;
+  is_open_access: number | null;
+  cited_by_count: number | null;
+  canonical_url: string | null;
+  openalex_id: string | null;
+  fetched_at: string;
+  rank: number;
+  rank_kind: string;
+  retracted: number;
+};
+
+function mapHubWorkAuthors(raw: string | null): HubWorkAuthor[] {
+  const parsed = parseJson<unknown>(raw, []);
+  if (!Array.isArray(parsed)) return [];
+  const authors: HubWorkAuthor[] = [];
+  for (const item of parsed) {
+    if (typeof item === "string") {
+      const name = item.trim();
+      if (name) authors.push({ name, orcid: null });
+      continue;
+    }
+    if (item && typeof item === "object" && "name" in item) {
+      const record = item as { name?: unknown; orcid?: unknown };
+      const name = String(record.name ?? "").trim();
+      if (!name) continue;
+      authors.push({
+        name,
+        orcid: record.orcid == null || record.orcid === "" ? null : String(record.orcid),
+      });
+    }
+  }
+  return authors;
+}
+
+function parseRankKind(value: string): RankKind | null {
+  if (value === "cited" || value === "recent") return value;
+  return null;
+}
+
+function mapHubWork(row: HubWorkRow): HubWork | null {
+  const rankKind = parseRankKind(row.rank_kind);
+  if (!rankKind) return null;
+  return {
+    doi: row.doi,
+    title: row.title,
+    authors: mapHubWorkAuthors(row.authors_json),
+    publicationYear: row.publication_year,
+    publicationDate: row.publication_date,
+    containerTitle: row.container_title,
+    workType: row.work_type,
+    isOpenAccess: row.is_open_access === null ? null : row.is_open_access === 1,
+    citedByCount: row.cited_by_count,
+    canonicalUrl: row.canonical_url,
+    openalexId: row.openalex_id,
+    fetchedAt: row.fetched_at,
+    rank: row.rank,
+    rankKind,
+    retracted: row.retracted === 1,
+  };
+}
+
+function splitHubWorks(works: HubWork[]): HubWorksByRank {
+  const cited: HubWork[] = [];
+  const recent: HubWork[] = [];
+  for (const work of works) {
+    switch (work.rankKind) {
+      case "cited":
+        cited.push(work);
+        break;
+      case "recent":
+        recent.push(work);
+        break;
+      default: {
+        const _never: never = work.rankKind;
+        throw new Error(`unhandled rank_kind: ${_never}`);
+      }
+    }
+  }
+  return { cited, recent };
+}
+
+export async function getHubWorks(
+  db: D1Database,
+  hubKind: HubKind,
+  hubId: string,
+): Promise<HubWorksByRank> {
+  const rows = (
+    await db
+      .prepare(
+        `SELECT w.doi, w.title, w.authors_json, w.publication_year, w.publication_date,
+                w.container_title, w.work_type, w.is_open_access, w.cited_by_count,
+                w.canonical_url, w.openalex_id, w.fetched_at,
+                h.rank, h.rank_kind,
+                EXISTS(
+                  SELECT 1 FROM retraction_watch_notices n
+                  WHERE n.doi = w.doi OR n.original_paper_doi = w.doi
+                ) AS retracted
+         FROM hub_works h
+         JOIN hub_work_records w ON w.doi = h.doi
+         WHERE h.hub_kind = ? AND h.hub_id = ?
+         ORDER BY h.rank_kind, h.rank`,
+      )
+      .bind(hubKind, hubId)
+      .all<HubWorkRow>()
+  ).results;
+  const works: HubWork[] = [];
+  for (const row of rows) {
+    const work = mapHubWork(row);
+    if (work) works.push(work);
+  }
+  return splitHubWorks(works);
+}
+
+export async function getSiblingDomains(
+  db: D1Database,
+  domainId: string,
+): Promise<TaxonomyDomain[]> {
+  const rows = (
+    await db
+      .prepare(
+        `SELECT id, display_name, description, works_count, cited_by_count
+         FROM oa_domains WHERE id != ? ORDER BY display_name, id`,
+      )
+      .bind(domainId)
+      .all<DomainRow>()
+  ).results;
+  return rows.map((row) => mapDomain(row));
+}
+
+export async function getSiblingFields(
+  db: D1Database,
+  domainId: string,
+  fieldId: string,
+): Promise<TaxonomyField[]> {
+  const rows = (
+    await db
+      .prepare(
+        `SELECT id, display_name, description, works_count, cited_by_count
+         FROM oa_fields WHERE domain_id = ? AND id != ? ORDER BY display_name, id`,
+      )
+      .bind(domainId, fieldId)
+      .all<DomainRow>()
+  ).results;
+  return rows.map((row) => mapField(row));
+}
+
+export async function getSiblingSubfields(
+  db: D1Database,
+  fieldId: string,
+  subfieldId: string,
+): Promise<TaxonomySubfield[]> {
+  const rows = (
+    await db
+      .prepare(
+        `SELECT id, display_name, description, works_count, cited_by_count
+         FROM oa_subfields WHERE field_id = ? AND id != ? ORDER BY display_name, id`,
+      )
+      .bind(fieldId, subfieldId)
+      .all<DomainRow>()
+  ).results;
+  return rows.map((row) => mapSubfield(row));
+}
+
+export async function getSubfieldKeywords(
+  db: D1Database,
+  subfieldId: string,
+  limit: number,
+): Promise<NamedCount[]> {
+  const rows = (
+    await db
+      .prepare(
+        `SELECT k.keyword AS name, COUNT(*) AS count
+         FROM oa_topics t
+         JOIN oa_topic_keywords k ON k.topic_id = t.id
+         WHERE t.subfield_id = ?
+         GROUP BY k.keyword
+         ORDER BY count DESC, k.keyword
+         LIMIT ?`,
+      )
+      .bind(subfieldId, limit)
+      .all<{ name: string; count: number }>()
+  ).results;
+  return rows;
+}
+
+export async function getRelatedKeywords(
+  db: D1Database,
+  keyword: string,
+  limit: number,
+): Promise<NamedCount[]> {
+  const rows = (
+    await db
+      .prepare(
+        `SELECT other.keyword AS name, COUNT(*) AS count
+         FROM oa_topic_keywords seed
+         JOIN oa_topic_keywords other
+           ON other.topic_id = seed.topic_id AND other.keyword != seed.keyword
+         WHERE seed.keyword = ?
+         GROUP BY other.keyword
+         ORDER BY count DESC, other.keyword
+         LIMIT ?`,
+      )
+      .bind(keyword, limit)
+      .all<{ name: string; count: number }>()
+  ).results;
+  return rows;
+}
+
+export async function getRelatedSubjects(
+  db: D1Database,
+  subject: string,
+  limit: number,
+): Promise<NamedCount[]> {
+  const rows = (
+    await db
+      .prepare(
+        `SELECT other.subject AS name, COUNT(*) AS count
+         FROM doaj_journal_subjects seed
+         JOIN doaj_journal_subjects other
+           ON other.doaj_id = seed.doaj_id AND other.subject != seed.subject
+         WHERE seed.subject = ?
+         GROUP BY other.subject
+         ORDER BY count DESC, other.subject
+         LIMIT ?`,
+      )
+      .bind(subject, limit)
+      .all<{ name: string; count: number }>()
+  ).results;
+  return rows;
+}
+
+export async function getRelatedReasons(
+  db: D1Database,
+  reason: string,
+  limit: number,
+): Promise<NamedCount[]> {
+  const rows = (
+    await db
+      .prepare(
+        `SELECT TRIM(j2.value) AS name, COUNT(DISTINCT n.id) AS count
+         FROM retraction_watch_notices n,
+              json_each(n.reason_json) j1,
+              json_each(n.reason_json) j2
+         WHERE TRIM(j1.value) = ?
+           AND TRIM(j2.value) != ''
+           AND TRIM(j2.value) != TRIM(j1.value)
+         GROUP BY TRIM(j2.value)
+         ORDER BY count DESC, name
+         LIMIT ?`,
+      )
+      .bind(reason, limit)
+      .all<{ name: string; count: number }>()
+  ).results;
+  return rows;
+}
+
+export async function getVenuesByPublisher(
+  db: D1Database,
+  publisherId: string,
+  limit: number,
+): Promise<VenueSummary[]> {
+  const rows = (
+    await db
+      .prepare(
+        `SELECT id, display_name, source_type, works_count
+         FROM oa_sources WHERE publisher_id = ?
+         ORDER BY display_name, id LIMIT ?`,
+      )
+      .bind(publisherId, limit)
+      .all<{
+        id: string;
+        display_name: string;
+        source_type: string | null;
+        works_count: number | null;
+      }>()
+  ).results;
+  return rows.map((row) => ({
+    id: row.id,
+    displayName: row.display_name,
+    sourceType: row.source_type,
+    worksCount: row.works_count,
+  }));
+}
+
 export async function listVenueTypes(db: D1Database): Promise<NamedCount[]> {
   const rows = (
     await db
@@ -1155,6 +1451,22 @@ export async function getRetractionNotice(
     .bind(noticeId)
     .first<RetractionRow>();
   return row ? mapNotice(row) : null;
+}
+
+export async function getFederatedOverview(
+  db: D1Database,
+  doi: string,
+): Promise<string | null> {
+  const normalized = normalizeDoi(doi);
+  if (!normalized) return null;
+  const row = await db
+    .prepare(
+      `SELECT overview FROM federated_work_overviews WHERE doi = ? LIMIT 1`,
+    )
+    .bind(normalized)
+    .first<{ overview: string }>();
+  const overview = row?.overview?.trim();
+  return overview ? overview : null;
 }
 
 export async function listRetractionReasons(db: D1Database): Promise<NamedCount[]> {

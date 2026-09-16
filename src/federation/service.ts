@@ -1,10 +1,12 @@
 import { getRetractionsByDoi, hasAuthorityFamily } from "../authority/repository";
 import type { AuthorityLookup, AuthorityLookups, CredibilityResult } from "../credibility/types";
 import { scoreCredibility } from "../credibility/score";
-import { PUBLIC_FEDERATION_ADAPTERS } from "./adapters";
+import { getCrossrefWorkByDoi, PUBLIC_FEDERATION_ADAPTERS } from "./adapters";
 import {
   createSearchCache,
+  federatedIdentifierCacheKey,
   federatedSearchCacheKey,
+  IDENTIFIER_LOOKUP_TTL_SECONDS,
   type WaitUntilContext,
 } from "./cache";
 import { dedupeAndMergeWorks, normalizeDoi } from "./identity";
@@ -199,6 +201,19 @@ export async function searchFederation(
   return response;
 }
 
+async function lookupCrossrefWork(
+  bindings: FederationBindings,
+  doi: string,
+): Promise<NormalizedWork | null> {
+  const permit = await requestUpstreamPermit(bindings.UPSTREAM_RATE_LIMITER, "crossref");
+  if (!permit.allowed) return null;
+  const result = await getCrossrefWorkByDoi(doi, {
+    timeoutMs: 2_500,
+    contactEmail: bindings.FEDERATION_CONTACT_EMAIL,
+  });
+  return result.hits.find((work) => normalizeDoi(work.doi) === doi) ?? null;
+}
+
 export async function resolveFederatedWork(
   bindings: FederationBindings,
   rawDoi: string,
@@ -206,10 +221,25 @@ export async function resolveFederatedWork(
 ): Promise<ScoredFederatedWork | null> {
   const doi = normalizeDoi(rawDoi);
   if (!doi) return null;
+
+  const cache = createSearchCache(bindings.SEARCH_CACHE, executionContext);
+  const key = federatedIdentifierCacheKey(doi);
+  const cached = await cache.get<ScoredFederatedWork>(key);
+  if (cached) return cached;
+
+  const direct = await lookupCrossrefWork(bindings, doi);
+  if (direct) {
+    const item = await scoreWork(direct, bindings.AUTHORITY);
+    await cache.put(key, item, IDENTIFIER_LOOKUP_TTL_SECONDS);
+    return item;
+  }
+
   const result = await searchFederation(
     bindings,
     { text: doi, pageSize: 10 },
     executionContext,
   );
-  return result.works.find((item) => normalizeDoi(item.work.doi) === doi) ?? null;
+  const item = result.works.find((entry) => normalizeDoi(entry.work.doi) === doi) ?? null;
+  if (item) await cache.put(key, item, IDENTIFIER_LOOKUP_TTL_SECONDS);
+  return item;
 }

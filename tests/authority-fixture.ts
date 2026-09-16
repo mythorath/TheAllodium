@@ -2,6 +2,9 @@ import authorityFixture from "../fixtures/authority_browse.sql?raw";
 import { execStatements } from "./sql-test-utils";
 
 const CLEAR_AUTHORITY_SQL = `
+DELETE FROM federated_work_overviews;
+DELETE FROM hub_works;
+DELETE FROM hub_work_records;
 DELETE FROM oa_topic_keywords;
 DELETE FROM doaj_journal_subjects;
 DELETE FROM oa_source_issns;

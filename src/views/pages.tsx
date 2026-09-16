@@ -17,6 +17,16 @@ import { buildApa, buildBibtexList, buildCitations, buildRisList, citationUrl } 
 import { FACET_PARAM_NAMES, buildSearchHref, filterEntries } from "../search-url";
 import { SUPPORT_ADDRESSES, SUPPORT_LINKS, hasSupportOptions } from "../support";
 
+export const OverviewSection: FC<{ overview: string }> = ({ overview }) => (
+  <section class="entry-overview" aria-labelledby="entry-overview-heading">
+    <h2 id="entry-overview-heading">Overview</h2>
+    <p class="meta">
+      AI-generated summary — not a substitute for reading the source.
+    </p>
+    <p class="entry-overview-body">{overview}</p>
+  </section>
+);
+
 export const Layout: FC<{
   title: string;
   /** Path (no origin, e.g. "/standard") this page is canonically reachable
@@ -1162,15 +1172,7 @@ export const EntryPage: FC<{ entry: PublicEntry; related: RelatedEntry[] }> = ({
           Add to shortlist
         </button>
       </p>
-      {entry.overview ? (
-        <section class="entry-overview" aria-labelledby="entry-overview-heading">
-          <h2 id="entry-overview-heading">Overview</h2>
-          <p class="meta">
-            AI-generated summary — not a substitute for reading the source.
-          </p>
-          <p class="entry-overview-body">{entry.overview}</p>
-        </section>
-      ) : null}
+      {entry.overview ? <OverviewSection overview={entry.overview} /> : null}
       <dl class="entry-fields">
         <dt>ID</dt>
         <dd>

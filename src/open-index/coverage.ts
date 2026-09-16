@@ -60,6 +60,15 @@ export const COVERAGE_SOURCES: readonly CoverageSource[] = [
     href: "https://zenodo.org/",
   },
   {
+    id: "dblp",
+    label: "DBLP direct API",
+    mode: "unavailable",
+    scope: "Computer-science bibliography (publications, proceedings, authors)",
+    limitation:
+      "The adapter is implemented, but DBLP's publication search API now returns an Anubis anti-bot HTML challenge instead of JSON from Cloudflare Worker egress. Computer-science records with DOIs remain reachable through Crossref, DataCite, and arXiv.",
+    href: "https://dblp.org/",
+  },
+  {
     id: "hal",
     label: "HAL",
     mode: "live",

@@ -98,3 +98,32 @@ INSERT INTO nlm_journals (
 ) VALUES
   ('N1', 'Example Journal', 'Ex J', '1234-5678', NULL, '1234-5678', 'Example Press',
    'United States', '["eng"]', 'Ex J', 'nlm');
+
+INSERT INTO hub_work_records (
+  doi, title, authors_json, publication_year, publication_date, container_title,
+  work_type, is_open_access, cited_by_count, canonical_url, openalex_id, fetched_at
+) VALUES
+  ('10.1000/example', 'Retracted example paper',
+   '[{"name":"Ada Example","orcid":null}]', 2020, '2020-06-01', 'Example Journal',
+   'article', 1, 42, 'https://doi.org/10.1000/example', 'https://openalex.org/W1',
+   '2026-09-01T00:00:00Z'),
+  ('10.1000/cited-ok', 'Most cited clinical paper',
+   '[{"name":"Bea Cited","orcid":null}]', 2018, '2018-03-12', 'Example Journal',
+   'article', 1, 99, 'https://doi.org/10.1000/cited-ok', 'https://openalex.org/W2',
+   '2026-09-01T00:00:00Z'),
+  ('10.1000/recent-ok', 'Recent clinical paper',
+   '[{"name":"Cara Recent","orcid":null}]', 2026, '2026-08-01', 'Example Journal',
+   'article', 0, 3, 'https://doi.org/10.1000/recent-ok', 'https://openalex.org/W3',
+   '2026-09-01T00:00:00Z');
+
+INSERT INTO hub_works (hub_kind, hub_id, rank_kind, rank, doi) VALUES
+  ('domain', 'D1', 'cited', 1, '10.1000/cited-ok'),
+  ('domain', 'D1', 'cited', 2, '10.1000/example'),
+  ('domain', 'D1', 'recent', 1, '10.1000/recent-ok'),
+  ('field', 'FL1', 'cited', 1, '10.1000/cited-ok'),
+  ('field', 'FL1', 'recent', 1, '10.1000/recent-ok'),
+  ('subfield', 'SF1', 'cited', 1, '10.1000/example'),
+  ('subfield', 'SF1', 'cited', 2, '10.1000/cited-ok'),
+  ('subfield', 'SF1', 'recent', 1, '10.1000/recent-ok'),
+  ('topic', 'T1', 'cited', 1, '10.1000/example'),
+  ('topic', 'T1', 'recent', 1, '10.1000/recent-ok');

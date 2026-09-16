@@ -6,6 +6,8 @@ import type {
   BrowsePage,
   DoajSubjectLink,
   IssnResolution,
+  HubWork,
+  HubWorksByRank,
   KeywordTopic,
   NamedCount,
   OrganizationSummary,
@@ -39,10 +41,11 @@ import {
   subjectPath,
   venuePath,
   venueTypePath,
+  workPath,
   worksPartialPath,
 } from "../open-index/paths";
 import { SITE_URL } from "../site-config";
-import { Layout } from "./pages";
+import { Layout, OverviewSection } from "./pages";
 
 function workHref(work: NormalizedWork): string | null {
   return work.doi ? `/works/${encodeURIComponent(work.doi)}` : work.canonicalUrl;
@@ -258,12 +261,89 @@ function countLabel(count: number | null): string {
   return count === null ? "count unavailable" : `${count.toLocaleString()} works`;
 }
 
+const BROWSE_DIRECTORIES = [
+  { href: "/fields", label: "Fields" },
+  { href: "/keywords", label: "Keywords" },
+  { href: "/venues", label: "Venues" },
+  { href: "/publishers", label: "Publishers" },
+  { href: "/organizations", label: "Organizations" },
+  { href: "/subjects", label: "DOAJ subjects" },
+  { href: "/retractions", label: "Retraction notices" },
+  { href: "/retractions/reasons", label: "Retraction reasons" },
+] as const;
+
+function BrowseNav() {
+  return (
+    <nav class="browse-nav" aria-label="Browse directories">
+      {BROWSE_DIRECTORIES.map((item) => (
+        <a href={item.href} key={item.href}>
+          {item.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function HubWorkRow(props: { work: HubWork }) {
+  const { work } = props;
+  const authors = work.authors.slice(0, 4).map((author) => author.name).join(", ");
+  return (
+    <li>
+      <a href={workPath(work.doi)}>{work.title}</a>
+      {work.retracted ? <span class="badge">Retracted</span> : null}
+      <p class="meta">
+        {authors || "Author unknown"}
+        {work.publicationYear ? ` · ${work.publicationYear}` : ""}
+        {work.containerTitle ? ` · ${work.containerTitle}` : ""}
+        {work.citedByCount !== null ? ` · ${work.citedByCount.toLocaleString()} citations` : ""}
+      </p>
+    </li>
+  );
+}
+
+function HubWorkSection(props: { title: string; works: HubWork[] }) {
+  if (props.works.length === 0) return null;
+  return (
+    <>
+      <h2>{props.title}</h2>
+      <ol class="result-list">
+        {props.works.map((work) => (
+          <HubWorkRow work={work} key={`${work.rankKind}:${work.rank}:${work.doi}`} />
+        ))}
+      </ol>
+    </>
+  );
+}
+
+function HubWorkList(props: { works: HubWorksByRank }) {
+  if (props.works.cited.length === 0 && props.works.recent.length === 0) {
+    return null;
+  }
+  return (
+    <section class="hub-works">
+      <HubWorkSection title="Most cited" works={props.works.cited} />
+      <HubWorkSection title="Most recent" works={props.works.recent} />
+    </section>
+  );
+}
+
+function SearchHubLink(props: { query: string; label: string }) {
+  return (
+    <p>
+      <a class="button-primary" href={searchPath(props.query)}>
+        {props.label}
+      </a>
+    </p>
+  );
+}
+
 export const FieldsPage: FC<{ domains: TaxonomyDomain[] }> = ({ domains }) => (
   <Layout
     title="Fields"
     canonicalPath="/fields"
     ogDescription="Browse the OpenAlex four-level research taxonomy used by The Allodium."
   >
+    <BrowseNav />
     <h1>Field map</h1>
     <p>
       This map comes from the redistributable OpenAlex taxonomy: four domains,
@@ -289,51 +369,100 @@ export const FieldsPage: FC<{ domains: TaxonomyDomain[] }> = ({ domains }) => (
   </Layout>
 );
 
-export const DomainPage: FC<{ domain: TaxonomyDomain }> = ({ domain }) => (
+export const DomainPage: FC<{
+  domain: TaxonomyDomain;
+  siblings: TaxonomyDomain[];
+  works: HubWorksByRank;
+}> = ({ domain, siblings, works }) => (
   <Layout title={domain.displayName} canonicalPath={`/fields/${encodeURIComponent(domain.id)}`}>
+    <BrowseNav />
+    <p class="meta">
+      <a href="/fields">Fields</a>
+    </p>
     <h1>{domain.displayName}</h1>
     {domain.description ? <p>{domain.description}</p> : null}
     <p class="meta">{countLabel(domain.worksCount)}</p>
-    <ul class="directory-list stat-list">
-      {domain.fields.map((field) => (
-        <li key={field.id}>
-          <a
-            href={`/fields/${encodeURIComponent(domain.id)}/${encodeURIComponent(field.id)}`}
-          >
-            <span>{field.displayName}</span>
-            <span class="stat-count">{countLabel(field.worksCount)}</span>
-          </a>
-        </li>
-      ))}
-    </ul>
+    <GraphHonestyNote />
+    <HubWorkList works={works} />
+    <SearchHubLink query={domain.displayName} label="Search this domain" />
+    <div class="browse-rails">
+      <div>
+        <h2>Fields</h2>
+        <ul class="directory-list stat-list">
+          {domain.fields.map((field) => (
+            <li key={field.id}>
+              <a href={fieldsPath(domain.id, field.id)}>
+                <span>{field.displayName}</span>
+                <span class="stat-count">{countLabel(field.worksCount)}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {siblings.length > 0 ? (
+        <RelatedRail title="Other domains">
+          <DirectoryList
+            items={siblings.map((item) => ({
+              key: item.id,
+              href: fieldsPath(item.id),
+              label: item.displayName,
+              count: countLabel(item.worksCount),
+            }))}
+          />
+        </RelatedRail>
+      ) : null}
+    </div>
   </Layout>
 );
 
 export const FieldPage: FC<{
   domain: TaxonomyDomain;
   field: TaxonomyField;
-}> = ({ domain, field }) => (
+  siblings: TaxonomyField[];
+  works: HubWorksByRank;
+}> = ({ domain, field, siblings, works }) => (
   <Layout
     title={field.displayName}
     canonicalPath={`/fields/${encodeURIComponent(domain.id)}/${encodeURIComponent(field.id)}`}
   >
+    <BrowseNav />
     <p class="meta">
-      <a href={`/fields/${encodeURIComponent(domain.id)}`}>{domain.displayName}</a>
+      <a href="/fields">Fields</a>
+      {" · "}
+      <a href={fieldsPath(domain.id)}>{domain.displayName}</a>
     </p>
     <h1>{field.displayName}</h1>
     {field.description ? <p>{field.description}</p> : null}
-    <ul class="directory-list stat-list">
-      {field.subfields.map((subfield) => (
-        <li key={subfield.id}>
-          <a
-            href={`/fields/${encodeURIComponent(domain.id)}/${encodeURIComponent(field.id)}/${encodeURIComponent(subfield.id)}`}
-          >
-            <span>{subfield.displayName}</span>
-            <span class="stat-count">{countLabel(subfield.worksCount)}</span>
-          </a>
-        </li>
-      ))}
-    </ul>
+    <GraphHonestyNote />
+    <HubWorkList works={works} />
+    <SearchHubLink query={field.displayName} label="Search this field" />
+    <div class="browse-rails">
+      <div>
+        <h2>Subfields</h2>
+        <ul class="directory-list stat-list">
+          {field.subfields.map((subfield) => (
+            <li key={subfield.id}>
+              <a href={fieldsPath(domain.id, field.id, subfield.id)}>
+                <span>{subfield.displayName}</span>
+                <span class="stat-count">{countLabel(subfield.worksCount)}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {siblings.length > 0 ? (
+        <RelatedRail title="Other fields in this domain">
+          <DirectoryList
+            items={siblings.map((item) => ({
+              key: item.id,
+              href: fieldsPath(domain.id, item.id),
+              label: item.displayName,
+              count: countLabel(item.worksCount),
+            }))}
+          />
+        </RelatedRail>
+      ) : null}
+    </div>
   </Layout>
 );
 
@@ -341,49 +470,81 @@ export const SubfieldPage: FC<{
   domain: TaxonomyDomain;
   field: TaxonomyField;
   subfield: TaxonomySubfield;
-}> = ({ domain, field, subfield }) => (
+  siblings: TaxonomySubfield[];
+  keywords: NamedCount[];
+  works: HubWorksByRank;
+}> = ({ domain, field, subfield, siblings, keywords, works }) => (
   <Layout
     title={subfield.displayName}
     canonicalPath={`/fields/${encodeURIComponent(domain.id)}/${encodeURIComponent(field.id)}/${encodeURIComponent(subfield.id)}`}
   >
+    <BrowseNav />
     <p class="meta">
-      <a href={`/fields/${encodeURIComponent(domain.id)}`}>{domain.displayName}</a>
+      <a href="/fields">Fields</a>
       {" · "}
-      <a href={`/fields/${encodeURIComponent(domain.id)}/${encodeURIComponent(field.id)}`}>
-        {field.displayName}
-      </a>
+      <a href={fieldsPath(domain.id)}>{domain.displayName}</a>
+      {" · "}
+      <a href={fieldsPath(domain.id, field.id)}>{field.displayName}</a>
     </p>
     <h1>{subfield.displayName}</h1>
     {subfield.description ? <p>{subfield.description}</p> : null}
-    <p>
-      <a
-        class="button-primary"
-        href={`/search?q=${encodeURIComponent(subfield.displayName)}`}
-      >
-        Search this subfield
-      </a>
-    </p>
-    <h2>Topics</h2>
-    <ul class="directory-list stat-list">
-      {subfield.topics.map((topic) => (
-        <li key={topic.id}>
-          <a href={fieldsPath(domain.id, field.id, subfield.id, topic.id)}>
-            <span>{topic.displayName}</span>
-            <span class="stat-count">{countLabel(topic.worksCount)}</span>
-          </a>
-        </li>
-      ))}
-    </ul>
+    <GraphHonestyNote />
+    <HubWorkList works={works} />
+    <SearchHubLink query={subfield.displayName} label="Search this subfield" />
+    <div class="browse-rails">
+      <div>
+        <h2>Topics</h2>
+        <ul class="directory-list stat-list">
+          {subfield.topics.map((topic) => (
+            <li key={topic.id}>
+              <a href={fieldsPath(domain.id, field.id, subfield.id, topic.id)}>
+                <span>{topic.displayName}</span>
+                <span class="stat-count">{countLabel(topic.worksCount)}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {siblings.length > 0 || keywords.length > 0 ? (
+        <div>
+          {siblings.length > 0 ? (
+            <RelatedRail title="Other subfields in this field">
+              <DirectoryList
+                items={siblings.map((item) => ({
+                  key: item.id,
+                  href: fieldsPath(domain.id, field.id, item.id),
+                  label: item.displayName,
+                  count: countLabel(item.worksCount),
+                }))}
+              />
+            </RelatedRail>
+          ) : null}
+          {keywords.length > 0 ? (
+            <RelatedRail title="Keywords">
+              <DirectoryList
+                items={keywords.map((item) => ({
+                  key: item.name,
+                  href: keywordPath(item.name),
+                  label: item.name,
+                  count: `${item.count.toLocaleString()} topic${item.count === 1 ? "" : "s"}`,
+                }))}
+              />
+            </RelatedRail>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   </Layout>
 );
 
-function WorkJsonLd(props: { item: ScoredFederatedWork }) {
+function WorkJsonLd(props: { item: ScoredFederatedWork; overview?: string | null }) {
   const work = props.item.work;
   const json = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "WebPage",
     url: work.doi ? `${SITE_URL}/works/${encodeURIComponent(work.doi)}` : undefined,
     name: work.title,
+    description: props.overview ?? undefined,
     mainEntity: {
       "@type": "ScholarlyArticle",
       name: work.title,
@@ -391,6 +552,7 @@ function WorkJsonLd(props: { item: ScoredFederatedWork }) {
       url: work.canonicalUrl ?? undefined,
       datePublished: work.publishedDate ?? undefined,
       author: work.authors.map((author) => ({ "@type": "Person", name: author.name })),
+      description: props.overview ?? undefined,
     },
   }).replace(/</g, "\\u003c");
   return (
@@ -401,16 +563,25 @@ function WorkJsonLd(props: { item: ScoredFederatedWork }) {
   );
 }
 
-export const FederatedWorkPage: FC<{ item: ScoredFederatedWork }> = ({ item }) => {
+export const FederatedWorkPage: FC<{
+  item: ScoredFederatedWork;
+  overview?: string | null;
+}> = ({ item, overview }) => {
   const { work, credibility } = item;
   const citations = buildFederatedCitations(work);
+  const trimmedOverview = overview?.trim() || "";
+  const ogDescription = trimmedOverview
+    ? trimmedOverview.length <= 280
+      ? trimmedOverview
+      : `${trimmedOverview.slice(0, 279).trimEnd()}…`
+    : `${credibility.band.replaceAll("-", " ")} · ${work.containerTitle ?? "scholarly record"}`;
   return (
     <Layout
       title={work.title}
       canonicalPath={work.doi ? `/works/${encodeURIComponent(work.doi)}` : undefined}
-      headExtra={<WorkJsonLd item={item} />}
+      headExtra={<WorkJsonLd item={item} overview={trimmedOverview || null} />}
       ogType="article"
-      ogDescription={`${credibility.band.replaceAll("-", " ")} · ${work.containerTitle ?? "scholarly record"}`}
+      ogDescription={ogDescription}
     >
       <h1>{work.title}</h1>
       <p class="meta">
@@ -428,6 +599,7 @@ export const FederatedWorkPage: FC<{ item: ScoredFederatedWork }> = ({ item }) =
           </a>
         </p>
       ) : null}
+      {trimmedOverview ? <OverviewSection overview={trimmedOverview} /> : null}
       <dl class="entry-fields">
         <dt>DOI</dt>
         <dd class="mono">{work.doi ?? "—"}</dd>
@@ -525,9 +697,11 @@ export const CoveragePage: FC = () => (
 function GraphHonestyNote() {
   return (
     <p class="honesty-note">
-      The topic map and the journal registry are separate. This snapshot has
-      no work-level rows, so there is no authoritative topic-to-venue link.
-      Search is a lexical lookup, not a claim that a venue publishes a topic.
+      Papers listed on taxonomy pages are the top few works per node from the
+      OpenAlex snapshot. That list is not exhaustive and is not an endorsement.
+      The topic map and the journal registry remain separate: there is still no
+      authoritative topic-to-venue or topic-to-organization edge. Search is a
+      lexical lookup, not a claim that a venue publishes a topic.
     </p>
   );
 }
@@ -603,12 +777,14 @@ export const TopicPage: FC<{
   subfield: TaxonomySubfield;
   topic: TaxonomyTopic;
   siblings: TaxonomyTopic[];
-}> = ({ domain, field, subfield, topic, siblings }) => (
+  works: HubWorksByRank;
+}> = ({ domain, field, subfield, topic, siblings, works }) => (
   <Layout
     title={topic.displayName}
     canonicalPath={fieldsPath(domain.id, field.id, subfield.id, topic.id)}
     ogDescription={`OpenAlex topic in ${subfield.displayName}.`}
   >
+    <BrowseNav />
     <p class="meta">
       <a href="/fields">Fields</a>
       {" · "}
@@ -622,7 +798,8 @@ export const TopicPage: FC<{
     {topic.description ? <p>{topic.description}</p> : null}
     <p class="meta">{countLabel(topic.worksCount)}</p>
     <GraphHonestyNote />
-    <WorksLoader query={topic.displayName} />
+    <HubWorkList works={works} />
+    <SearchHubLink query={topic.displayName} label="Search papers" />
     <div class="browse-rails">
       <div>
         <h2>Keywords</h2>
@@ -640,16 +817,18 @@ export const TopicPage: FC<{
           </ul>
         )}
       </div>
-      <RelatedRail title="Other topics in this subfield">
-        <DirectoryList
-          items={siblings.map((item) => ({
-            key: item.id,
-            href: fieldsPath(domain.id, field.id, subfield.id, item.id),
-            label: item.displayName,
-            count: countLabel(item.worksCount),
-          }))}
-        />
-      </RelatedRail>
+      {siblings.length > 0 ? (
+        <RelatedRail title="Other topics in this subfield">
+          <DirectoryList
+            items={siblings.map((item) => ({
+              key: item.id,
+              href: fieldsPath(domain.id, field.id, subfield.id, item.id),
+              label: item.displayName,
+              count: countLabel(item.worksCount),
+            }))}
+          />
+        </RelatedRail>
+      ) : null}
     </div>
   </Layout>
 );
@@ -663,6 +842,7 @@ export const KeywordsPage: FC<{ page: BrowsePage<NamedCount>; after?: string | n
     canonicalPath="/keywords"
     ogDescription="OpenAlex topic keywords that bridge research areas."
   >
+    <BrowseNav />
     <h1>Keywords</h1>
     <p>
       Keywords are the only authoritative cross-domain bridge in this snapshot.
@@ -681,15 +861,17 @@ export const KeywordsPage: FC<{ page: BrowsePage<NamedCount>; after?: string | n
   </Layout>
 );
 
-export const KeywordPage: FC<{ keyword: string; topics: KeywordTopic[] }> = ({
-  keyword,
-  topics,
-}) => (
+export const KeywordPage: FC<{
+  keyword: string;
+  topics: KeywordTopic[];
+  relatedKeywords: NamedCount[];
+}> = ({ keyword, topics, relatedKeywords }) => (
   <Layout
     title={keyword}
     canonicalPath={keywordPath(keyword)}
     ogDescription={`OpenAlex topics that share the keyword ${keyword}.`}
   >
+    <BrowseNav />
     <p class="meta">
       <a href="/keywords">Keywords</a>
     </p>
@@ -700,14 +882,31 @@ export const KeywordPage: FC<{ keyword: string; topics: KeywordTopic[] }> = ({
     </p>
     <GraphHonestyNote />
     <WorksLoader query={keyword} />
-    <DirectoryList
-      items={topics.map((topic) => ({
-        key: topic.id,
-        href: fieldsPath(topic.domainId, topic.fieldId, topic.subfieldId, topic.id),
-        label: `${topic.displayName} · ${topic.domainName}`,
-        count: countLabel(topic.worksCount),
-      }))}
-    />
+    <div class="browse-rails">
+      <div>
+        <h2>Topics</h2>
+        <DirectoryList
+          items={topics.map((topic) => ({
+            key: topic.id,
+            href: fieldsPath(topic.domainId, topic.fieldId, topic.subfieldId, topic.id),
+            label: `${topic.displayName} · ${topic.domainName}`,
+            count: countLabel(topic.worksCount),
+          }))}
+        />
+      </div>
+      {relatedKeywords.length > 0 ? (
+        <RelatedRail title="Co-occurring keywords">
+          <DirectoryList
+            items={relatedKeywords.map((item) => ({
+              key: item.name,
+              href: keywordPath(item.name),
+              label: item.name,
+              count: `${item.count.toLocaleString()} topic${item.count === 1 ? "" : "s"}`,
+            }))}
+          />
+        </RelatedRail>
+      ) : null}
+    </div>
   </Layout>
 );
 
@@ -722,6 +921,7 @@ export const VenuesPage: FC<{
     canonicalPath={type ? venueTypePath(type) : "/venues"}
     ogDescription="OpenAlex sources: journals, conferences, repositories, and other venues."
   >
+    <BrowseNav />
     <h1>{type ? `Venues: ${type}` : "Venues"}</h1>
     <p>
       Venue records come from the OpenAlex sources snapshot. ISSN aliases
@@ -763,12 +963,14 @@ export const VenuePage: FC<{
   issns: IssnResolution[];
   subjects: DoajSubjectLink[];
   notices: RetractionNotice[];
-}> = ({ venue, publisher, issns, subjects, notices }) => (
+  publisherVenues: VenueSummary[];
+}> = ({ venue, publisher, issns, subjects, notices, publisherVenues }) => (
   <Layout
     title={venue.displayName}
     canonicalPath={venuePath(venue.id)}
     ogDescription={venue.sourceType ? `${venue.sourceType} in the OpenAlex source registry.` : "OpenAlex venue."}
   >
+    <BrowseNav />
     <p class="meta">
       <a href="/venues">Venues</a>
       {venue.sourceType ? (
@@ -830,6 +1032,19 @@ export const VenuePage: FC<{
         ) : (
           <p class="status-prompt">No publisher link in this snapshot.</p>
         )}
+        {publisherVenues.length > 0 ? (
+          <>
+            <h3>More venues from this publisher</h3>
+            <DirectoryList
+              items={publisherVenues.map((item) => ({
+                key: item.id,
+                href: venuePath(item.id),
+                label: item.displayName,
+                count: item.sourceType ?? countLabel(item.worksCount),
+              }))}
+            />
+          </>
+        ) : null}
         <h3>Retraction notices naming this journal</h3>
         <DirectoryList
           items={notices.map((notice) => ({
@@ -849,6 +1064,7 @@ export const PublishersPage: FC<{
   after?: string | null;
 }> = ({ page, after }) => (
   <Layout title="Publishers" canonicalPath="/publishers" ogDescription="OpenAlex publishers.">
+    <BrowseNav />
     <h1>Publishers</h1>
     <GraphHonestyNote />
     <DirectoryList
@@ -875,6 +1091,7 @@ export const PublisherPage: FC<{
     canonicalPath={publisherPath(publisher.id)}
     ogDescription="OpenAlex publisher record."
   >
+    <BrowseNav />
     <p class="meta">
       <a href="/publishers">Publishers</a>
       {parent ? (
@@ -936,6 +1153,7 @@ export const OrganizationsPage: FC<{
     canonicalPath={country ? organizationCountryPath(country) : "/organizations"}
     ogDescription="Research Organization Registry records joined to OpenAlex institutions."
   >
+    <BrowseNav />
     <h1>{country ? `Organizations in ${country}` : "Organizations"}</h1>
     <p>
       These pages start from ROR. An OpenAlex institution record is shown when
@@ -982,6 +1200,7 @@ export const OrganizationPage: FC<{
       canonicalPath={ror ? organizationPath(ror) : undefined}
       ogDescription="ROR organization record."
     >
+      <BrowseNav />
       <p class="meta">
         <a href="/organizations">Organizations</a>
         {organization.countryCode ? (
@@ -1041,6 +1260,7 @@ export const SubjectsPage: FC<{
     canonicalPath="/subjects"
     ogDescription="Subject labels from the Directory of Open Access Journals."
   >
+    <BrowseNav />
     <h1>DOAJ subjects</h1>
     <p>
       These labels come from DOAJ journal records. They are a venue-side topical
@@ -1062,28 +1282,47 @@ export const SubjectsPage: FC<{
 export const SubjectPage: FC<{
   subject: string;
   venues: BrowsePage<VenueSummary>;
+  relatedSubjects: NamedCount[];
   after?: string | null;
-}> = ({ subject, venues, after }) => (
+}> = ({ subject, venues, relatedSubjects, after }) => (
   <Layout
     title={subject}
     canonicalPath={subjectPath(subject)}
     ogDescription="Venues whose DOAJ record carries this subject label."
   >
+    <BrowseNav />
     <p class="meta">
       <a href="/subjects">DOAJ subjects</a>
     </p>
     <h1>{subject}</h1>
     <GraphHonestyNote />
     <WorksLoader query={subject} />
-    <DirectoryList
-      items={venues.items.map((item) => ({
-        key: item.id,
-        href: venuePath(item.id),
-        label: item.displayName,
-        count: item.sourceType ?? undefined,
-      }))}
-    />
-    <KeysetNav path={subjectPath(subject)} nextAfter={venues.nextAfter} after={after} />
+    <div class="browse-rails">
+      <div>
+        <h2>Venues</h2>
+        <DirectoryList
+          items={venues.items.map((item) => ({
+            key: item.id,
+            href: venuePath(item.id),
+            label: item.displayName,
+            count: item.sourceType ?? undefined,
+          }))}
+        />
+        <KeysetNav path={subjectPath(subject)} nextAfter={venues.nextAfter} after={after} />
+      </div>
+      {relatedSubjects.length > 0 ? (
+        <RelatedRail title="Co-occurring DOAJ subjects">
+          <DirectoryList
+            items={relatedSubjects.map((item) => ({
+              key: item.name,
+              href: subjectPath(item.name),
+              label: item.name,
+              count: `${item.count.toLocaleString()} journal${item.count === 1 ? "" : "s"}`,
+            }))}
+          />
+        </RelatedRail>
+      ) : null}
+    </div>
   </Layout>
 );
 
@@ -1096,6 +1335,7 @@ export const RetractionsPage: FC<{
     canonicalPath="/retractions"
     ogDescription="Retraction Watch notices in the authority snapshot."
   >
+    <BrowseNav />
     <h1>Retraction notices</h1>
     <p>
       <a href="/retractions/reasons">Browse by reason</a>
@@ -1118,6 +1358,7 @@ export const RetractionReasonsPage: FC<{ reasons: NamedCount[] }> = ({ reasons }
     canonicalPath="/retractions/reasons"
     ogDescription="Reason labels attached to Retraction Watch notices."
   >
+    <BrowseNav />
     <p class="meta">
       <a href="/retractions">Retraction notices</a>
     </p>
@@ -1136,28 +1377,63 @@ export const RetractionReasonsPage: FC<{ reasons: NamedCount[] }> = ({ reasons }
 export const RetractionReasonPage: FC<{
   reason: string;
   page: BrowsePage<RetractionNotice>;
+  relatedReasons: NamedCount[];
+  journals: VenueSummary[];
   after?: string | null;
-}> = ({ reason, page, after }) => (
+}> = ({ reason, page, relatedReasons, journals, after }) => (
   <Layout
     title={reason}
     canonicalPath={retractionReasonPath(reason)}
     ogDescription={`Retraction Watch notices labelled ${reason}.`}
   >
+    <BrowseNav />
     <p class="meta">
       <a href="/retractions">Retraction notices</a>
       {" · "}
       <a href="/retractions/reasons">Reasons</a>
     </p>
     <h1>{reason}</h1>
-    <DirectoryList
-      items={page.items.map((item) => ({
-        key: item.id,
-        href: retractionPath(item.id),
-        label: item.title,
-        count: item.noticeDate ?? item.noticeType,
-      }))}
-    />
-    <KeysetNav path={retractionReasonPath(reason)} nextAfter={page.nextAfter} after={after} />
+    <div class="browse-rails">
+      <div>
+        <DirectoryList
+          items={page.items.map((item) => ({
+            key: item.id,
+            href: retractionPath(item.id),
+            label: item.title,
+            count: item.noticeDate ?? item.noticeType,
+          }))}
+        />
+        <KeysetNav path={retractionReasonPath(reason)} nextAfter={page.nextAfter} after={after} />
+      </div>
+      {relatedReasons.length > 0 || journals.length > 0 ? (
+        <div>
+          {relatedReasons.length > 0 ? (
+            <RelatedRail title="Co-occurring reasons">
+              <DirectoryList
+                items={relatedReasons.map((item) => ({
+                  key: item.name,
+                  href: retractionReasonPath(item.name),
+                  label: item.name,
+                  count: `${item.count.toLocaleString()} notice${item.count === 1 ? "" : "s"}`,
+                }))}
+              />
+            </RelatedRail>
+          ) : null}
+          {journals.length > 0 ? (
+            <RelatedRail title="Journals with this reason">
+              <DirectoryList
+                items={journals.map((item) => ({
+                  key: item.id,
+                  href: venuePath(item.id),
+                  label: item.displayName,
+                  count: item.sourceType ?? undefined,
+                }))}
+              />
+            </RelatedRail>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   </Layout>
 );
 
@@ -1170,6 +1446,7 @@ export const RetractionNoticePage: FC<{
     canonicalPath={retractionPath(notice.id)}
     ogDescription="Retraction Watch notice."
   >
+    <BrowseNav />
     <p class="meta">
       <a href="/retractions">Retraction notices</a>
     </p>
@@ -1188,7 +1465,7 @@ export const RetractionNoticePage: FC<{
       <dt>Original paper DOI</dt>
       <dd class="mono">
         {notice.originalPaperDoi ? (
-          <a href={`/works/${encodeURIComponent(notice.originalPaperDoi)}`}>
+          <a href={workPath(notice.originalPaperDoi)}>
             {notice.originalPaperDoi}
           </a>
         ) : (

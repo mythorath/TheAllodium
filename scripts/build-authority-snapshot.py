@@ -122,6 +122,9 @@ TABLES = {
         {"language_json": []}, "nlm",
     ),
 }
+# federated_work_overviews, hub_works, and hub_work_records are intentionally
+# omitted: offline GPU paraphrases and precomputed hub works must survive
+# authority snapshot promotion.
 DELETE_ORDER = (
     "oa_topic_keywords", "doaj_journal_subjects", "oa_source_issns",
     "oa_topics", "oa_subfields", "oa_fields", "oa_domains",

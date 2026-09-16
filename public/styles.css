@@ -558,7 +558,8 @@ a.collection-card:hover h3 {
   opacity: 0.85;
 }
 
-.home-directory {
+.home-directory,
+.browse-nav {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem 1.15rem;
@@ -566,13 +567,19 @@ a.collection-card:hover h3 {
   font-size: 0.95rem;
 }
 
-.home-directory a {
+.browse-nav {
+  margin: 0 0 1.15rem;
+}
+
+.home-directory a,
+.browse-nav a {
   color: var(--muted);
   text-decoration: none;
   font-weight: 500;
 }
 
-.home-directory a:hover {
+.home-directory a:hover,
+.browse-nav a:hover {
   color: var(--accent-ink);
   text-decoration: underline;
   text-underline-offset: 0.12em;

@@ -188,6 +188,46 @@ export type TopicPath = SubfieldPath & {
   siblings: TaxonomyTopic[];
 };
 
+export type FederatedWorkOverview = {
+  doi: string;
+  overview: string;
+  model: string;
+  generatedAt: string;
+  sourceNote: string | null;
+};
+
+export type HubKind = "domain" | "field" | "subfield" | "topic";
+
+export type RankKind = "cited" | "recent";
+
+export type HubWorkAuthor = {
+  name: string;
+  orcid: string | null;
+};
+
+export type HubWork = {
+  doi: string;
+  title: string;
+  authors: HubWorkAuthor[];
+  publicationYear: number | null;
+  publicationDate: string | null;
+  containerTitle: string | null;
+  workType: string | null;
+  isOpenAccess: boolean | null;
+  citedByCount: number | null;
+  canonicalUrl: string | null;
+  openalexId: string | null;
+  fetchedAt: string;
+  rank: number;
+  rankKind: RankKind;
+  retracted: boolean;
+};
+
+export type HubWorksByRank = {
+  cited: HubWork[];
+  recent: HubWork[];
+};
+
 export type SitemapKind =
   | "static"
   | "fields"

@@ -17,8 +17,10 @@
 //
 // Federated papers on browse hubs: any `[data-load-works]` button fetches
 // `/partials/works` and injects the server-rendered fragment. Buttons start
-// `hidden` and are revealed here; without this file the plain Search papers
-// link remains the working path, so crawlers never trigger federation.
+// `hidden` and are revealed here. With JS, IntersectionObserver fires that
+// fetch once when `.works-loader` nears the viewport; the button stays as
+// a click-to-retry control. Without this file the plain Search papers link
+// remains the working path, so crawlers never trigger federation.
 (function () {
   "use strict";
 
@@ -130,14 +132,49 @@
     }
   }
 
+  function worksLoaderRoot(button) {
+    return button.closest(".works-loader") || button.parentNode;
+  }
+
+  function observeWorksLoaders() {
+    var buttons = document.querySelectorAll("[data-load-works]");
+    if (buttons.length === 0) return;
+    if (typeof IntersectionObserver !== "function") return;
+
+    var observer = new IntersectionObserver(
+      function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          var entry = entries[i];
+          if (!entry.isIntersecting) continue;
+          var root = entry.target;
+          observer.unobserve(root);
+          if (root.getAttribute("data-works-attempted") === "1") continue;
+          var button = root.querySelector
+            ? root.querySelector("[data-load-works]")
+            : null;
+          if (!button) continue;
+          loadWorks(button);
+        }
+      },
+      // Fire when the loader is on screen or just below the fold — not while
+      // it is still far down a long hub page.
+      { rootMargin: "0px 0px 80px 0px", threshold: 0 },
+    );
+
+    for (var j = 0; j < buttons.length; j++) {
+      observer.observe(worksLoaderRoot(buttons[j]));
+    }
+  }
+
   function loadWorks(button) {
     var url = button.getAttribute("data-load-works");
     if (!url) return;
-    var root = button.closest(".works-loader") || button.parentNode;
+    var root = worksLoaderRoot(button);
     var target = root && root.querySelector ? root.querySelector("[data-works-target]") : null;
     if (!target) return;
     if (button.getAttribute("data-loading") === "1") return;
     button.setAttribute("data-loading", "1");
+    if (root && root.setAttribute) root.setAttribute("data-works-attempted", "1");
     button.disabled = true;
     target.replaceChildren();
     var pending = document.createElement("p");
@@ -206,4 +243,5 @@
   renderShortlistNav();
   refreshShortlistButtons();
   revealWorksButtons();
+  observeWorksLoaders();
 })();

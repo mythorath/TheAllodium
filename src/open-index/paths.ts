@@ -48,6 +48,10 @@ export function searchPath(query: string): string {
   return `/search?q=${encodeURIComponent(query)}`;
 }
 
+export function workPath(doi: string): string {
+  return `/works/${encodeURIComponent(doi)}`;
+}
+
 export function worksPartialPath(query: string): string {
   return `/partials/works?q=${encodeURIComponent(query)}`;
 }

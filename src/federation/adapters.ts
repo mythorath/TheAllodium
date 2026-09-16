@@ -354,6 +354,32 @@ export async function searchCrossref(
   });
 }
 
+/** Direct Crossref identifier GET. `message` is the work, not `{ items }`. */
+export async function getCrossrefWorkByDoi(
+  doi: string,
+  options: AdapterOptions = {},
+): Promise<AdapterResult> {
+  const normalized = normalizeDoi(doi) ?? doi.trim();
+  const query: FederationQuery = { text: normalized, pageSize: 1 };
+  return runAdapter("crossref", query, options, async (fetcher, signal, retrievedAt) => {
+    const params = new URLSearchParams();
+    if (options.contactEmail) params.set("mailto", options.contactEmail);
+    const queryString = params.size > 0 ? `?${params}` : "";
+    const { body, status } = await getJson(
+      fetcher,
+      `https://api.crossref.org/works/${encodeURIComponent(normalized)}${queryString}`,
+      signal,
+    );
+    const message = isRecord(body) && isRecord(body.message) ? body.message : null;
+    if (!message) throw new InvalidResponseError(status, "Missing Crossref message");
+    return {
+      hits: [crossrefWork(message, retrievedAt, 0)],
+      nextCursor: null,
+      httpStatus: status,
+    };
+  });
+}
+
 function europePmcWork(
   item: JsonRecord,
   retrievedAt: string,
@@ -1282,8 +1308,16 @@ export const FEDERATION_ADAPTERS: readonly FederationAdapter[] = [
   { source: "dblp", search: searchDblp },
 ];
 
-/** Adapters used on every public request. Zenodo remains implemented and
- * monitored, but its origin returned 403/timeouts from Cloudflare egress in
- * the Phase 5A staging spike; DataCite already federates Zenodo DOIs. */
+/** Adapters used on every public request. Zenodo and DBLP remain
+ * implemented and monitored, but their origins block or challenge
+ * Cloudflare egress (Zenodo 403; DBLP Anubis HTML). DataCite already
+ * federates Zenodo DOIs. */
+export const DISABLED_PUBLIC_SOURCES: ReadonlySet<FederationSource> = new Set([
+  "zenodo",
+  "dblp",
+]);
+
 export const PUBLIC_FEDERATION_ADAPTERS: readonly FederationAdapter[] =
-  FEDERATION_ADAPTERS.filter((adapter) => adapter.source !== "zenodo");
+  FEDERATION_ADAPTERS.filter(
+    (adapter) => !DISABLED_PUBLIC_SOURCES.has(adapter.source),
+  );

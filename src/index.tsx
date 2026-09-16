@@ -3,14 +3,24 @@ import {
   findVenuesByName,
   getDomainWithFields,
   getDomains,
+  getFederatedOverview,
   getFieldWithSubfields,
+  getHubWorks,
   getInstitutionByRor,
   getPublisher,
+  getRelatedKeywords,
+  getRelatedReasons,
+  getRelatedSubjects,
   getRetractionNotice,
+  getSiblingDomains,
+  getSiblingFields,
+  getSiblingSubfields,
+  getSubfieldKeywords,
   getSubfieldWithTopics,
   getTopic,
   getVenue,
   getVenueByIssn,
+  getVenuesByPublisher,
   hasDoajSubject,
   listCountryPeers,
   listDoajSubjects,
@@ -32,6 +42,7 @@ import {
   listVenuesForPublisher,
   listVenuesForSubject,
 } from "./authority/repository";
+import type { VenueSummary } from "./authority/types";
 import {
   getEntriesByIds,
   getEntry,
@@ -212,6 +223,30 @@ app.all("/mcp", (c) =>
 app.get("/coverage", (c) => c.html(<CoveragePage />));
 
 const DIRECTORY_CACHE = { "Cache-Control": "public, max-age=3600" };
+const RAIL_LIMIT = 8;
+
+async function journalsForNotices(
+  db: D1Database,
+  notices: Array<{ journal: string | null }>,
+): Promise<VenueSummary[]> {
+  const names = [
+    ...new Set(
+      notices
+        .map((notice) => notice.journal?.trim())
+        .filter((name): name is string => Boolean(name)),
+    ),
+  ].slice(0, RAIL_LIMIT);
+  const matches = await Promise.all(names.map((name) => findVenuesByName(db, name, 1)));
+  const seen = new Set<string>();
+  const journals: VenueSummary[] = [];
+  for (const match of matches) {
+    const venue = match[0];
+    if (!venue || seen.has(venue.id)) continue;
+    seen.add(venue.id);
+    journals.push(venue);
+  }
+  return journals;
+}
 
 async function withAuthority<T>(
   db: D1Database | undefined,
@@ -237,23 +272,27 @@ app.get("/fields", async (c) => {
 });
 
 app.get("/fields/:domain/:field/:subfield/:topic", async (c) => {
-  const path = await withAuthority(c.env.AUTHORITY, null, (db) =>
-    getTopic(
+  const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
+    const path = await getTopic(
       db,
       c.req.param("domain"),
       c.req.param("field"),
       c.req.param("subfield"),
       c.req.param("topic"),
-    ),
-  );
-  if (!path) return c.html(<NotFoundPage />, 404);
+    );
+    if (!path) return null;
+    const works = await getHubWorks(db, "topic", path.topic.id);
+    return { path, works };
+  });
+  if (!payload) return c.html(<NotFoundPage />, 404);
   return c.html(
     <TopicPage
-      domain={path.domain}
-      field={path.field}
-      subfield={path.subfield}
-      topic={path.topic}
-      siblings={path.siblings}
+      domain={payload.path.domain}
+      field={payload.path.field}
+      subfield={payload.path.subfield}
+      topic={payload.path.topic}
+      siblings={payload.path.siblings}
+      works={payload.works}
     />,
     200,
     DIRECTORY_CACHE,
@@ -261,31 +300,75 @@ app.get("/fields/:domain/:field/:subfield/:topic", async (c) => {
 });
 
 app.get("/fields/:domain/:field/:subfield", async (c) => {
-  const path = await withAuthority(c.env.AUTHORITY, null, (db) =>
-    getSubfieldWithTopics(db, c.req.param("domain"), c.req.param("field"), c.req.param("subfield")),
-  );
-  if (!path) return c.html(<NotFoundPage />, 404);
+  const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
+    const path = await getSubfieldWithTopics(
+      db,
+      c.req.param("domain"),
+      c.req.param("field"),
+      c.req.param("subfield"),
+    );
+    if (!path) return null;
+    const [siblings, keywords, works] = await Promise.all([
+      getSiblingSubfields(db, path.field.id, path.subfield.id),
+      getSubfieldKeywords(db, path.subfield.id, RAIL_LIMIT),
+      getHubWorks(db, "subfield", path.subfield.id),
+    ]);
+    return { path, siblings, keywords, works };
+  });
+  if (!payload) return c.html(<NotFoundPage />, 404);
   return c.html(
-    <SubfieldPage domain={path.domain} field={path.field} subfield={path.subfield} />,
+    <SubfieldPage
+      domain={payload.path.domain}
+      field={payload.path.field}
+      subfield={payload.path.subfield}
+      siblings={payload.siblings}
+      keywords={payload.keywords}
+      works={payload.works}
+    />,
     200,
     DIRECTORY_CACHE,
   );
 });
 
 app.get("/fields/:domain/:field", async (c) => {
-  const path = await withAuthority(c.env.AUTHORITY, null, (db) =>
-    getFieldWithSubfields(db, c.req.param("domain"), c.req.param("field")),
+  const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
+    const path = await getFieldWithSubfields(db, c.req.param("domain"), c.req.param("field"));
+    if (!path) return null;
+    const [siblings, works] = await Promise.all([
+      getSiblingFields(db, path.domain.id, path.field.id),
+      getHubWorks(db, "field", path.field.id),
+    ]);
+    return { path, siblings, works };
+  });
+  if (!payload) return c.html(<NotFoundPage />, 404);
+  return c.html(
+    <FieldPage
+      domain={payload.path.domain}
+      field={payload.path.field}
+      siblings={payload.siblings}
+      works={payload.works}
+    />,
+    200,
+    DIRECTORY_CACHE,
   );
-  if (!path) return c.html(<NotFoundPage />, 404);
-  return c.html(<FieldPage domain={path.domain} field={path.field} />, 200, DIRECTORY_CACHE);
 });
 
 app.get("/fields/:domain", async (c) => {
-  const domain = await withAuthority(c.env.AUTHORITY, null, (db) =>
-    getDomainWithFields(db, c.req.param("domain")),
+  const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
+    const domain = await getDomainWithFields(db, c.req.param("domain"));
+    if (!domain) return null;
+    const [siblings, works] = await Promise.all([
+      getSiblingDomains(db, domain.id),
+      getHubWorks(db, "domain", domain.id),
+    ]);
+    return { domain, siblings, works };
+  });
+  if (!payload) return c.html(<NotFoundPage />, 404);
+  return c.html(
+    <DomainPage domain={payload.domain} siblings={payload.siblings} works={payload.works} />,
+    200,
+    DIRECTORY_CACHE,
   );
-  if (!domain) return c.html(<NotFoundPage />, 404);
-  return c.html(<DomainPage domain={domain} />, 200, DIRECTORY_CACHE);
 });
 
 app.get("/keywords", async (c) => {
@@ -298,9 +381,22 @@ app.get("/keywords", async (c) => {
 
 app.get("/keywords/:keyword", async (c) => {
   const keyword = c.req.param("keyword");
-  const topics = await withAuthority(c.env.AUTHORITY, [], (db) => listTopicsForKeyword(db, keyword));
-  if (topics.length === 0) return c.html(<NotFoundPage />, 404);
-  return c.html(<KeywordPage keyword={keyword} topics={topics} />, 200, DIRECTORY_CACHE);
+  const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
+    const topics = await listTopicsForKeyword(db, keyword);
+    if (topics.length === 0) return null;
+    const relatedKeywords = await getRelatedKeywords(db, keyword, RAIL_LIMIT);
+    return { topics, relatedKeywords };
+  });
+  if (!payload) return c.html(<NotFoundPage />, 404);
+  return c.html(
+    <KeywordPage
+      keyword={keyword}
+      topics={payload.topics}
+      relatedKeywords={payload.relatedKeywords}
+    />,
+    200,
+    DIRECTORY_CACHE,
+  );
 });
 
 app.get("/venues/type/:type", async (c) => {
@@ -329,13 +425,25 @@ app.get("/venues/:id", async (c) => {
   const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
     const venue = await getVenue(db, id);
     if (!venue) return null;
-    const [publisher, issns, subjects, notices] = await Promise.all([
+    const [publisher, issns, subjects, notices, publisherVenues] = await Promise.all([
       venue.publisherId ? getPublisher(db, venue.publisherId) : Promise.resolve(null),
       listIssnResolutions(db, venue.id),
       listVenueSubjects(db, venue.id),
       listNoticesForJournal(db, venue.displayName),
+      venue.publisherId
+        ? getVenuesByPublisher(db, venue.publisherId, RAIL_LIMIT + 1)
+        : Promise.resolve([]),
     ]);
-    return { venue, publisher, issns, subjects, notices };
+    return {
+      venue,
+      publisher,
+      issns,
+      subjects,
+      notices,
+      publisherVenues: publisherVenues
+        .filter((item) => item.id !== venue.id)
+        .slice(0, RAIL_LIMIT),
+    };
   });
   if (!payload) return c.html(<NotFoundPage />, 404);
   return c.html(
@@ -345,6 +453,7 @@ app.get("/venues/:id", async (c) => {
       issns={payload.issns}
       subjects={payload.subjects}
       notices={payload.notices}
+      publisherVenues={payload.publisherVenues}
     />,
     200,
     DIRECTORY_CACHE,
@@ -449,20 +558,49 @@ app.get("/subjects/:subject", async (c) => {
   const after = afterQuery(c.req.query("after"));
   const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
     if (!(await hasDoajSubject(db, subject))) return null;
-    return listVenuesForSubject(db, subject, after);
+    const [venues, relatedSubjects] = await Promise.all([
+      listVenuesForSubject(db, subject, after),
+      getRelatedSubjects(db, subject, RAIL_LIMIT),
+    ]);
+    return { venues, relatedSubjects };
   });
   if (!payload) return c.html(<NotFoundPage />, 404);
-  return c.html(<SubjectPage subject={subject} venues={payload} after={after} />, 200, DIRECTORY_CACHE);
+  return c.html(
+    <SubjectPage
+      subject={subject}
+      venues={payload.venues}
+      relatedSubjects={payload.relatedSubjects}
+      after={after}
+    />,
+    200,
+    DIRECTORY_CACHE,
+  );
 });
 
 app.get("/retractions/reasons/:reason", async (c) => {
   const reason = c.req.param("reason");
   const after = afterQuery(c.req.query("after"));
-  const page = await withAuthority(c.env.AUTHORITY, { items: [], nextAfter: null }, (db) =>
-    listNoticesByReason(db, reason, after),
+  const payload = await withAuthority(c.env.AUTHORITY, null, async (db) => {
+    const page = await listNoticesByReason(db, reason, after);
+    if (page.items.length === 0 && !after) return null;
+    const [relatedReasons, journals] = await Promise.all([
+      getRelatedReasons(db, reason, RAIL_LIMIT),
+      journalsForNotices(db, page.items),
+    ]);
+    return { page, relatedReasons, journals };
+  });
+  if (!payload) return c.html(<NotFoundPage />, 404);
+  return c.html(
+    <RetractionReasonPage
+      reason={reason}
+      page={payload.page}
+      relatedReasons={payload.relatedReasons}
+      journals={payload.journals}
+      after={after}
+    />,
+    200,
+    DIRECTORY_CACHE,
   );
-  if (page.items.length === 0 && !after) return c.html(<NotFoundPage />, 404);
-  return c.html(<RetractionReasonPage reason={reason} page={page} after={after} />, 200, DIRECTORY_CACHE);
 });
 
 app.get("/retractions/reasons", async (c) => {
@@ -509,15 +647,18 @@ app.get("/partials/works", async (c) => {
   });
 });
 
-app.get("/works/*", async (c) => {
-  const rawDoi = c.req.param("*") ?? "";
+app.get("/works/:doi{.+}", async (c) => {
+  const rawDoi = c.req.param("doi") ?? "";
   const item = await resolveFederatedWork(
     c.env satisfies FederationBindings,
     rawDoi,
     c.executionCtx,
   );
   if (!item) return c.html(<NotFoundPage id={rawDoi} />, 404);
-  return c.html(<FederatedWorkPage item={item} />);
+  const overview = await withAuthority(c.env.AUTHORITY, null, (db) =>
+    getFederatedOverview(db, item.work.doi ?? rawDoi),
+  );
+  return c.html(<FederatedWorkPage item={item} overview={overview} />);
 });
 
 app.get("/psychotherapy/disclaimer", (c) => c.html(<DisclaimerPage />));

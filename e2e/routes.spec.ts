@@ -862,11 +862,24 @@ test.describe("OpenGraph cards (Phase 2E)", () => {
   });
 });
 
+async function stubFederatedWorksPartial(page: import("@playwright/test").Page) {
+  await page.route("**/partials/works**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html; charset=utf-8",
+      body: `<div class="works-partial"><p class="meta">1 merged result</p><ol class="result-list federated-results"><li><a href="/works/10.1000%2Fcited-ok">Federated venue paper</a></li></ol></div>`,
+    });
+  });
+}
+
 test.describe("Open Index browse web", () => {
   test("walks a topic, keyword, venue, publisher, organization, subject, and retraction", async ({
     page,
   }) => {
     test.setTimeout(90_000);
+    // Auto-load on long-tail hubs would otherwise fan out live federation and
+    // stall later navigations in this same Worker.
+    await stubFederatedWorksPartial(page);
     const sitemap = await page.request.get("/sitemap.xml");
     expect(sitemap.status()).toBe(200);
     expect(await sitemap.text()).toContain("<sitemapindex");
@@ -880,7 +893,7 @@ test.describe("Open Index browse web", () => {
     await expect(
       page.getByRole("heading", { name: "Cognitive Behavioral Therapy" }),
     ).toBeVisible();
-    await expect(page.getByText(/no authoritative topic-to-venue link/)).toBeVisible();
+    await expect(page.getByText(/not an endorsement/)).toBeVisible();
     await expect(page.getByRole("link", { name: "Search papers" })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
 
@@ -909,6 +922,45 @@ test.describe("Open Index browse web", () => {
     await expect(page.getByRole("link", { name: "10.1000/example" })).toBeVisible();
   });
 
+  test("lands on a subfield page and shows papers without clicking", async ({ page }) => {
+    await page.goto("/fields/D1/FL1/SF1");
+    await expect(page.getByRole("heading", { level: 1, name: "Clinical Psychology" })).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "Browse directories" }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Most cited" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Most recent" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Retracted example paper" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Most cited clinical paper" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Recent clinical paper" })).toBeVisible();
+    await expect(page.locator(".hub-works .badge", { hasText: "Retracted" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Load papers here" })).toHaveCount(0);
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test("venue page auto-loads federated results without clicking", async ({ page }) => {
+    await stubFederatedWorksPartial(page);
+
+    await page.goto("/venues/S1");
+    await expect(page.getByRole("heading", { name: "Example Journal" })).toBeVisible();
+    await page.locator(".works-loader").scrollIntoViewIfNeeded();
+    await expect(page.getByRole("link", { name: "Federated venue paper" })).toBeVisible();
+    await expect(page.locator(".works-loader")).toHaveAttribute("data-works-attempted", "1");
+    await expect(page.getByRole("button", { name: "Load papers here" })).toBeVisible();
+  });
+
+  test("serves a federated /works page for a live Crossref DOI", async ({ page }) => {
+    test.setTimeout(60_000);
+    const doi = "10.1007/s00422-026-01037-5";
+    const response = await page.goto(`/works/${encodeURIComponent(doi)}`);
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole("heading", { level: 1 })).not.toHaveText("Not found");
+    await expect(page.locator("dd.mono", { hasText: doi })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Credibility signals" })).toBeVisible();
+    await expect(page.getByText("That page does not exist.")).toHaveCount(0);
+    await expectNoSeriousA11yViolations(page);
+  });
+
   test.describe("with JavaScript disabled", () => {
     test.use({ javaScriptEnabled: false });
 
@@ -916,11 +968,14 @@ test.describe("Open Index browse web", () => {
       page,
     }) => {
       await page.goto("/fields/D1/FL1/SF1/T1");
+      await expect(page.getByRole("heading", { name: "Most cited" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Retracted example paper" })).toBeVisible();
+      await expect(page.locator(".hub-works .badge", { hasText: "Retracted" })).toBeVisible();
       await expect(page.getByRole("link", { name: "Search papers" })).toHaveAttribute(
         "href",
         "/search?q=Cognitive%20Behavioral%20Therapy",
       );
-      await expect(page.getByRole("button", { name: "Load papers here" })).toBeHidden();
+      await expect(page.getByRole("button", { name: "Load papers here" })).toHaveCount(0);
     });
   });
 });

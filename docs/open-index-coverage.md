@@ -9,7 +9,7 @@ open interface can fill.
 ## Reachable live
 
 The first production adapter set covers Crossref, Europe PMC, DataCite,
-PubMed, DOAJ, HAL, arXiv, DOAB, and DBLP. Together these sources cover most
+PubMed, DOAJ, HAL, arXiv, and DOAB. Together these sources cover most
 DOI-registered literature plus substantial biomedical, repository, preprint,
 dataset, software, and thesis records. They overlap heavily; counts cannot be
 added.
@@ -18,6 +18,11 @@ A Zenodo adapter is implemented and monitored, but the Phase 5A staging spike
 proved that Zenodo returns 403 or times out from Cloudflare Worker egress.
 It is therefore disabled in the public fan-out. Zenodo DOI metadata remains
 reachable through DataCite rather than making every search partially fail.
+
+A DBLP adapter is implemented and monitored, but DBLP's publication search
+API now returns an Anubis anti-bot HTML page instead of JSON from Cloudflare
+Worker egress. It is therefore disabled in the public fan-out. Computer-science
+records with DOIs remain reachable through Crossref, DataCite, and arXiv.
 
 The best available estimate is 60–70% of global scholarly output. This is an
 estimate, not a measured recall figure: there is no complete denominator for

@@ -332,7 +332,10 @@ throttle concurrent callers.
   Respect `robots.txt` and DBLP’s data licence/terms.
 - Adapter: `GET https://dblp.org/search/publ/api` with JSON format and bounded
   `h`/`f`; normalizes publication info, author names, DOI, venue, year, access,
-  and canonical record link.
+  and canonical record link. Public fan-out is disabled: the origin now
+  returns an Anubis anti-bot HTML challenge instead of JSON from Cloudflare
+  Worker egress. The adapter remains implemented and is probed by
+  `npm run audit:federation`.
 - 2026 documented limits: no fixed quota is published. DBLP says waiting 1–2
   seconds between requests should be safe; excessive use returns 429 with
   `Retry-After`. Search hits are capped at 1,000 per response.

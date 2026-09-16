@@ -6,5 +6,5 @@
       "@cloudflare/vitest-pool-workers"
     ]
   },
-  "include": ["./**/*.ts", "../src/**/*.ts", "../migrations/**/*.sql", "../fixtures/**/*.sql"]
+  "include": ["./**/*.ts", "../src/**/*.ts", "../scripts/verify-browse-lib.ts", "../migrations/**/*.sql", "../fixtures/**/*.sql"]
 }

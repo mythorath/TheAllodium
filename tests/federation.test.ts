@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  DISABLED_PUBLIC_SOURCES,
+  FEDERATION_ADAPTERS,
+  PUBLIC_FEDERATION_ADAPTERS,
+  getCrossrefWorkByDoi,
   searchArxiv,
   searchCrossref,
   searchDblp,
@@ -9,6 +13,10 @@ import {
   searchHal,
   searchZenodo,
 } from "../src/federation/adapters";
+import {
+  federatedIdentifierCacheKey,
+  IDENTIFIER_LOOKUP_TTL_SECONDS,
+} from "../src/federation/cache";
 import {
   arxivSyntheticDoi,
   dedupeAndMergeWorks,
@@ -125,7 +133,74 @@ describe("federation identity", () => {
   });
 });
 
+describe("federation cache keys", () => {
+  it("keys identifier lookups separately from bibliographic search and for 7 days", () => {
+    expect(IDENTIFIER_LOOKUP_TTL_SECONDS).toBe(7 * 24 * 60 * 60);
+    expect(federatedIdentifierCacheKey("10.1007/s00422-026-01037-5")).toBe(
+      "federation-v1:doi:10.1007/s00422-026-01037-5",
+    );
+    expect(federatedIdentifierCacheKey(" 10.1007/ABC ")).toBe(
+      "federation-v1:doi:10.1007/abc",
+    );
+  });
+});
+
 describe("federation adapters", () => {
+  it("looks up a Crossref work by DOI without exposing abstracts", async () => {
+    let requested = "";
+    const fetcher: typeof fetch = async (input) => {
+      requested = String(input);
+      return new Response(
+        JSON.stringify({
+          message: {
+            DOI: "10.1007/s00422-026-01037-5",
+            title: ["A Direct Lookup"],
+            author: [{ given: "Ada", family: "Lovelace" }],
+            published: { "date-parts": [[2024, 2, 3]] },
+            abstract: "Must not be redistributed",
+            URL: "https://doi.org/10.1007/s00422-026-01037-5",
+            type: "journal-article",
+            "container-title": ["Biological Cybernetics"],
+            publisher: "Springer",
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    };
+    const result = await getCrossrefWorkByDoi("10.1007/s00422-026-01037-5", {
+      fetch: fetcher,
+      contactEmail: "index@theallodium.org",
+      now: () => new Date("2026-09-03T00:00:00Z"),
+    });
+    expect(result.status.kind).toBe("ok");
+    expect(requested).toBe(
+      "https://api.crossref.org/works/10.1007%2Fs00422-026-01037-5?mailto=index%40theallodium.org",
+    );
+    expect(result.hits).toHaveLength(1);
+    expect(result.hits[0]).toMatchObject({
+      title: "A Direct Lookup",
+      doi: "10.1007/s00422-026-01037-5",
+      publicationYear: 2024,
+      publishedDate: "2024-02-03",
+      containerTitle: "Biological Cybernetics",
+    });
+    expect(result.hits[0]).not.toHaveProperty("abstract");
+    expect(JSON.stringify(result.hits[0])).not.toContain("Must not");
+  });
+
+  it("returns a structured HTTP error when Crossref has no work for the DOI", async () => {
+    const fetcher: typeof fetch = async () =>
+      new Response("Resource not found.", { status: 404 });
+    const result = await getCrossrefWorkByDoi("10.9999/does-not-exist", {
+      fetch: fetcher,
+    });
+    expect(result.status).toMatchObject({
+      kind: "http-error",
+      httpStatus: 404,
+    });
+    expect(result.hits).toEqual([]);
+  });
+
   it("normalizes Crossref results without exposing abstracts", async () => {
     const fetcher: typeof fetch = async () =>
       new Response(
@@ -436,5 +511,16 @@ describe("federation adapters", () => {
       "network-error",
     ]);
     expect(results.every((result) => result.hits.length === 0)).toBe(true);
+  });
+
+  it("keeps Zenodo and DBLP implemented but out of public fan-out", () => {
+    expect([...DISABLED_PUBLIC_SOURCES].sort()).toEqual(["dblp", "zenodo"]);
+    const implemented = FEDERATION_ADAPTERS.map((adapter) => adapter.source);
+    const published = PUBLIC_FEDERATION_ADAPTERS.map((adapter) => adapter.source);
+    expect(implemented).toContain("zenodo");
+    expect(implemented).toContain("dblp");
+    expect(published).not.toContain("zenodo");
+    expect(published).not.toContain("dblp");
+    expect(published).toHaveLength(8);
   });
 });
