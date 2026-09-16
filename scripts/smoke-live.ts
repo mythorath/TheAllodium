@@ -79,6 +79,7 @@ async function main() {
   await checkPage("/psychotherapy/hexaflex", "Hexaflex");
   await checkPage("/standard", "The Standard");
   await checkPage("/about", "Why The Allodium exists");
+  await checkPage("/support", "Support The Allodium");
   await checkPage("/psychotherapy/disclaimer", "988");
 
   const disclaimerRedirect = await fetch(`${base}/disclaimer`, { redirect: "manual" });

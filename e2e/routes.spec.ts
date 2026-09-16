@@ -792,14 +792,21 @@ test.describe("about", () => {
     await expectNoSeriousA11yViolations(page);
   });
 
-  test("/about lists tip options with copyable wallet addresses", async ({
+  test("/support lists tip options with copyable wallet addresses", async ({
     page,
   }) => {
-    await page.goto("/about");
+    await page.goto("/support");
     await expect(
-      page.getByRole("heading", { name: "If you'd like to leave a tip" }),
+      page.getByRole("heading", { name: "Support The Allodium" }),
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: "Ko-fi" })).toHaveAttribute(
+    await expect(
+      page.getByRole("heading", { name: "A little, regularly" }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Ko-fi monthly" })).toHaveAttribute(
+      "href",
+      "https://ko-fi.com/mythorath/tiers",
+    );
+    await expect(page.getByRole("link", { name: "Ko-fi", exact: true })).toHaveAttribute(
       "href",
       "https://ko-fi.com/mythorath",
     );

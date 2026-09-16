@@ -23,6 +23,7 @@ export const RESERVED_COLLECTION_SLUGS = [
   "sitemaps",
   "standard",
   "subjects",
+  "support",
   "venues",
   "works",
 ] as const;

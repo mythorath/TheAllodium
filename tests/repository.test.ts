@@ -27,7 +27,6 @@ import { execStatements } from "./sql-test-utils";
 import { SITE_URL } from "../src/site-config";
 import { STATIC_SITEMAP_PATHS } from "../src/sitemap";
 import { collectionForPath } from "../src/collections";
-import { hasSupportOptions } from "../src/support";
 
 async function loadFixture() {
   await execStatements(env.DB, fixtureSql);
@@ -1116,7 +1115,7 @@ describe("local D1 repository + routes", () => {
     expect(html).not.toMatch(/file_path/i);
   });
 
-  it("serves /about with the mission copy and no half-configured tip links", async () => {
+  it("serves /about with the mission copy and a link to /support", async () => {
     const ctx = createExecutionContext();
     const res = await app.request("/about", {}, env, ctx);
     await waitOnExecutionContext(ctx);
@@ -1125,14 +1124,9 @@ describe("local D1 repository + routes", () => {
     expect(html).toContain("Why The Allodium exists");
     expect(html).toContain("What you can count on");
     expect(html).toContain('href="/standard"');
-    // The support section renders only once real tip links/addresses are
-    // configured in src/support.ts, never an empty shell.
-    if (!hasSupportOptions()) {
-      expect(html).not.toContain("support-section");
-      expect(html).not.toContain("leave a tip");
-    } else {
-      expect(html).toContain("support-section");
-    }
+    expect(html).toContain('href="/support"');
+    expect(html).not.toContain("support-section");
+    expect(html).not.toContain("leave a tip");
   });
 
   it("redirects /disclaimer to /psychotherapy/disclaimer", async () => {
@@ -1158,6 +1152,7 @@ describe("local D1 repository + routes", () => {
       "/",
       "/standard",
       "/about",
+      "/support",
       "/disclaimer",
       "/psychotherapy",
       "/psychotherapy/disclaimer",
@@ -1230,6 +1225,7 @@ describe("local D1 repository + routes", () => {
       ["/", "/"],
       ["/standard", "/standard"],
       ["/about", "/about"],
+      ["/support", "/support"],
       ["/psychotherapy", "/psychotherapy"],
       ["/psychotherapy/disclaimer", "/psychotherapy/disclaimer"],
       ["/psychotherapy/search", "/psychotherapy/search"],

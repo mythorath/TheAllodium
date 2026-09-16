@@ -12,14 +12,20 @@ const DESIRED = {
   sbfm_definitely_automated: "allow",
   ai_bots_protection: "disabled",
   enable_js: false,
+  // Cloudflare's managed robots.txt / Bot Preference Sync prepends
+  // AI-training Disallow rules and Content-Signal: ai-train=no. Turn
+  // both the prepend and the Content Signals Policy off so origin
+  // public/robots.txt is what crawlers see. ai_training "disabled"
+  // means do not apply a training restriction (not "allow", which 400s).
+  is_robots_txt_managed: false,
+  cf_robots_variant: "off",
+  bot_preference_sync_enabled: false,
+  ai_training: "disabled",
 } as const;
 
 const READ_ONLY_KEYS = new Set([
   "using_latest_model",
   "ai_bots_migration_opt_out",
-  "bot_preference_sync_enabled",
-  "cf_robots_variant",
-  "is_robots_txt_managed",
 ]);
 
 type BotManagementConfig = Record<string, unknown>;
@@ -29,7 +35,8 @@ function usage(): never {
     `Usage: configure-bot-access.ts --yes\n` +
       `  Idempotently GET-merge-PUTs Super Bot Fight Mode on ${ORG_DOMAIN} so\n` +
       `  automated traffic and AI crawlers are allowed (sbfm_definitely_automated=allow,\n` +
-      `  ai_bots_protection=disabled, enable_js=false). Writes ${EVIDENCE_PATH}.`,
+      `  ai_bots_protection=disabled, enable_js=false, is_robots_txt_managed=false,\n` +
+      `  cf_robots_variant=off, bot_preference_sync_enabled=false, ai_training=disabled). Writes ${EVIDENCE_PATH}.`,
   );
 }
 
@@ -45,8 +52,24 @@ function alreadyDesired(current: BotManagementConfig): boolean {
   return (
     current.sbfm_definitely_automated === DESIRED.sbfm_definitely_automated &&
     current.ai_bots_protection === DESIRED.ai_bots_protection &&
-    current.enable_js === DESIRED.enable_js
+    current.enable_js === DESIRED.enable_js &&
+    current.is_robots_txt_managed === DESIRED.is_robots_txt_managed &&
+    current.cf_robots_variant === DESIRED.cf_robots_variant &&
+    current.bot_preference_sync_enabled === DESIRED.bot_preference_sync_enabled &&
+    current.ai_training === DESIRED.ai_training
   );
+}
+
+function snapshotFields(config: BotManagementConfig): Record<string, unknown> {
+  return {
+    sbfm_definitely_automated: config.sbfm_definitely_automated,
+    ai_bots_protection: config.ai_bots_protection,
+    enable_js: config.enable_js,
+    is_robots_txt_managed: config.is_robots_txt_managed,
+    cf_robots_variant: config.cf_robots_variant,
+    bot_preference_sync_enabled: config.bot_preference_sync_enabled,
+    ai_training: config.ai_training,
+  };
 }
 
 function writeEvidence(evidence: Record<string, unknown>): void {
@@ -76,7 +99,7 @@ async function main() {
     console.log("  already at desired bot-access settings; leaving as-is.");
   } else {
     console.log(
-      "  PUT merged bot_management (definitely-automated=allow, AI bots disabled, JS detections off)…",
+      "  PUT merged bot_management (definitely-automated=allow, AI bots allowed, JS detections off, managed robots.txt and Bot Preference Sync off)…",
     );
     applied = await cloudflareApiFetch<BotManagementConfig>(
       `/zones/${zone.id}/bot_management`,
@@ -90,11 +113,7 @@ async function main() {
   if (!alreadyDesired(applied)) {
     throw new Error(
       "bot_management PUT succeeded but desired fields were not applied: " +
-        JSON.stringify({
-          sbfm_definitely_automated: applied.sbfm_definitely_automated,
-          ai_bots_protection: applied.ai_bots_protection,
-          enable_js: applied.enable_js,
-        }),
+        JSON.stringify(snapshotFields(applied)),
     );
   }
 
@@ -102,21 +121,14 @@ async function main() {
     at: new Date().toISOString(),
     zone: ORG_DOMAIN,
     zone_id: zone.id,
-    previous: {
-      sbfm_definitely_automated: current.sbfm_definitely_automated,
-      ai_bots_protection: current.ai_bots_protection,
-      enable_js: current.enable_js,
-    },
-    applied: {
-      sbfm_definitely_automated: applied.sbfm_definitely_automated,
-      ai_bots_protection: applied.ai_bots_protection,
-      enable_js: applied.enable_js,
-    },
+    previous: snapshotFields(current),
+    applied: snapshotFields(applied),
   });
 
   console.log(
     `Done. ${ORG_DOMAIN} allows automated traffic and AI crawlers ` +
-      `(sbfm_definitely_automated=allow, ai_bots_protection=disabled, enable_js=false).`,
+      `(sbfm_definitely_automated=allow, ai_bots_protection=disabled, enable_js=false, ` +
+      `is_robots_txt_managed=false, cf_robots_variant=off, bot_preference_sync_enabled=false, ai_training=disabled).`,
   );
 }
 

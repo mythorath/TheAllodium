@@ -442,6 +442,8 @@ describe("Open Index routes", () => {
     const payload = await tools.json() as {
       result: { tools: Array<{ name: string }> };
     };
-    expect(payload.result.tools.map((tool) => tool.name)).toContain("search_research");
+    expect(payload.result.tools.map((tool) => tool.name)).toEqual(
+      expect.arrayContaining(["search_research", "tip"]),
+    );
   });
 });

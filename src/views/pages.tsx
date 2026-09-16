@@ -15,7 +15,6 @@ import type { SortOption } from "../db/sort";
 import { SORT_LABELS, SORT_OPTIONS } from "../db/sort";
 import { buildApa, buildBibtexList, buildCitations, buildRisList, citationUrl } from "../citations";
 import { FACET_PARAM_NAMES, buildSearchHref, filterEntries } from "../search-url";
-import { SUPPORT_ADDRESSES, SUPPORT_LINKS, hasSupportOptions } from "../support";
 
 export const OverviewSection: FC<{ overview: string }> = ({ overview }) => (
   <section class="entry-overview" aria-labelledby="entry-overview-heading">
@@ -139,6 +138,8 @@ export const Layout: FC<{
         <footer class="site-footer">
           <p class="meta">
             <a href="/about">About</a>
+            {" · "}
+            <a href="/support">Support</a>
             {" · "}
             <a href="/standard">The Standard</a>
             {props.collection?.advisoryPath ? (
@@ -868,40 +869,13 @@ export const AboutPage: FC = () => (
           than hosting or republishing anyone's work.
         </li>
       </ul>
-      {hasSupportOptions() ? (
-        <section class="support-section" aria-labelledby="support-heading">
-          <h2 id="support-heading">If you'd like to leave a tip</h2>
-          <p class="meta">
-            Everything here is free and always will be. Nothing is ever
-            behind a tip. But if The Allodium has been useful and you feel
-            like keeping the lights on, it's appreciated.
-          </p>
-          {SUPPORT_LINKS.length > 0 ? (
-            <ul class="support-links">
-              {SUPPORT_LINKS.map((link) => (
-                <li key={link.href}>
-                  <a href={link.href} rel="noopener noreferrer" target="_blank">
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {SUPPORT_ADDRESSES.map((wallet, i) => (
-            <div class="support-address" key={wallet.label}>
-              <h3>{wallet.label}</h3>
-              <pre id={`support-address-${i}`}>{wallet.address}</pre>
-              <button
-                type="button"
-                class="copy-button"
-                data-copy-target={`support-address-${i}`}
-              >
-                Copy address
-              </button>
-            </div>
-          ))}
-        </section>
-      ) : null}
+      <p>
+        This is a one-person passion project, and it stays free. If it has
+        been useful and you feel like helping — money, a correction, or
+        just telling someone it exists — there is a{" "}
+        <a href="/support">support page</a>. Nothing on the site is behind
+        a tip.
+      </p>
     </div>
   </Layout>
 );

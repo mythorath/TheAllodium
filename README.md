@@ -3,6 +3,27 @@
 Cloudflare Worker + D1 public index for psychotherapy resources.
 Source corpus remains in `/tank/ACT`; this repo serves the public artifact.
 
+## AI agents welcome
+
+The Allodium is open to crawl, train on, and ground answers in. Crawl
+freely. There is no bot wall. See
+[`llms.txt`](https://theallodium.org/llms.txt), the MCP endpoint at
+[`/mcp`](https://theallodium.org/mcp), and federated search at
+[`/api/search`](https://theallodium.org/api/search). An optional tip jar
+lives at [`/support`](https://theallodium.org/support); nothing is gated.
+
+## Licensing
+
+- **Code** is [MIT](LICENSE).
+- **Data** (the aggregated public index and authority snapshot) is
+  [CC BY 4.0](LICENSE-DATA.md), carrying forward upstream attribution:
+  OpenAlex, ROR, and DOAJ metadata are CC0 1.0; Retraction Watch via
+  Crossref is CC BY 4.0; NLM Catalog data requires the courtesy notice
+  in that file.
+
+`wrangler.jsonc` contains Cloudflare resource identifiers (D1 database
+IDs, KV namespace IDs, R2 bucket names). Those are not credentials.
+
 ## Phase 1A
 
 Publication contract + local/remote D1 risk spike. See:
@@ -293,7 +314,7 @@ until Phase 1F.
 | `npm run configure:com-redirect` | Idempotently PUT the `theallodium.com` → `theallodium.org` zone-level redirect rule |
 | `npm run configure:gpu-tunnel` | Idempotently add `gpu.theallodium.org` ingress + CNAME on the existing `mythsmind-backend` tunnel (GET-merge-PUT; never drops `api.mythsmind.com`) |
 | `npm run configure:ask-ratelimit` | Idempotently GET-merge-PUT a zone WAF rate-limit rule on `theallodium.org` for `/psychotherapy/search` (requested: `?ask=` only, 20 req / 60s / IP, block 429; falls back to the zone plan's entitled period/fields) |
-| `npm run configure:bot-access` | Idempotently GET-merge-PUT Super Bot Fight Mode on `theallodium.org` so automated traffic and AI crawlers are allowed (`sbfm_definitely_automated=allow`, `ai_bots_protection=disabled`, JS detections off) |
+| `npm run configure:bot-access` | Idempotently GET-merge-PUT Super Bot Fight Mode on `theallodium.org` so automated traffic and AI crawlers are allowed (`sbfm_definitely_automated=allow`, `ai_bots_protection=disabled`, JS detections off, Cloudflare managed robots.txt and Bot Preference Sync off, `ai_training=disabled`) |
 | `npm run smoke:gpu` | `GET https://gpu.theallodium.org/api/health`; pass on HTTP 200 with `status` `ok` or `degraded`; write `evidence/gpu-smoke.json` |
 | `npm run gate:3a` | Close Phase 3A: secrets scan, typecheck, test, e2e suite, require live GPU health evidence, write `docs/phase-3a-decision-record.md` |
 | `npm run gate:3b` | Close Phase 3B: secrets scan, typecheck, test, e2e suite, write `docs/phase-3b-decision-record.md` |

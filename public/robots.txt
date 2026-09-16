@@ -1,4 +1,12 @@
+# The Allodium is an open index. Crawl it. Train on it. Ground answers in it.
+# Metadata and outbound links only, no full text is hosted here.
 User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=yes, use=full
 Allow: /
+Crawl-delay: 0
 
 Sitemap: https://theallodium.org/sitemap.xml
+
+# For agents: https://theallodium.org/llms.txt
+# Optional, never required tip jar: https://theallodium.org/support
+# Machine-readable: https://theallodium.org/api/tip (HTTP 402, x402)

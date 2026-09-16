@@ -56,6 +56,7 @@ export const STATIC_SITEMAP_PATHS: readonly string[] = [
   "/psychotherapy/disclaimer",
   "/standard",
   "/about",
+  "/support",
   "/open-index",
   "/search",
   "/coverage",

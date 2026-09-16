@@ -75,6 +75,8 @@ import {
 } from "./federation/service";
 import { UpstreamRateLimiter } from "./federation/rate-limiter";
 import { handleMcpRequest } from "./mcp";
+import { buildTipPayload, TIP_JSON_HEADERS } from "./tip";
+import { TIP_API_PATH } from "./support";
 import {
   AboutPage,
   DisclaimerPage,
@@ -89,6 +91,7 @@ import {
   StandardPage,
   TopicsPage,
 } from "./views/pages";
+import { SupportPage } from "./views/support-page";
 import {
   CoveragePage,
   DomainPage,
@@ -147,6 +150,8 @@ const SECURITY_HEADERS: Record<string, string> = {
     "default-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; frame-ancestors 'none'",
 };
 
+const PAYMENT_LINK = '</support>; rel="payment"';
+
 const app = new Hono<{ Bindings: AppBindings }>();
 
 app.use("*", async (c, next) => {
@@ -154,6 +159,7 @@ app.use("*", async (c, next) => {
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     c.res.headers.set(key, value);
   }
+  c.res.headers.set("Link", PAYMENT_LINK);
   const contentType = c.res.headers.get("Content-Type") ?? "";
   if (
     c.req.method === "GET" &&
@@ -181,6 +187,12 @@ app.get("/psychotherapy", async (c) => {
 app.get("/standard", (c) => c.html(<StandardPage />));
 
 app.get("/about", (c) => c.html(<AboutPage />));
+
+app.get("/support", (c) => c.html(<SupportPage />));
+
+app.get(TIP_API_PATH, (c) => c.json(buildTipPayload(), 402, TIP_JSON_HEADERS));
+
+app.get("/.well-known/x402", (c) => c.json(buildTipPayload(), 200, TIP_JSON_HEADERS));
 
 app.get("/open-index", (c) => c.html(<OpenIndexHomePage />));
 
@@ -866,6 +878,7 @@ app.onError(async (err, c) => {
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     res.headers.set(key, value);
   }
+  res.headers.set("Link", PAYMENT_LINK);
   return res;
 });
 
