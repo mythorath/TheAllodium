@@ -201,6 +201,36 @@ npm run authority:migrate:local
 npm run gate:5a   # through gate:5h
 ```
 
+### Federated overviews (resumable)
+
+Cached 2–4 sentence paraphrases live in `AUTHORITY.federated_work_overviews`
+and survive authority snapshot promotes. The Worker never sees source
+abstracts. Partial rows are safe: a work page with no overview simply omits
+the section.
+
+State lives in `/mnt/smesh/allodium-verify/` (`hub-pages.jsonl`,
+`doi-queue.jsonl`). Re-running the same command skips already-written URLs and
+DOIs.
+
+```bash
+# Crawl the live browse web (Pass A) then resolve /works pages (Pass B).
+# ~520k sitemap URLs; hours to days. Safe to interrupt and resume.
+npm run verify:browse -- --url https://theallodium.org --env production
+
+# When the LAN 5090 Ollama box is up (http://10.10.10.2:11435):
+python3 scripts/generate_federated_overviews.py \
+  --doi-queue /mnt/smesh/allodium-verify/doi-queue.jsonl \
+  --dry-run --limit 3
+
+python3 scripts/generate_federated_overviews.py \
+  --doi-queue /mnt/smesh/allodium-verify/doi-queue.jsonl \
+  --env staging --limit 20
+
+python3 scripts/generate_federated_overviews.py \
+  --doi-queue /mnt/smesh/allodium-verify/doi-queue.jsonl \
+  --env production --yes
+```
+
 See [docs/federation-contract-v1.md](docs/federation-contract-v1.md),
 [docs/authority-data.md](docs/authority-data.md),
 [docs/credibility-standard-v1.md](docs/credibility-standard-v1.md), and
@@ -270,7 +300,7 @@ until Phase 1F.
 | `npm run audit:links -- --url <base> [--env staging\|production]` | Real HTTP-level link-integrity audit: double-fetches a sample of live entry pages (plus every duplicate-titled "tie-risk" entry when `--env` gives D1 access) to prove id/title/canonical_url stay self-consistent, and checks that every sort's search/browse pagination has no duplicate/missing ids and a stable order across repeated requests. Run against staging and production after every deploy, alongside `smoke:live` |
 | `npm run diff:links -- --env staging\|production [--snapshot <name>] [--acknowledge]` | Cross-snapshot stability check: diffs the new `fixtures/<name>.sql` about to be promoted against the currently-live entries in `--env`, and fails if any id's `title`/`canonical_url` would silently change. Runs automatically as part of `db:promote:*` (pass `--acknowledge-link-changes` to that command once a flagged change is confirmed intentional) |
 | `npm run gate:1f` | Close Phase 1F: secrets scan, typecheck, test, e2e suite, verify a production deploy + passing live smoke evidence exist, write `docs/phase-1f-decision-record.md` |
-| `npm run spike:federation` / `audit:federation` | Exercise all Open Index adapters and write timestamped latency/availability evidence |
+| `npm run verify:browse` | Crawl the live browse web into resumable `hub-pages.jsonl` / `doi-queue.jsonl` (default state dir `/mnt/smesh/allodium-verify/`) |
 | `npm run authority:fetch` / `authority:build` | Fetch approved public authority sources and build deterministic `import.sql`, manifest, license, and checksum artifacts |
 | `npm run authority:promote:staging` / `authority:promote:production` | Checksum, migrate, Time-Travel bookmark, atomically import, smoke-check, and log an authority snapshot |
 | `npm run authority:rollback:staging` / `authority:rollback:production` | Restore the authority database to its pre-promotion Time Travel bookmark |
