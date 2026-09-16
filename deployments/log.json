@@ -484,5 +484,21 @@
     "databaseName": "theallodium-psychotherapy-production",
     "versionId": "9e5d689a-24cb-4719-845c-e02cd97bf4e6",
     "gitCommit": "688c601cc1610b0e120a2b94667cbd471f5f6c34"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-09-16T21:43:48.143Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "versionId": "c7ad4aea-2d9d-489b-a644-00a48bc1eba1",
+    "gitCommit": "52551de43c0fb2384acf985a3aa62f02346c1811"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-09-16T21:45:29.223Z",
+    "env": "production",
+    "databaseName": "theallodium-psychotherapy-production",
+    "versionId": "84507911-9022-4a85-92b5-77cb0467b0b9",
+    "gitCommit": "52551de43c0fb2384acf985a3aa62f02346c1811"
   }
 ]
