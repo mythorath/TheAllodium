@@ -156,6 +156,12 @@ Phase 3C (`configure:ask-ratelimit`) additionally needs:
   WAF). Confirm with a GET of
   `/zones/{id}/rulesets/phases/http_ratelimit/entrypoint` before PUT.
 
+`configure:bot-access` additionally needs:
+
+- Zone → Bot Management → Edit, on `theallodium.org` (Super Bot Fight Mode
+  and AI-bot protection live under Bot Management). Confirm with a GET of
+  `/zones/{id}/bot_management` before PUT.
+
 Phase 3B (`?ask=` NL search) needs a **shared secret**, not extra Cloudflare
 token scopes. This is **not** `CLOUDFLARE_API_TOKEN`:
 
@@ -170,8 +176,9 @@ token scopes. This is **not** `CLOUDFLARE_API_TOKEN`:
 `/open-index` and `/search` add an all-fields federated research index without
 copying the complete scholarly graph into D1. Ten isolated adapters cover
 Crossref, Europe PMC, DataCite, PubMed, DOAJ, Zenodo, HAL, arXiv, DOAB, and
-DBLP; nine are enabled in public fan-out, while Zenodo is monitored but
-disabled after staging proved its origin blocks Cloudflare egress. Results are
+DBLP; eight are enabled in public fan-out. Zenodo and DBLP are monitored but
+disabled after their origins blocked Cloudflare egress (Zenodo 403; DBLP
+Anubis HTML). Results are
 merged by normalized DOI and a fallback
 title/first-author/year identity, then shown with expandable, versioned
 credibility signals.
@@ -254,6 +261,7 @@ until Phase 1F.
 | `npm run configure:com-redirect` | Idempotently PUT the `theallodium.com` → `theallodium.org` zone-level redirect rule |
 | `npm run configure:gpu-tunnel` | Idempotently add `gpu.theallodium.org` ingress + CNAME on the existing `mythsmind-backend` tunnel (GET-merge-PUT; never drops `api.mythsmind.com`) |
 | `npm run configure:ask-ratelimit` | Idempotently GET-merge-PUT a zone WAF rate-limit rule on `theallodium.org` for `/psychotherapy/search` (requested: `?ask=` only, 20 req / 60s / IP, block 429; falls back to the zone plan's entitled period/fields) |
+| `npm run configure:bot-access` | Idempotently GET-merge-PUT Super Bot Fight Mode on `theallodium.org` so automated traffic and AI crawlers are allowed (`sbfm_definitely_automated=allow`, `ai_bots_protection=disabled`, JS detections off) |
 | `npm run smoke:gpu` | `GET https://gpu.theallodium.org/api/health`; pass on HTTP 200 with `status` `ok` or `degraded`; write `evidence/gpu-smoke.json` |
 | `npm run gate:3a` | Close Phase 3A: secrets scan, typecheck, test, e2e suite, require live GPU health evidence, write `docs/phase-3a-decision-record.md` |
 | `npm run gate:3b` | Close Phase 3B: secrets scan, typecheck, test, e2e suite, write `docs/phase-3b-decision-record.md` |

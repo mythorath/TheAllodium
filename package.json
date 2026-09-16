@@ -33,6 +33,7 @@
     "configure:com-redirect": "tsx scripts/configure-com-redirect.ts --yes",
     "configure:gpu-tunnel": "tsx scripts/configure-gpu-tunnel-route.ts --yes",
     "configure:ask-ratelimit": "tsx scripts/configure-ask-ratelimit.ts --yes",
+    "configure:bot-access": "tsx scripts/configure-bot-access.ts --yes",
     "promote:og-cards": "tsx scripts/upload-og-cards.ts",
     "promote:og-cards": "tsx scripts/upload-og-cards.ts",
     "smoke:live": "tsx scripts/smoke-live.ts",
