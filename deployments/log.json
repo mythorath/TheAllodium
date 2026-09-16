@@ -428,5 +428,61 @@
     "databaseName": "theallodium-psychotherapy-production",
     "versionId": "8424ede9-1f8e-4749-91a4-2ab8009ab261",
     "gitCommit": "89a80021c0fa1cc37e4017c17e17e13824f5920b"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-09-04T02:57:25.787Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "versionId": "c0bf0700-7df3-4970-ab9e-51c83e945815",
+    "gitCommit": "07835f32792b2f004282ea6ea36fe8e29dc37d85"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-09-04T03:09:06.248Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "versionId": "a1ab8671-77c2-4282-ab91-df9636785b63",
+    "gitCommit": "07835f32792b2f004282ea6ea36fe8e29dc37d85"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-09-04T03:10:45.951Z",
+    "env": "production",
+    "databaseName": "theallodium-psychotherapy-production",
+    "versionId": "3eba4301-196b-4df0-9c5e-025eaff4bb4b",
+    "gitCommit": "07835f32792b2f004282ea6ea36fe8e29dc37d85"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-09-04T04:07:06.284Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "versionId": "65c7c571-fcfb-40cc-af2e-d4f0b2cf765d",
+    "gitCommit": "07835f32792b2f004282ea6ea36fe8e29dc37d85"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-09-04T04:19:01.072Z",
+    "env": "production",
+    "databaseName": "theallodium-psychotherapy-production",
+    "versionId": "093c3628-ad39-45db-a8d2-4aaf066ec04e",
+    "gitCommit": "07835f32792b2f004282ea6ea36fe8e29dc37d85"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-09-16T20:23:57.230Z",
+    "env": "staging",
+    "databaseName": "theallodium-psychotherapy-staging",
+    "versionId": "2a071fc1-929e-4ec1-939d-428b006050bb",
+    "gitCommit": "688c601cc1610b0e120a2b94667cbd471f5f6c34"
+  },
+  {
+    "type": "deploy",
+    "at": "2026-09-16T20:25:26.383Z",
+    "env": "production",
+    "databaseName": "theallodium-psychotherapy-production",
+    "versionId": "9e5d689a-24cb-4719-845c-e02cd97bf4e6",
+    "gitCommit": "688c601cc1610b0e120a2b94667cbd471f5f6c34"
   }
 ]
